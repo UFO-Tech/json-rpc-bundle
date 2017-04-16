@@ -59,7 +59,7 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
         if (empty($namespace) && is_object($procedure)) {
             $className = explode('\\', get_class($procedure));
             $namespace = array_pop($className);
-            if ($namespace == 'Ping') {
+            if ($namespace == 'PingProcedure') {
                 $namespace = '';
             }
         }

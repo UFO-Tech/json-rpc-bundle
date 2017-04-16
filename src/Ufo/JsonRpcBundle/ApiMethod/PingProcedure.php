@@ -11,7 +11,7 @@ namespace Ufo\JsonRpcBundle\ApiMethod;
 
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 
-class Ping implements IRpcService
+class PingProcedure implements IRpcService
 {
     /**
      * @return string

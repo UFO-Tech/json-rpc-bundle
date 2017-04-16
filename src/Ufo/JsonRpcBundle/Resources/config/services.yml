@@ -4,6 +4,6 @@ services:
         arguments: ['%kernel.environment%']
 
     ufo_api_service.ping:
-        class: Ufo\JsonRpcBundle\ApiMethod\Ping
+        class: Ufo\JsonRpcBundle\ApiMethod\PingProcedure
         tags:
             - { name: rpc.service }
