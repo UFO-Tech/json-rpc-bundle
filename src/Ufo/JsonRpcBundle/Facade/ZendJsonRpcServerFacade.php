@@ -10,6 +10,7 @@ namespace Ufo\JsonRpcBundle\Facade;
 
 
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
+use Ufo\JsonRpcBundle\Exceptions\BadRequestException;
 use Ufo\JsonRpcBundle\Exceptions\InvalidJsonRpcParamsException;
 use Ufo\JsonRpcBundle\Facade\Interfaces\IFacadeJsonRpcServer;
 use Zend\Json\Server\Server;
@@ -25,11 +26,18 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
     protected $zendServer;
 
     /**
-     * ZendJsonRpcServerFacade constructor.
+     * @var string
      */
-    public function __construct()
+    protected $environment;
+
+    /**
+     * ZendJsonRpcServerFacade constructor.
+     * @param string $environment
+     */
+    public function __construct($environment)
     {
         $this->zendServer = new Server();
+        $this->environment = $environment;
     }
 
     /**
@@ -65,16 +73,36 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
     public function handle()
     {
         try {
-            if ($this->zendServer->getRequest()) {
+            $requestId = $this->zendServer->getRequest()->getId();
+            if (is_null($requestId) || empty($requestId)) {
                 $this->zendServer->getRequest()->setId(uniqid());
             }
             $response = $this->zendServer->handle();
-        } catch (InvalidJsonRpcParamsException $e) {
-            $response = new Http();
-            $error = new Error($e->getMessage(), Error::ERROR_INVALID_PARAMS);
-            $response->setError($error);
+        } catch (BadRequestException $e) {
+            $response = $this->createErrorResponse($e->getMessage(), Error::ERROR_INVALID_PARAMS, $e);
+        } catch (\Exception $e) {
+            $response = $this->createErrorResponse($e->getMessage(), Error::ERROR_OTHER, $e);
         }
 
+        return $response;
+    }
+
+    /**
+     * @param string $message
+     * @param int $code
+     * @param mixed $data
+     * @return Http
+     */
+    protected function createErrorResponse($message, $code, $data = null)
+    {
+        if ($code == Error::ERROR_OTHER && $this->environment != 'dev') {
+            $message = 'Everything is bad. Call admin.';
+            $data = null;
+        }
+
+        $response = new Http();
+        $error = new Error($message, $code, $data);
+        $response->setError($error);
         return $response;
     }
 
