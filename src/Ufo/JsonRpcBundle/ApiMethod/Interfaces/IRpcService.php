@@ -9,6 +9,6 @@
 namespace Ufo\JsonRpcBundle\ApiMethod\Interfaces;
 
 
-interface IApiProcedure
+interface IRpcService
 {
 }

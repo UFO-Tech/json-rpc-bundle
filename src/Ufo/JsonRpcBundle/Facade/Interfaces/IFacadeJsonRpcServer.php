@@ -9,7 +9,7 @@
 namespace Ufo\JsonRpcBundle\Facade\Interfaces;
 
 
-use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IApiProcedure;
+use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 
 interface IFacadeJsonRpcServer
 {
@@ -19,12 +19,12 @@ interface IFacadeJsonRpcServer
     public function getServer();
 
     /**
-     * @param IApiProcedure $procedure
+     * @param IRpcService $procedure
      * @param string $namespace
      * @param mixed|null $argv
      * @return $this
      */
-    public function addProcedure(IApiProcedure $procedure, $namespace = '', $argv = null);
+    public function addProcedure(IRpcService $procedure, $namespace = '', $argv = null);
 
     /**
      * @return mixed

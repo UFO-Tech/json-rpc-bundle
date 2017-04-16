@@ -9,7 +9,7 @@
 namespace Ufo\JsonRpcBundle\Facade;
 
 
-use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IApiProcedure;
+use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 use Ufo\JsonRpcBundle\Exceptions\InvalidJsonRpcParamsException;
 use Ufo\JsonRpcBundle\Facade\Interfaces\IFacadeJsonRpcServer;
 use Zend\Json\Server\Server;
@@ -41,12 +41,12 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
     }
 
     /**
-     * @param IApiProcedure $procedure
+     * @param IRpcService $procedure
      * @param string $namespace
      * @param mixed|null $argv
      * @return $this
      */
-    public function addProcedure(IApiProcedure $procedure, $namespace = '', $argv = null)
+    public function addProcedure(IRpcService $procedure, $namespace = '', $argv = null)
     {
         if (empty($namespace) && is_object($procedure)) {
             $className = explode('\\', get_class($procedure));

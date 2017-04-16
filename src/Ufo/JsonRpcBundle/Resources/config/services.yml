@@ -5,4 +5,4 @@ services:
     ufo_api_service.ping:
         class: Ufo\JsonRpcBundle\ApiMethod\Ping
         tags:
-            - { name: api.procedure }
+            - { name: rpc.service }
