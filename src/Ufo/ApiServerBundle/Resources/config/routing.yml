@@ -1,0 +1,4 @@
+ufo_api_server:
+    path:     /api
+    defaults: { _controller: UfoJsonRpcBundle:Api:server }
+    methods: ["GET", "POST"]

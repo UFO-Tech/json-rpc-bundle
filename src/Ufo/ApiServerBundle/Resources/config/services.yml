@@ -1,0 +1,8 @@
+services:
+    ufo_api_server.zend_json_rpc_server_facade:
+        class: Ufo\JsonRpcBundle\Facade\ZendJsonRpcServerFacade
+
+    ufo_api_service.ping:
+        class: Ufo\JsonRpcBundle\ApiMethod\Ping
+        tags:
+            - { name: api.procedure }
