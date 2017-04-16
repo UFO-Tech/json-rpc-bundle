@@ -1,11 +1,11 @@
 {
     "name": "ufo-cms/json-rpc-bundle",
-    "description": "",
+    "description": "The bundle for easy using json-rpc api on your project",
     "license": "MIT",
     "authors": [
         {
             "name": "Alex Maystrenko",
-            "email": "ashterix69@gmail.com",
+            "email": "ashterix69@gmail.com"
         }
     ],
     "version" : "1.0.0",
