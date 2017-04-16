@@ -62,6 +62,9 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
             if ($namespace == 'PingProcedure') {
                 $namespace = '';
             }
+            $implementedInterfaces = class_implements($procedure);
+            $jsonRpcNamespace = array_shift($implementedInterfaces);
+            $this->zendServer->setClass($procedure, $jsonRpcNamespace, $argv);
         }
         $this->zendServer->setClass($procedure, $namespace, $argv);
         return $this;
