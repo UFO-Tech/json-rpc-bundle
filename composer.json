@@ -20,7 +20,7 @@
         "zendframework/zend-http": "2.5.3"
     },
     "autoload" : {
-        "psr-4" : { "Ufo\\JsonRpcBundle\\" : "src/Ufo/" }
+        "psr-4" : { "Ufo\\JsonRpcBundle\\" : "src/Ufo/JsonRpcBundle/" }
     },
     "extra" : {
         "branch-alias" : {
