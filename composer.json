@@ -12,6 +12,7 @@
     "type" : "symfony-bundle",
     "homepage": "https://github.com/UFO-CMS/json-rpc-bundle",
     "keywords" : ["ufo", "symfony", "api", "bundle", "json-rpc"],
+    "minimum-stability" : "dev",
     "require" : {
         "php": ">=5.4.2",
         "symfony/symfony": ">=2.6",
