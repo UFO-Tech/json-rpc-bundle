@@ -31,6 +31,11 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
     protected $environment;
 
     /**
+     * @var array
+     */
+    protected $nsAliases = [];
+
+    /**
      * ZendJsonRpcServerFacade constructor.
      * @param string $environment
      */
@@ -62,9 +67,7 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
             if ($namespace == 'PingProcedure') {
                 $namespace = '';
             }
-            $implementedInterfaces = class_implements($procedure);
-            $jsonRpcNamespace = array_shift($implementedInterfaces);
-            $this->zendServer->setClass($procedure, $jsonRpcNamespace, $argv);
+            $this->setNamespaceAliasesForProxyAccess($procedure, $namespace);
         }
         $this->zendServer->setClass($procedure, $namespace, $argv);
         return $this;
@@ -80,6 +83,10 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
             if (is_null($requestId) || empty($requestId)) {
                 $this->zendServer->getRequest()->setId(uniqid());
             }
+            $requestMethod = $this->zendServer->getRequest()->getMethod();
+            if (false === $this->zendServer->getServiceMap()->getService($requestMethod)) {
+                $this->zendServer->getRequest()->setMethod($this->checkNsAlias($requestMethod));
+            }
             $response = $this->zendServer->handle();
         } catch (BadRequestException $e) {
             $response = $this->createErrorResponse($e->getMessage(), Error::ERROR_INVALID_PARAMS, $e);
@@ -88,6 +95,18 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
         }
 
         return $response;
+    }
+
+    /**
+     * @param $procedure
+     * @param $namespace
+     * @return void
+     */
+    protected function setNamespaceAliasesForProxyAccess($procedure, $namespace)
+    {
+        foreach (class_implements($procedure) as $interface) {
+            $this->addNsAlias($namespace, $interface);
+        }
     }
 
     /**
@@ -118,5 +137,33 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
             ->setEnvelope(\Zend\Json\Server\Smd::ENV_JSONRPC_2);
 
         return $this->zendServer->getServiceMap();
+    }
+    
+    /**
+     * @param string $alias
+     * @param string $namespace
+     * @return $this
+     */
+    public function addNsAlias($namespace, $alias)
+    {
+        $this->nsAliases[$alias] = $namespace;
+        return $this;
+    }
+
+    /**
+     * @return array
+     */
+    public function getNsAliases()
+    {
+        return $this->nsAliases;
+    }
+
+    /**
+     * @param string $alias
+     * @return string
+     */
+    public function checkNsAlias($alias)
+    {
+        return isset($this->nsAliases[$alias]) ? $this->nsAliases[$alias] : $alias;
     }
 }
