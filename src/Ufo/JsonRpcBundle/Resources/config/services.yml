@@ -6,4 +6,4 @@ services:
     ufo_api_service.ping:
         class: Ufo\JsonRpcBundle\ApiMethod\PingProcedure
         tags:
-            - { name: rpc.service }
+            - { name: rpc.service, priority: 100  }
