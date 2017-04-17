@@ -85,7 +85,7 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
             }
             $requestMethod = $this->zendServer->getRequest()->getMethod();
             if (false === $this->zendServer->getServiceMap()->getService($requestMethod)) {
-                $this->zendServer->getRequest()->setMethod($this->checkNsAlias($requestMethod));
+                $this->zendServer->getRequest()->setMethod($this->checkNsAliasFromMethodName($requestMethod));
             }
             $response = $this->zendServer->handle();
         } catch (BadRequestException $e) {
@@ -165,5 +165,18 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
     public function checkNsAlias($alias)
     {
         return isset($this->nsAliases[$alias]) ? $this->nsAliases[$alias] : $alias;
+    }
+
+    /**
+     * @param string $methodName
+     * @return string
+     */
+    protected function checkNsAliasFromMethodName($methodName)
+    {
+        $n = explode('.', $methodName);
+        if (count($n) != 2) {
+            return $this->checkNsAlias($methodName);
+        }
+        return $this->checkNsAlias($n[0]) . '.' . $n[1];
     }
 }
