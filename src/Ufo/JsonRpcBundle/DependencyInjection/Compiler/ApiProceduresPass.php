@@ -31,8 +31,29 @@ class ApiProceduresPass implements CompilerPassInterface
 
         $taggedServices = $container->findTaggedServiceIds('rpc.service');
 
-        foreach ($taggedServices as $id => $tags) {
+        foreach ($this->sortByPriority($taggedServices) as $id) {
             $definition->addMethodCall('addProcedure', [new Reference($id)]);
         }
+    }
+
+    protected function sortByPriority($taggedServices)
+    {
+        $arrayMap = [];
+        foreach ($taggedServices as $key => $service) {
+            $priority = 100;
+            if (isset($service[0]['priority'])) {
+                $priority = $service[0]['priority'] * 100;
+            }
+            $arrayMapSetter = function ($key, $value) use (&$arrayMap, &$arrayMapSetter) {
+                if (isset($arrayMap[$key])) {
+                    $arrayMapSetter($key + 1, $value);
+                    return;
+                }
+                $arrayMap[$key] = $value;
+            };
+            $arrayMapSetter($priority, $key);
+        }
+        krsort($arrayMap);
+        return $arrayMap;
     }
 }
