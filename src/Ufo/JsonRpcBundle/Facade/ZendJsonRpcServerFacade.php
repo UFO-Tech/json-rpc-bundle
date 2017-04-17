@@ -177,6 +177,8 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
         if (count($n) != 2) {
             return $this->checkNsAlias($methodName);
         }
-        return $this->checkNsAlias($n[0]) . '.' . $n[1];
+        $n[0] = $this->checkNsAlias($n[0]);
+
+        return  implode('.', array_diff($n, ['']));
     }
 }
