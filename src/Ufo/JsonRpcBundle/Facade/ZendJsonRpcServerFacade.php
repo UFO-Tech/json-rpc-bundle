@@ -17,6 +17,7 @@ use Zend\Json\Server\Server;
 use Zend\Json\Server\Error;
 use Zend\Json\Server\Request;
 use Zend\Json\Server\Response\Http;
+use \Symfony\Bundle\FrameworkBundle\Routing\Router;
 
 class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
 {
@@ -36,12 +37,19 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
     protected $nsAliases = [];
 
     /**
+     * @var Router
+     */
+    protected $router;
+
+    /**
      * ZendJsonRpcServerFacade constructor.
+     * @param Router $router
      * @param string $environment
      */
-    public function __construct($environment)
+    public function __construct(Router $router, $environment)
     {
         $this->zendServer = new Server();
+        $this->router = $router;
         $this->environment = $environment;
     }
 
@@ -133,7 +141,7 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
      */
     public function getServiceMap()
     {
-        $this->zendServer->setTarget('/json-rpc.php')
+        $this->zendServer->setTarget($this->router->generate('ufo_api_server'))
             ->setEnvelope(\Zend\Json\Server\Smd::ENV_JSONRPC_2);
 
         return $this->zendServer->getServiceMap();
