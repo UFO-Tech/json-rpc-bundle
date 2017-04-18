@@ -236,7 +236,7 @@ Call a GET request to the API to make sure that your new methods are available:
 
 }
 ```
-And test call your new methods/
+And test call your new methods:
 
 POST /api
 Request:
