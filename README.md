@@ -164,3 +164,110 @@ services:
 
 ```
 ### Step 5: Profit
+
+Call a GET request to the API to make sure that your new methods are available:
+
+```json
+{
+    "transport": "POST",
+    "envelope": "JSON-RPC-2.0",
+    "contentType": "application/json",
+    "SMDVersion": "2.0",
+    "description": null,
+    "target": "/api",
+    "services": {
+        "ping": {
+            "envelope": "JSON-RPC-2.0",
+            "transport": "POST",
+            "name": "ping",
+            "parameters": [],
+            "returns": "string"
+        },
+        "MyRpcProcedure.sayHello": {
+            "envelope": "JSON-RPC-2.0",
+            "transport": "POST",
+            "name": "ping",
+            "parameters": [],
+            "returns": "string"
+        },
+        "MyRpcProcedure.sayHelloName": {
+            "envelope": "JSON-RPC-2.0",
+            "transport": "POST",
+            "name": "ping",
+            "parameters": [
+                {
+                    "type": "string",
+                    "name": "name",
+                    "optional": false
+                }
+            ],
+            "returns": "string"
+        }
+    },
+    "methods": {
+        "ping": {
+            "envelope": "JSON-RPC-2.0",
+            "transport": "POST",
+            "name": "ping",
+            "parameters": [],
+            "returns": "string"
+        },
+        "MyRpcProcedure.sayHello": {
+            "envelope": "JSON-RPC-2.0",
+            "transport": "POST",
+            "name": "ping",
+            "parameters": [],
+            "returns": "string"
+        },
+        "MyRpcProcedure.sayHelloName": {
+            "envelope": "JSON-RPC-2.0",
+            "transport": "POST",
+            "name": "ping",
+            "parameters": [
+                {
+                    "type": "string",
+                    "name": "name",
+                    "optional": false
+                }
+            ],
+            "returns": "string"
+        }
+    }
+
+}
+```
+And test call your new methods/
+
+POST /api
+Request:
+```json
+{
+    "id":123,
+    "method": "MyRpcProcedure.sayHello"
+}
+```
+Response:
+```json
+{
+    "result": "Hello",
+    "id": "123"
+}
+```
+
+Request:
+```json
+{
+    "id":123,
+    "method": "MyRpcProcedure.sayHelloName",
+    "params": {
+        "operation": "Mr. Anderson"
+    }
+}
+```
+Response:
+```json
+{
+    "result": "Hello, Mr. Anderson",
+    "id": "123"
+}
+```
