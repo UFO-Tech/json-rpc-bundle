@@ -67,7 +67,8 @@ Now the API is available on the url **http://example.com/my_new_api_path**
 
 Congratulations, your RPC server is ready to use!!!
 
-Execute the GET request for the URL, on which your server is accessible (default: /api):
+Execute GET request on url you use to access your server.
+GET /api:
 
 ```json
 {
@@ -98,7 +99,7 @@ Execute the GET request for the URL, on which your server is accessible (default
 
 }
 ```
-The **ping** method is available by default and you can immediately execute a POST request for make sure that the server is working as it should.
+The **ping** method is available by default and you can immediately execute a POST request to make sure that the server is working as it should.
 
 POST /api
 Request:
@@ -118,7 +119,7 @@ Response:
 
 ### Step 4: Add your procedures to rpc server
 
-You can easily added methods in rpc server:
+You can easily add methods in rpc server:
 
 Create any class, implement interface ***Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService***
 ```php
@@ -164,8 +165,7 @@ services:
 
 ```
 ### Step 5: Profit
-
-Call a GET request to the API to make sure that your new methods are available:
+Execute GET request to the API to make sure that your new methods are available:
 
 ```json
 {
