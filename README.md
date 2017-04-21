@@ -275,9 +275,9 @@ Response:
 ### Step 6: Security
 By default, security is disabled.
 
-The package supports security on the client's token.
+The bundle supports security on the client's token.
 
-To enable safe mode, you must add the appropriate settings to the config.yml file.
+To enable safe mode, you must add the settings to the ```config.yml``` file.
 
 ```yml
 # app/config/config.yml
