@@ -1,9 +1,18 @@
 services:
     ufo_api_server.zend_json_rpc_server_facade:
         class: Ufo\JsonRpcBundle\Facade\ZendJsonRpcServerFacade
-        arguments: ['@router', '%kernel.environment%']
+        arguments: ['@router', '@ufo_api.security', '%kernel.environment%']
 
     ufo_api_service.ping:
         class: Ufo\JsonRpcBundle\ApiMethod\PingProcedure
         tags:
             - { name: rpc.service, priority: 100  }
+
+    ufo_api.security:
+        class: Ufo\JsonRpcBundle\Security\TokenRpcSecurity
+        arguments:
+            - "@request_stack"
+            - "%ufo_json_rpc.security.protected_get%"
+            - "%ufo_json_rpc.security.protected_post%"
+            - "%ufo_json_rpc.security.token_key_in_header%"
+            - "%ufo_json_rpc.security.clients_tokens%"

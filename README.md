@@ -283,9 +283,13 @@ To enable safe mode, you must add the settings to the ```config.yml``` file.
 # app/config/config.yml
 ufo_json_rpc:
     security:
-        protected_get: true     # protected GET requests
-        protected_post: true    # protected POST requests
+        protected_get: true                     # Protected GET requests
+        protected_post: true                    # Protected POST requests
+        token_key_in_header: "Ufo-RPC-Token"    # Default token key 
         clients_tokens:
-            - "ClientKeyExample"            # Example client token. IMPORTANT!!! Change or remove this!
-            - "ExampleOfAnotherClientKey"   # Example client token. IMPORTANT!!! Change or remove this!
+            - "ClientTokenExample"              # Example client token. IMPORTANT!!! Change or remove this!
+            - "ExampleOfAnotherClientToken"     # Example client token. IMPORTANT!!! Change or remove this!
 ```
+If you enable safe mode requests must contain the header key from ***token_key_in_header*** parameter.
+
+For example: ```Ufo-RPC-Token: ClientTokenExample```

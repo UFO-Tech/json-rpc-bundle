@@ -13,6 +13,7 @@ use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 use Ufo\JsonRpcBundle\Exceptions\BadRequestException;
 use Ufo\JsonRpcBundle\Exceptions\InvalidJsonRpcParamsException;
 use Ufo\JsonRpcBundle\Facade\Interfaces\IFacadeJsonRpcServer;
+use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
 use Zend\Json\Server\Server;
 use Zend\Json\Server\Error;
 use Zend\Json\Server\Request;
@@ -42,15 +43,22 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
     protected $router;
 
     /**
+     * @var IRpcSecurity
+     */
+    protected $rpcSecurity;
+
+    /**
      * ZendJsonRpcServerFacade constructor.
      * @param Router $router
+     * @param IRpcSecurity $rpcSecurity
      * @param string $environment
      */
-    public function __construct(Router $router, $environment)
+    public function __construct(Router $router, IRpcSecurity $rpcSecurity, $environment)
     {
         $this->zendServer = new Server();
         $this->router = $router;
         $this->environment = $environment;
+        $this->rpcSecurity = $rpcSecurity;
     }
 
     /**
@@ -87,6 +95,7 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
     public function handle()
     {
         try {
+            $this->rpcSecurity->isValidGetRequest();
             $requestId = $this->zendServer->getRequest()->getId();
             if (is_null($requestId) || empty($requestId)) {
                 $this->zendServer->getRequest()->setId(uniqid());
@@ -141,10 +150,16 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
      */
     public function getServiceMap()
     {
-        $this->zendServer->setTarget($this->router->generate('ufo_api_server'))
-            ->setEnvelope(\Zend\Json\Server\Smd::ENV_JSONRPC_2);
+        try {
+            $this->rpcSecurity->isValidGetRequest();
+            $this->zendServer->setTarget($this->router->generate('ufo_api_server'))
+                ->setEnvelope(\Zend\Json\Server\Smd::ENV_JSONRPC_2);
+            $response = $this->zendServer->getServiceMap();
+        } catch (\Exception $e) {
+            $response = $this->createErrorResponse($e->getMessage(), Error::ERROR_OTHER, $e);
+        }
 
-        return $this->zendServer->getServiceMap();
+        return $response;
     }
     
     /**

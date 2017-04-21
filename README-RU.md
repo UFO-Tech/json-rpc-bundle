@@ -286,9 +286,13 @@ Response:
 # app/config/config.yml
 ufo_json_rpc:
     security:
-        protected_get: true     # защитить GET запросы
-        protected_post: true    # защитить POST зпросы
+        protected_get: true                     # защитить GET запросы
+        protected_post: true                    # защитить POST зпросы
+        token_key_in_header: "Ufo-RPC-Token"    # Имя ключа в заголовках запроса 
         clients_tokens:
-            - "ClientKeyExample"            # Пример клиентского ключа. ВАЖНО!!! Смените или удалите это!
-            - "ExampleOfAnotherClientKey"   # Пример клиентского ключа. ВАЖНО!!! Смените или удалите это!
+            - "ClientTokenExample"              # Пример клиентского ключа. ВАЖНО!!! Смените или удалите это!
+            - "ExampleOfAnotherClientToken"     # Пример клиентского ключа. ВАЖНО!!! Смените или удалите это!
 ```
+Если вы включили безопасный режим, ваши запросы должны содержать заголовок, указанный в параметре ***token_key_in_header***. 
+
+Например: ```Ufo-RPC-Token: ClientTokenExample``` 
