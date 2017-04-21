@@ -95,7 +95,7 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
     public function handle()
     {
         try {
-            $this->rpcSecurity->isValidGetRequest();
+            $this->rpcSecurity->isValidPostRequest();
             $requestId = $this->zendServer->getRequest()->getId();
             if (is_null($requestId) || empty($requestId)) {
                 $this->zendServer->getRequest()->setId(uniqid());
