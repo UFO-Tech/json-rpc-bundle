@@ -271,3 +271,21 @@ Response:
     "id": "123"
 }
 ```
+
+### Step 6: Security
+By default, security is disabled.
+
+The package supports security on the client's token.
+
+To enable safe mode, you must add the appropriate settings to the config.yml file.
+
+```yml
+# app/config/config.yml
+ufo_json_rpc:
+    security:
+        protected_get: true     # protected GET requests
+        protected_post: true    # protected POST requests
+        clients_tokens:
+            - "ClientKeyExample"            # Example client token. IMPORTANT!!! Change or remove this!
+            - "ExampleOfAnotherClientKey"   # Example client token. IMPORTANT!!! Change or remove this!
+```
