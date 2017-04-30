@@ -15,6 +15,7 @@ use Symfony\Component\HttpFoundation\RequestStack;
 use Ufo\JsonRpcBundle\Exceptions\InvalidTokenException;
 use Ufo\JsonRpcBundle\Exceptions\TokenNotFoundInHeaderException;
 use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
+use Ufo\JsonRpcBundle\Security\Interfaces\ITokenValidator;
 
 class TokenRpcSecurity implements IRpcSecurity
 {
@@ -34,9 +35,9 @@ class TokenRpcSecurity implements IRpcSecurity
     protected $tokenHeader;
 
     /**
-     * @var array
+     * @var ITokenValidator
      */
-    protected $clientsTokens = [];
+    protected $tokenValidator;
 
     /**
      * @var Request
@@ -49,14 +50,14 @@ class TokenRpcSecurity implements IRpcSecurity
      * @param bool $protectedGet
      * @param bool $protectedPost
      * @param string $tokenHeaderKey
-     * @param array $clientsTokens
+     * @param array $tokenValidator
      */
-    public function __construct(RequestStack $requestStack, $protectedGet, $protectedPost, $tokenHeaderKey, array $clientsTokens)
+    public function __construct(RequestStack $requestStack, $protectedGet, $protectedPost, $tokenHeaderKey, ITokenValidator $tokenValidator)
     {
         $this->request = $requestStack->getCurrentRequest();
         $this->protectedGet = $protectedGet;
         $this->protectedPost = $protectedPost;
-        $this->clientsTokens = $clientsTokens;
+        $this->tokenValidator = $tokenValidator;
         $this->tokenHeader = $tokenHeaderKey;
     }
 
@@ -77,25 +78,13 @@ class TokenRpcSecurity implements IRpcSecurity
     }
 
     /**
-     * @return array
-     */
-    public function getClientsTokens()
-    {
-        return $this->clientsTokens;
-    }
-
-    /**
      * @param $token
      * @return bool
      * @throws InvalidTokenException
      */
     public function isValidToken($token)
     {
-        $valid = in_array($token, $this->clientsTokens);
-        if (false == $valid) {
-            throw new InvalidTokenException();
-        }
-        return in_array($token, $this->clientsTokens);
+        return $this->tokenValidator->isValid($token);
     }
 
     /**
