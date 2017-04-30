@@ -50,7 +50,7 @@ class TokenRpcSecurity implements IRpcSecurity
      * @param bool $protectedGet
      * @param bool $protectedPost
      * @param string $tokenHeaderKey
-     * @param array $tokenValidator
+     * @param ITokenValidator $tokenValidator
      */
     public function __construct(RequestStack $requestStack, $protectedGet, $protectedPost, $tokenHeaderKey, ITokenValidator $tokenValidator)
     {
