@@ -27,11 +27,6 @@ interface IRpcSecurity
     public function isProtectedPost();
 
     /**
-     * @return array
-     */
-    public function getClientsTokens();
-
-    /**
      * @return string
      */
     public function getTokenHeader();

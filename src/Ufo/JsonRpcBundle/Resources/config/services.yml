@@ -8,6 +8,11 @@ services:
         tags:
             - { name: rpc.service, priority: 100  }
 
+    ufo_api.simple_token_validator:
+        class: Ufo\JsonRpcBundle\Security\SimpleTokenValidator
+        arguments:
+            - "%ufo_json_rpc.security.clients_tokens%"
+
     ufo_api.security:
         class: Ufo\JsonRpcBundle\Security\TokenRpcSecurity
         arguments:
@@ -15,4 +20,4 @@ services:
             - "%ufo_json_rpc.security.protected_get%"
             - "%ufo_json_rpc.security.protected_post%"
             - "%ufo_json_rpc.security.token_key_in_header%"
-            - "%ufo_json_rpc.security.clients_tokens%"
+            - "@ufo_api.simple_token_validator"
