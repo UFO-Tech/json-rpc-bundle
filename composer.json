@@ -16,8 +16,8 @@
     "require" : {
         "php": ">=5.4.2",
         "symfony/symfony": ">=2.6",
-        "zendframework/zend-server": "2.6.1",
-        "zendframework/zend-json": "2.6.0",
+        "zendframework/zend-server": "2.6.*",
+        "zendframework/zend-json": "2.6.*",
         "zendframework/zend-http": "2.5.*"
     },
     "autoload" : {
