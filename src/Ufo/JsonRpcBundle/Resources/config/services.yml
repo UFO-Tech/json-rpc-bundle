@@ -21,3 +21,4 @@ services:
             - "%ufo_json_rpc.security.protected_post%"
             - "%ufo_json_rpc.security.token_key_in_header%"
             - "@ufo_api.simple_token_validator"
+            - "@router"

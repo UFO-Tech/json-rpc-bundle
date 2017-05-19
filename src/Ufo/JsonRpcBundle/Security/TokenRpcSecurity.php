@@ -10,6 +10,7 @@
 namespace Ufo\JsonRpcBundle\Security;
 
 
+use Symfony\Bundle\FrameworkBundle\Routing\Router;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Ufo\JsonRpcBundle\Exceptions\InvalidTokenException;
@@ -45,20 +46,29 @@ class TokenRpcSecurity implements IRpcSecurity
     protected $request;
 
     /**
+     * @var null|string
+     */
+    protected $protectedPath;
+
+    /**
      * TokenRpcSecurity constructor.
      * @param RequestStack $requestStack
      * @param bool $protectedGet
      * @param bool $protectedPost
      * @param string $tokenHeaderKey
      * @param ITokenValidator $tokenValidator
+     * @param Router $protectedPath
      */
-    public function __construct(RequestStack $requestStack, $protectedGet, $protectedPost, $tokenHeaderKey, ITokenValidator $tokenValidator)
+    public function __construct(RequestStack $requestStack, $protectedGet, $protectedPost, $tokenHeaderKey, ITokenValidator $tokenValidator, Router $router = null)
     {
         $this->request = $requestStack->getCurrentRequest();
         $this->protectedGet = $protectedGet;
         $this->protectedPost = $protectedPost;
         $this->tokenValidator = $tokenValidator;
         $this->tokenHeader = $tokenHeaderKey;
+        if ($router instanceof Router) {
+            $this->protectedPath = $router->getRouteCollection()->get('ufo_api_server')->getPath();
+        }
     }
 
     /**
@@ -94,8 +104,20 @@ class TokenRpcSecurity implements IRpcSecurity
      */
     protected function isValidRequest()
     {
-        $token = Helper::tokenFromRequest($this->request, $this->getTokenHeader());
-        return $this->isValidToken($token);
+        $res = true;
+        if ($this->routeMustBeProtected()) {
+            $token = Helper::tokenFromRequest($this->request, $this->getTokenHeader());
+            $res = $this->isValidToken($token);
+        }
+        return $res;
+
+    }
+
+    /**
+     * @return bool
+     */
+    protected function routeMustBeProtected(){
+        return $this->protectedPath && $this->request->getRequestUri() == $this->protectedPath;
     }
 
     /**
