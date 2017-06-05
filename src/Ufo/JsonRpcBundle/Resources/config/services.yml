@@ -1,7 +1,7 @@
 services:
     ufo_api_server.zend_json_rpc_server_facade:
         class: Ufo\JsonRpcBundle\Facade\ZendJsonRpcServerFacade
-        arguments: ['@router', '@ufo_api.security', '%kernel.environment%']
+        arguments: ['@router', '@ufo_api.security', '%kernel.environment%', '@logger']
 
     ufo_api_service.ping:
         class: Ufo\JsonRpcBundle\ApiMethod\PingProcedure

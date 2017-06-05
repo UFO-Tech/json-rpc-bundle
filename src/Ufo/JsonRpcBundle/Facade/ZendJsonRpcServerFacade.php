@@ -9,14 +9,13 @@
 namespace Ufo\JsonRpcBundle\Facade;
 
 
+use Monolog\Logger;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 use Ufo\JsonRpcBundle\Exceptions\BadRequestException;
-use Ufo\JsonRpcBundle\Exceptions\InvalidJsonRpcParamsException;
 use Ufo\JsonRpcBundle\Facade\Interfaces\IFacadeJsonRpcServer;
 use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
-use Zend\Json\Server\Server;
+use Ufo\JsonRpcBundle\Server\UfoZendServer as Server;
 use Zend\Json\Server\Error;
-use Zend\Json\Server\Request;
 use Zend\Json\Server\Response\Http;
 use \Symfony\Bundle\FrameworkBundle\Routing\Router;
 
@@ -52,17 +51,18 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
      * @param Router $router
      * @param IRpcSecurity $rpcSecurity
      * @param string $environment
+     * @param Logger $logger
      */
-    public function __construct(Router $router, IRpcSecurity $rpcSecurity, $environment)
+    public function __construct(Router $router, IRpcSecurity $rpcSecurity, $environment, Logger $logger = null)
     {
-        $this->zendServer = new Server();
+        $this->zendServer = new Server($logger);
         $this->router = $router;
         $this->environment = $environment;
         $this->rpcSecurity = $rpcSecurity;
     }
 
     /**
-     * @return object JsonRpc Server
+     * @return Server Zend Server
      */
     public function getServer()
     {
@@ -106,9 +106,9 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
             }
             $response = $this->zendServer->handle();
         } catch (BadRequestException $e) {
-            $response = $this->createErrorResponse($e->getMessage(), Error::ERROR_INVALID_PARAMS, $e);
+            $response = $this->getServer()->fault($e->getMessage(), Error::ERROR_INVALID_PARAMS, $e);
         } catch (\Exception $e) {
-            $response = $this->createErrorResponse($e->getMessage(), Error::ERROR_OTHER, $e);
+            $response = $this->getServer()->fault($e->getMessage(), Error::ERROR_OTHER, $e);
         }
 
         return $response;
