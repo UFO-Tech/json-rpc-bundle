@@ -62,7 +62,7 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
     }
 
     /**
-     * @return Server Zend Server
+     * @return object|Server JsonRpc Server
      */
     public function getServer()
     {

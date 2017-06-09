@@ -2,3 +2,8 @@ ufo_api_server:
     path:     /api
     defaults: { _controller: UfoJsonRpcBundle:Api:server }
     methods: ["GET", "POST"]
+
+ufo_api_soapui_xml:
+    path:     /api/soapui.xml
+    defaults: { _controller: UfoJsonRpcBundle:Api:soapUi }
+    methods: ["GET"]

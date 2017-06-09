@@ -293,3 +293,14 @@ ufo_json_rpc:
 If you enable safe mode requests must contain the header key from ***token_key_in_header*** parameter.
 
 For example: ```Ufo-RPC-Token: ClientTokenExample```
+
+## Importing your RPC project to the SoapUI
+
+Your RPC project can be imported to the SoapUI application.
+
+In order to do this, it will be enough to import the remote project to the SoapUI Application ```File -> Import Remote Project``` and specify the xml export link of your project **http://example.com/api/soapui.xml**. 
+As a result, you will get a ready project with a list of all available methods in SoupUI.
+
+URL **http://example.com/api/soapui.xml** can accept the following optional query parameters:
+* `Token` (string) is a client token to access your RPC project (it is substituted to the SoupUI parameters of your project)
+* `Show_examples` (boolean), which accepts values 1 or 0: to substitute an example of values ​​in methods  (1 - by default) or to specify the types of parameters (0)

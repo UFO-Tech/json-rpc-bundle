@@ -18,8 +18,7 @@
         "symfony/symfony": ">=2.6",
         "zendframework/zend-server": "2.6.*",
         "zendframework/zend-json": "2.6.*",
-        "zendframework/zend-http": "2.5.*",
-        "spatie/array-to-xml": "2.5.*"
+        "zendframework/zend-http": "2.5.*"
     },
     "autoload" : {
         "psr-4" : { "Ufo\\JsonRpcBundle\\" : "src/Ufo/JsonRpcBundle/" }

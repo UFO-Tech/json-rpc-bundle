@@ -3,6 +3,14 @@ services:
         class: Ufo\JsonRpcBundle\Facade\ZendJsonRpcServerFacade
         arguments: ['@router', '@ufo_api.security', '%kernel.environment%', '@logger']
 
+    ufo_api_server.soupui.project_generator:
+        class: Ufo\JsonRpcBundle\SoupUi\ProjectGenerator
+        arguments:
+            - '@request_stack'
+            - '@router'
+            - '%kernel.environment%'
+            - '%ufo_json_rpc.security.token_key_in_header%'
+
     ufo_api_service.ping:
         class: Ufo\JsonRpcBundle\ApiMethod\PingProcedure
         tags:
