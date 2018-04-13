@@ -8,17 +8,17 @@
             "email": "ashterix69@gmail.com"
         }
     ],
-    "version" : "1.0.0",
+    "version" : "2.0.0",
     "type" : "symfony-bundle",
     "homepage": "https://github.com/UFO-CMS/json-rpc-bundle",
     "keywords" : ["ufo", "symfony", "api", "bundle", "json-rpc"],
     "minimum-stability" : "dev",
     "require" : {
-        "php": ">=5.4.2",
-        "symfony/symfony": ">=2.6",
-        "zendframework/zend-server": "2.6.*",
-        "zendframework/zend-json": "2.6.*",
-        "zendframework/zend-http": "2.5.*"
+        "php": ">=5.6",
+        "zendframework/zend-server": ">=2.6",
+        "zendframework/zend-json-server": ">=3.0",
+        "zendframework/zend-json": ">=2.6",
+        "zendframework/zend-http": ">=2.5"
     },
     "autoload" : {
         "psr-4" : { "Ufo\\JsonRpcBundle\\" : "src/Ufo/JsonRpcBundle/" }
@@ -26,6 +26,12 @@
     "extra" : {
         "branch-alias" : {
             "dev-master" : "1.0.x-dev"
+        }
+    },
+    "scripts": {
+        "auto-scripts": {
+            "cache:clear": "symfony-cmd",
+            "assets:install --symlink --relative %PUBLIC_DIR%": "symfony-cmd"
         }
     }
 }

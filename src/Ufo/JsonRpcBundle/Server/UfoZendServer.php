@@ -10,22 +10,22 @@
 namespace Ufo\JsonRpcBundle\Server;
 
 
-use Monolog\Logger;
+use Psr\Log\LoggerInterface;
 use Zend\Json\Server\Error;
 use Zend\Json\Server\Server;
 
 class UfoZendServer extends Server
 {
     /**
-     * @var Logger
+     * @var LoggerInterface
      */
     protected $logger;
 
     /**
      * UfoZendServer constructor.
-     * @param Logger $logger
+     * @param LoggerInterface $logger
      */
-    public function __construct(Logger $logger = null)
+    public function __construct(LoggerInterface $logger = null)
     {
         $this->logger = $logger;
         parent::__construct();

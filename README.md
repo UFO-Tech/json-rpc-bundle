@@ -1,4 +1,4 @@
-# ufo-cms/json-rpc-bundle v.1.0.0 (deprecated)
+# ufo-cms/json-rpc-bundle v.2.0.*
 JSON-RPC 2.0 Server for Symfony
 
 The bundle for simple usage api with zend json-rpc server
@@ -11,45 +11,46 @@ The bundle for simple usage api with zend json-rpc server
 Open a command console, enter your project directory and execute the following command to download the latest stable version of this bundle:
 
 ```console
-$ composer require ufo-cms/json-rpc-bundle 1.0.0
+$ composer require ufo-cms/json-rpc-bundle 2.0.*
 ```
 
 This command requires you to have Composer installed globally, as explained in the [installation chapter](https://getcomposer.org/doc/00-intro.md) of the Composer documentation.
 
 ### Step 2: Register the Bundle
 
-Then, register the bundle in the `app/AppKernel.php` file of your project:
+Then, register the bundle in the `config/bundles.php` file of your project:
 
 ```php
 <?php
-// app/AppKernel.php
+// config/bundles.php
 
-// ...
-class AppKernel extends Kernel
-{
-    public function registerBundles()
-    {
-        $bundles = [
-            // ...
-
-            new Ufo\JsonRpcBundle\UfoJsonRpcBundle(),
-            // ...
-        ];
-
-        // ...
-    }
-
+return [
     // ...
-}
+    Ufo\JsonRpcBundle\UfoJsonRpcBundle::class => ['all' => true],
+    // ...
+];
+
 ```
 
 
-### Step 3: Register the routes
+### Step 3: Add configs section
+
+Add empty config section for default values:
+
+```yaml
+# config/services.yaml
+ufo_json_rpc:
+    security:
+        # default parameters is enabled
+
+```
+
+### Step 4: Register the routes
 
 Register this bundle's routes by adding the following to your project's routing file:
 
 ```yaml
-# app/config/routing.yml
+# config/routes.yaml
 ufo_json_rpc_bundle:
     resource: "@UfoJsonRpcBundle/Resources/config/routing.yml"
 
@@ -57,10 +58,10 @@ ufo_json_rpc_bundle:
 The API is available on the url **http://example.com/api**
 If you want to change the url, redefine the routing in this way:
 ```yaml
-# app/config/routing.yml
+# config/routes.yaml
 ufo_api_server:
     path:     /my_new_api_path
-    defaults: { _controller: UfoJsonRpcBundle:Api:server }
+    controller: UfoJsonRpcBundle:Api:server 
     methods: ["GET", "POST"]
 ```
 Now the API is available on the url **http://example.com/my_new_api_path**
@@ -277,10 +278,10 @@ By default, security is disabled.
 
 The bundle supports security on the client's token.
 
-To enable safe mode, you must add the settings to the ```config.yml``` file.
+To enable safe mode, you must add the settings to the ```services.yaml``` file.
 
 ```yml
-# app/config/config.yml
+# config/services.yaml
 ufo_json_rpc:
     security:
         protected_get: true                     # Protected GET requests
