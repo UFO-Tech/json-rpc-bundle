@@ -1,4 +1,4 @@
-# ufo-cms/json-rpc-bundle
+# ufo-cms/json-rpc-bundle v.1.0.0 (Устаревшая версия)
 JSON-RPC 2.0 сервер для Symfony
 
 Пакет для простого использования api с помощью сервера zend json-rpc
