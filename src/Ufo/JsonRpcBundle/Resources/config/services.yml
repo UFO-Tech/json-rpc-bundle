@@ -2,6 +2,7 @@ services:
     ufo_api_server.zend_json_rpc_server_facade:
         class: Ufo\JsonRpcBundle\Facade\ZendJsonRpcServerFacade
         arguments: ['@router', '@ufo_api.security', '%kernel.environment%', '@logger']
+        public: true
 
     ufo_api_server.soupui.project_generator:
         class: Ufo\JsonRpcBundle\SoupUi\ProjectGenerator

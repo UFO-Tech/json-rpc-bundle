@@ -9,7 +9,7 @@
 namespace Ufo\JsonRpcBundle\Facade;
 
 
-use Monolog\Logger;
+use Psr\Log\LoggerInterface;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 use Ufo\JsonRpcBundle\Exceptions\BadRequestException;
 use Ufo\JsonRpcBundle\Facade\Interfaces\IFacadeJsonRpcServer;
@@ -51,9 +51,9 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
      * @param Router $router
      * @param IRpcSecurity $rpcSecurity
      * @param string $environment
-     * @param Logger $logger
+     * @param LoggerInterface $logger
      */
-    public function __construct(Router $router, IRpcSecurity $rpcSecurity, $environment, Logger $logger = null)
+    public function __construct(Router $router, IRpcSecurity $rpcSecurity, $environment, LoggerInterface $logger = null)
     {
         $this->zendServer = new Server($logger);
         $this->router = $router;
