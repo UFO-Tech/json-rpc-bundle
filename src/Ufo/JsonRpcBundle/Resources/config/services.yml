@@ -11,6 +11,7 @@ services:
             - '@router'
             - '%kernel.environment%'
             - '%ufo_json_rpc.security.token_key_in_header%'
+        public: true
 
     ufo_api_service.ping:
         class: Ufo\JsonRpcBundle\ApiMethod\PingProcedure
