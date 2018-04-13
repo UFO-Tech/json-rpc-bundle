@@ -1,4 +1,4 @@
-# ufo-cms/json-rpc-bundle
+# ufo-cms/json-rpc-bundle v.2.0.*
 JSON-RPC 2.0 сервер для Symfony
 
 Пакет для простого использования api с помощью сервера zend json-rpc
@@ -10,55 +10,56 @@ JSON-RPC 2.0 сервер для Symfony
 
 Откройте консоль, перейдите в папку проекта и выполните следующую команду, чтобы загрузить последнюю стабильную версию этого пакета:
 ```console
-$ composer require ufo-cms/json-rpc-bundle
+$ composer require ufo-cms/json-rpc-bundle 2.0.*
 ```
-Эта команда подразумевает, что вы установили Composer глобально, как описано в [главе установки] (https://getcomposer.org/doc/00-intro.md) документации Composer.
+Эта команда подразумевает, что вы установили Composer глобально, как описано в [главе установки](https://getcomposer.org/doc/00-intro.md) документации Composer.
 
 ### Шаг 2: Регистрация пакета
 
-Зарегистрируйте пакет в файле `app/AppKernel.php` вашего проекта:
+Убедитесь, что пакет зарегистрировался в файле `config/bundles.php` вашего проекта:
 
 ```php
 <?php
-// app/AppKernel.php
+// config/bundles.php
 
-// ...
-class AppKernel extends Kernel
-{
-    public function registerBundles()
-    {
-        $bundles = [
-            // ...
-
-            new Ufo\JsonRpcBundle\UfoJsonRpcBundle(),
-            // ...
-        ];
-
-        // ...
-    }
-
+return [
     // ...
-}
+    Ufo\JsonRpcBundle\UfoJsonRpcBundle::class => ['all' => true],
+    // ...
+];
+
+```
+### Step 3: Добавление секции параметров
+
+Добавьте пустую секцию параметров:
+
+```yaml
+# config/services.yaml
+ufo_json_rpc:
+    security:
+        # default parameters is enabled
+
 ```
 
 
-### Шаг 3: Регистрация маршрутов
+
+### Шаг 4: Регистрация путей
 
 Зарегистрируйте маршруты этого пакета, добавив в файл маршрутизации вашего проекта следующую информацию:
 
 ```yaml
-# app/config/routing.yml
+# config/routes.yaml
 ufo_json_rpc_bundle:
     resource: "@UfoJsonRpcBundle/Resources/config/routing.yml"
 
 ```
 По-умолчанию, API доступно по url **http://example.com/api**
-Если вы хотите сменить url, переопределите маршрут следующим образом:
+Если вы хотите сменить url, переопределите путь следующим образом:
 ```yaml
-# app/config/routing.yml
+# config/routes.yaml
 ufo_api_server:
     path:     /my_new_api_path
-    defaults: { _controller: UfoJsonRpcBundle:Api:server }
+    controller: UfoJsonRpcBundle:Api:server 
     methods: ["GET", "POST"]
 ```
 Теперь API доступно по url **http://example.com/my_new_api_path**
@@ -280,10 +281,10 @@ Response:
 
 Пакет поддерживает безопасность по клиентскому ключу.
 
-Для включения безопасного режима, вы должны добавить соответствующие настройки в ```config.yml```.
+Для включения безопасного режима, вы должны добавить соответствующие настройки в ```services.yaml```.
 
 ```yml
-# app/config/config.yml
+# config/services.yaml
 ufo_json_rpc:
     security:
         protected_get: true                     # защитить GET запросы
