@@ -10,7 +10,7 @@ JSON-RPC 2.0 сервер для Symfony
 
 Откройте консоль, перейдите в папку проекта и выполните следующую команду, чтобы загрузить последнюю стабильную версию этого пакета:
 ```console
-$ composer require ufo-cms/json-rpc-bundle
+$ composer require ufo-cms/json-rpc-bundle 1.0.0
 ```
 Эта команда подразумевает, что вы установили Composer глобально, как описано в [главе установки] (https://getcomposer.org/doc/00-intro.md) документации Composer.
 
