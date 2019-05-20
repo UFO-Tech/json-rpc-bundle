@@ -8,7 +8,6 @@
             "email": "ashterix69@gmail.com"
         }
     ],
-    "version" : "2.0.1",
     "type" : "symfony-bundle",
     "homepage": "https://github.com/UFO-CMS/json-rpc-bundle",
     "keywords" : ["ufo", "symfony", "api", "bundle", "json-rpc"],
