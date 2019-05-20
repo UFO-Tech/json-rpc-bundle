@@ -43,7 +43,7 @@ class UfoZendServer extends Server
     {
         $error = parent::fault($fault, $code, $data);
         if ($this->logger instanceof LoggerInterface) {
-            $this->logger->error((string)$error, [$data]);
+            $this->logger->error((string)$error->getData(), ['method' => $this->getRequest()->getMethod(), 'params' => $this->getRequest()->getParams()]);
         }
         return $error;
     }
