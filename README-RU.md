@@ -1,7 +1,10 @@
-# ufo-cms/json-rpc-bundle v.2.0.*
-JSON-RPC 2.0 сервер для Symfony
+# ufo-cms/json-rpc-bundle v.2.1.*
+JSON-RPC 2.1 сервер для Symfony
 
 Пакет для простого использования api с помощью сервера zend json-rpc
+
+## Что нового?
+* Добавлена автоматическая обработка мультизапросов (Butch Requests)
 
 
 ## Начало работы
