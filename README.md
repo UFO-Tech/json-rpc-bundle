@@ -1,4 +1,4 @@
-# ufo-cms/json-rpc-bundle v.2.1.*
+# ufo-cms/json-rpc-bundle v.2.1.* (ver => 2.2 only for Symfony 4+)
 JSON-RPC 2.0 Server for Symfony
 
 The bundle for simple usage api with zend json-rpc server
@@ -47,6 +47,25 @@ ufo_json_rpc:
 
 ```
 
+### Step 3 (Symfony 4+): Add configs section
+
+Add empty config section for default values:
+
+```yaml
+# config/services.yaml
+ufo_json_rpc:
+    security:
+        # default parameters is enabled
+
+
+services:
+    #Controllers section
+    Ufo\JsonRpcBundle\Controller\ApiController:
+        class: 'Ufo\JsonRpcBundle\Controller\ApiController'
+        arguments: ['@ufo_api_server.zend_json_rpc_server_facade', '@ufo_api_server.soupui.project_generator']
+        tags: ['controller.service_arguments']
+```
+
 ### Step 4: Register the routes
 
 Register this bundle's routes by adding the following to your project's routing file:
@@ -67,6 +86,18 @@ ufo_api_server:
     methods: ["GET", "POST"]
 ```
 Now the API is available on the url **http://example.com/my_new_api_path**
+
+### Step 4 (Symfony 4+): Register the routes
+
+Register this bundle's routes by adding the following to your project's routing file:
+
+```yaml
+# config/routes.yaml
+ufo_api_server:
+    path:     /api
+    controller: Ufo\JsonRpcBundle\Controller\ApiController::serverAction
+    methods: ["GET", "POST"]
+```
 
 Congratulations, your RPC server is ready to use!!!
 
