@@ -1,5 +1,5 @@
-# ufo-cms/json-rpc-bundle v.2.1.*
-JSON-RPC 2.0 Server for Symfony
+# ufo-cms/json-rpc-bundle v.3.*
+JSON-RPC 2.0 Server for Symfony 4+
 
 The bundle for simple usage api with zend json-rpc server
 
@@ -13,7 +13,7 @@ The bundle for simple usage api with zend json-rpc server
 Open a command console, enter your project directory and execute the following command to download the latest stable version of this bundle:
 
 ```console
-$ composer require ufo-cms/json-rpc-bundle 2.0.*
+$ composer require ufo-cms/json-rpc-bundle 3.*
 ```
 
 This command requires you to have Composer installed globally, as explained in the [installation chapter](https://getcomposer.org/doc/00-intro.md) of the Composer documentation.
@@ -34,8 +34,7 @@ return [
 
 ```
 
-
-### Step 3: Add configs section
+### Step 3 : Add configs section
 
 Add empty config section for default values:
 
@@ -45,6 +44,13 @@ ufo_json_rpc:
     security:
         # default parameters is enabled
 
+
+services:
+    #Controllers section
+    Ufo\JsonRpcBundle\Controller\ApiController:
+        class: 'Ufo\JsonRpcBundle\Controller\ApiController'
+        arguments: ['@ufo_api_server.zend_json_rpc_server_facade', '@ufo_api_server.soupui.project_generator']
+        tags: ['controller.service_arguments']
 ```
 
 ### Step 4: Register the routes
@@ -53,20 +59,11 @@ Register this bundle's routes by adding the following to your project's routing 
 
 ```yaml
 # config/routes.yaml
-ufo_json_rpc_bundle:
-    resource: "@UfoJsonRpcBundle/Resources/config/routing.yml"
-
-```
-The API is available on the url **http://example.com/api**
-If you want to change the url, redefine the routing in this way:
-```yaml
-# config/routes.yaml
 ufo_api_server:
-    path:     /my_new_api_path
-    controller: UfoJsonRpcBundle:Api:server 
+    path:     /api
+    controller: Ufo\JsonRpcBundle\Controller\ApiController::serverAction
     methods: ["GET", "POST"]
 ```
-Now the API is available on the url **http://example.com/my_new_api_path**
 
 Congratulations, your RPC server is ready to use!!!
 
