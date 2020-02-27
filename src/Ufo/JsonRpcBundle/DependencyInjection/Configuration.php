@@ -13,12 +13,17 @@ use Symfony\Component\Config\Definition\ConfigurationInterface;
 class Configuration implements ConfigurationInterface
 {
     /**
+     * Default TreeBuilder name
+     */
+    const TREE_BUILDER_NAME = 'ufo_json_rpc';
+
+    /**
      * {@inheritdoc}
      */
     public function getConfigTreeBuilder()
     {
-        $treeBuilder = new TreeBuilder();
-        $rootNode = $treeBuilder->root('ufo_json_rpc');
+        $treeBuilder = new TreeBuilder(self::TREE_BUILDER_NAME);
+        $rootNode = $treeBuilder->getRootNode();
 
         $rootNode
             ->children()
