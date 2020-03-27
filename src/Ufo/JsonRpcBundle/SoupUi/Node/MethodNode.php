@@ -13,7 +13,7 @@ namespace Ufo\JsonRpcBundle\SoupUi\Node;
 use Ufo\JsonRpcBundle\SoupUi\Node\Interfaces\IHaveChildNodes;
 use Ufo\JsonRpcBundle\SoupUi\Node\Interfaces\ISoupUiNode;
 use Ufo\JsonRpcBundle\SoupUi\Node\Traits\HaveChildNodesTrait;
-use Zend\Http\Request;
+use Laminas\Http\Request;
 
 class MethodNode implements ISoupUiNode, IHaveChildNodes
 {

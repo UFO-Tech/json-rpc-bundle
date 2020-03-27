@@ -7,7 +7,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Ufo\JsonRpcBundle\Facade\ZendJsonRpcServerFacade;
 use Ufo\JsonRpcBundle\SoupUi\ProjectGenerator;
 use Ufo\JsonRpcBundle\Exceptions\InvalidButchRequestExceptions;
-use Zend\Json\Server\Smd;
+use Laminas\Json\Server\Smd;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 /**
