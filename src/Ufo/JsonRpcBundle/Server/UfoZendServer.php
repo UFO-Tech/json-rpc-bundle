@@ -11,8 +11,8 @@ namespace Ufo\JsonRpcBundle\Server;
 
 
 use Psr\Log\LoggerInterface;
-use Zend\Json\Server\Error;
-use Zend\Json\Server\Server;
+use Laminas\Json\Server\Error;
+use Laminas\Json\Server\Server;
 
 class UfoZendServer extends Server
 {

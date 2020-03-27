@@ -24,7 +24,7 @@ use Ufo\JsonRpcBundle\SoupUi\Node\ParametersNode;
 use Ufo\JsonRpcBundle\SoupUi\Node\RequestNode;
 use Ufo\JsonRpcBundle\SoupUi\Node\ResourceNode;
 use Ufo\JsonRpcBundle\SoupUi\Node\RootNode;
-use Zend\Json\Server\Smd\Service;
+use Laminas\Json\Server\Smd\Service;
 
 class ProjectGenerator
 {

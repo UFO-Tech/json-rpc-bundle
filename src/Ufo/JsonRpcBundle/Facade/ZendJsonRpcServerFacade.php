@@ -15,8 +15,8 @@ use Ufo\JsonRpcBundle\Exceptions\BadRequestException;
 use Ufo\JsonRpcBundle\Facade\Interfaces\IFacadeJsonRpcServer;
 use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
 use Ufo\JsonRpcBundle\Server\UfoZendServer as Server;
-use Zend\Json\Server\Error;
-use Zend\Json\Server\Response\Http;
+use Laminas\Json\Server\Error;
+use Laminas\Json\Server\Response\Http;
 use \Symfony\Bundle\FrameworkBundle\Routing\Router;
 
 class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
@@ -153,7 +153,7 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
         try {
             $this->rpcSecurity->isValidGetRequest();
             $this->zendServer->setTarget($this->router->generate('ufo_api_server'))
-                ->setEnvelope(\Zend\Json\Server\Smd::ENV_JSONRPC_2);
+                ->setEnvelope(\Laminas\Json\Server\Smd::ENV_JSONRPC_2);
             $response = $this->zendServer->getServiceMap();
         } catch (\Exception $e) {
             $response = $this->createErrorResponse($e->getMessage(), Error::ERROR_OTHER, $e);
