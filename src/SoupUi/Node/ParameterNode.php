@@ -15,27 +15,6 @@ use Ufo\JsonRpcBundle\SoupUi\Node\Interfaces\ISoupUiNode;
 
 class ParameterNode implements ICanTransformToArray
 {
-
-    /**
-     * @var string
-     */
-    protected $name;
-
-    /**
-     * @var string
-     */
-    protected $value;
-
-    /**
-     * @var string
-     */
-    protected $style;
-
-    /**
-     * @var string
-     */
-    protected $default;
-
     /**
      * ParameterNode constructor.
      * @param string $name
@@ -43,18 +22,15 @@ class ParameterNode implements ICanTransformToArray
      * @param string $style
      * @param string $default
      */
-    public function __construct($name, $value, $style = 'HEADER', $default = null)
+    public function __construct(protected string $name, protected string $value, protected string $style = 'HEADER', protected ?string $default = null)
     {
-        $this->name = $name;
-        $this->value = $value;
-        $this->style = $style;
-        $this->default = $default ?: $value;
+        $this->default = $this->default ?? $this->value;
     }
 
     /**
      * @return array
      */
-    public function toArray()
+    public function toArray(): array
     {
         return  [
             ISoupUiNode::SOUPUI_NS . 'name' => $this->name,

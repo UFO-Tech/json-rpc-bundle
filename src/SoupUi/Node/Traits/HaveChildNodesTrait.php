@@ -18,13 +18,13 @@ trait HaveChildNodesTrait
     /**
      * @var array
      */
-    protected $child = [];
+    protected array $child = [];
 
     /**
      * @param ISoupUiNode $node
      * @return $this
      */
-    public function addChildNode(ISoupUiNode $node)
+    public function addChildNode(ISoupUiNode $node): static
     {
         $this->child[] = $node;
         return $this;
@@ -33,7 +33,7 @@ trait HaveChildNodesTrait
     /**
      * @return ISoupUiNode[]
      */
-    public function getChildNodes()
+    public function getChildNodes(): array
     {
         return $this->child;
     }
@@ -42,7 +42,7 @@ trait HaveChildNodesTrait
      * @param ISoupUiNode[] $nodes
      * @return $this
      */
-    protected function setChild($nodes)
+    protected function setChild(array $nodes): static
     {
         foreach ($nodes as $node) {
             $this->addChildNode($node);

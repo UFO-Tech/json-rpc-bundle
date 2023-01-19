@@ -21,7 +21,7 @@ class InterfaceNode implements ISoupUiNode, IHaveChildNodes
 
     const NODE_NAME = 'interface';
 
-    protected $attributes = [
+    protected array $attributes = [
         'xsi:type' => 'con:RestService',
         'wadlVersion' => 'http://wadl.dev.java.net/2009/02',
         'name' => 'JsonRPC',
@@ -43,7 +43,7 @@ class InterfaceNode implements ISoupUiNode, IHaveChildNodes
     /**
      * @return array
      */
-    public function getAttributes()
+    public function getAttributes(): array
     {
         return $this->attributes;
     }
@@ -51,7 +51,7 @@ class InterfaceNode implements ISoupUiNode, IHaveChildNodes
     /**
      * @return string
      */
-    public function getTag()
+    public function getTag(): string
     {
         return static::NODE_NAME;
     }
@@ -59,7 +59,7 @@ class InterfaceNode implements ISoupUiNode, IHaveChildNodes
     /**
      * @return array
      */
-    public function toArray()
+    public function toArray(): array
     {
         $content = [
             '@ns' => static::SOUPUI_NS,

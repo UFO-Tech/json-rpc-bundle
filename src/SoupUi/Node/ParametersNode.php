@@ -18,7 +18,7 @@ class ParametersNode implements ISoupUiNode
     /**
      * @var array
      */
-    protected $parameters;
+    protected array $parameters;
 
     /**
      * EndpointsNode constructor.
@@ -39,7 +39,7 @@ class ParametersNode implements ISoupUiNode
     /**
      * @return array
      */
-    public function getAttributes()
+    public function getAttributes(): array
     {
         return [];
     }
@@ -47,7 +47,7 @@ class ParametersNode implements ISoupUiNode
     /**
      * @return string
      */
-    public function getTag()
+    public function getTag(): string
     {
         return 'parameters';
     }
@@ -55,7 +55,7 @@ class ParametersNode implements ISoupUiNode
     /**
      * @return array
      */
-    public function toArray()
+    public function toArray(): array
     {
         $parametersArray = [];
         foreach ($this->parameters as $parameter) {

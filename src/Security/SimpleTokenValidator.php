@@ -16,17 +16,11 @@ class SimpleTokenValidator implements ITokenValidator
 {
 
     /**
-     * @var array
-     */
-    protected $clientsTokens = [];
-
-    /**
      * SimpleTokenValidator constructor.
      * @param array $clientsTokens
      */
-    public function __construct(array $clientsTokens)
+    public function __construct(protected array $clientsTokens = [])
     {
-        $this->clientsTokens = $clientsTokens;
     }
 
     /**
@@ -34,19 +28,18 @@ class SimpleTokenValidator implements ITokenValidator
      * @return bool
      * @throws InvalidTokenException
      */
-    public function isValid($token)
+    public function isValid(string $token): bool
     {
-        $valid = in_array($token, $this->clientsTokens);
-        if (false == $valid) {
+        if (false === in_array($token, $this->clientsTokens)) {
             throw new InvalidTokenException();
         }
-        return $valid;
+        return true;
     }
 
     /**
      * @return array
      */
-    public function getClientsTokens()
+    public function getClientsTokens(): array
     {
         return $this->clientsTokens;
     }

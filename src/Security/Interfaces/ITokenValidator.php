@@ -18,5 +18,5 @@ interface ITokenValidator
      * @return bool
      * @throws InvalidTokenException
      */
-    public function isValid($token);
+    public function isValid(string $token): bool;
 }

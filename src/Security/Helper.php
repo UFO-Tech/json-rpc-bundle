@@ -21,7 +21,7 @@ class Helper
      * @return string
      * @throws TokenNotFoundInHeaderException
      */
-    public static function tokenFromRequest(Request $request, $tokenHeaderKey)
+    public static function tokenFromRequest(Request $request, string $tokenHeaderKey): string
     {
         $token = $request->headers->get($tokenHeaderKey);
         if (is_null($token)) {

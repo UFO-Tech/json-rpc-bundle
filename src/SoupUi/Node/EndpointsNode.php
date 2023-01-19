@@ -14,25 +14,18 @@ use Ufo\JsonRpcBundle\SoupUi\Node\Interfaces\ISoupUiNode;
 
 class EndpointsNode implements ISoupUiNode
 {
-
-    /**
-     * @var string
-     */
-    protected $endpoint;
-
     /**
      * EndpointsNode constructor.
      * @param string $endpoint
      */
-    public function __construct($endpoint)
+    public function __construct(protected string $endpoint)
     {
-        $this->endpoint = $endpoint;
     }
 
     /**
      * @return array
      */
-    public function getAttributes()
+    public function getAttributes(): array
     {
         return [];
     }
@@ -40,7 +33,7 @@ class EndpointsNode implements ISoupUiNode
     /**
      * @return string
      */
-    public function getTag()
+    public function getTag(): string
     {
         return 'endpoints';
     }
@@ -48,7 +41,7 @@ class EndpointsNode implements ISoupUiNode
     /**
      * @return array
      */
-    public function toArray()
+    public function toArray(): array
     {
         return [
             $this->getTag() => [

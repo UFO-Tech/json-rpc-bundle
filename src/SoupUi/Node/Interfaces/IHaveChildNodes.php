@@ -17,10 +17,10 @@ interface IHaveChildNodes
      * @param ISoupUiNode $node
      * @return $this
      */
-    public function addChildNode(ISoupUiNode $node);
+    public function addChildNode(ISoupUiNode $node): static;
 
     /**
      * @return ISoupUiNode[]
      */
-    public function getChildNodes();
+    public function getChildNodes(): array;
 }

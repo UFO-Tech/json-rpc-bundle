@@ -19,37 +19,37 @@ interface IRpcSecurity
     /**
      * @return bool
      */
-    public function isProtectedGet();
+    public function isProtectedGet(): bool;
 
     /**
      * @return bool
      */
-    public function isProtectedPost();
+    public function isProtectedPost(): bool;
 
     /**
      * @return string
      */
-    public function getTokenHeader();
+    public function getTokenHeader(): string;
 
     /**
      * @param $token
      * @return bool
      * @throws InvalidTokenException
      */
-    public function isValidToken($token);
+    public function isValidToken($token): bool;
 
     /**
      * @return bool
      * @throws InvalidTokenException
      * @throws TokenNotFoundInHeaderException
      */
-    public function isValidGetRequest();
+    public function isValidGetRequest(): bool;
 
     /**
      * @return bool
      * @throws InvalidTokenException
      * @throws TokenNotFoundInHeaderException
      */
-    public function isValidPostRequest();
+    public function isValidPostRequest(): bool;
 
 }

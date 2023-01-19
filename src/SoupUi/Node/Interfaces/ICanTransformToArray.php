@@ -15,5 +15,5 @@ interface ICanTransformToArray
     /**
      * @return array
      */
-    public function toArray();
+    public function toArray(): array;
 }

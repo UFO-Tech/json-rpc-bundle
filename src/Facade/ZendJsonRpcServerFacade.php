@@ -10,61 +10,48 @@ namespace Ufo\JsonRpcBundle\Facade;
 
 
 use Psr\Log\LoggerInterface;
+use Symfony\Component\Routing\RouterInterface;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 use Ufo\JsonRpcBundle\Exceptions\BadRequestException;
 use Ufo\JsonRpcBundle\Facade\Interfaces\IFacadeJsonRpcServer;
 use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
-use Ufo\JsonRpcBundle\Server\UfoZendServer as Server;
 use Laminas\Json\Server\Error;
 use Laminas\Json\Server\Response\Http;
-use \Symfony\Bundle\FrameworkBundle\Routing\Router;
+use Ufo\JsonRpcBundle\Server\UfoZendServer;
 
 class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
 {
     /**
-     * @var Server
+     * @var UfoZendServer
      */
-    protected $zendServer;
-
-    /**
-     * @var string
-     */
-    protected $environment;
+    protected UfoZendServer $zendServer;
 
     /**
      * @var array
      */
-    protected $nsAliases = [];
-
-    /**
-     * @var Router
-     */
-    protected $router;
-
-    /**
-     * @var IRpcSecurity
-     */
-    protected $rpcSecurity;
+    protected array $nsAliases = [];
 
     /**
      * ZendJsonRpcServerFacade constructor.
-     * @param Router $router
+     * @param RouterInterface $router
      * @param IRpcSecurity $rpcSecurity
      * @param string $environment
-     * @param LoggerInterface $logger
+     * @param LoggerInterface|null $logger
      */
-    public function __construct(Router $router, IRpcSecurity $rpcSecurity, $environment, LoggerInterface $logger = null)
+    public function __construct(
+        protected RouterInterface $router,
+        protected IRpcSecurity $rpcSecurity,
+        protected string $environment,
+        LoggerInterface $logger = null
+    )
     {
-        $this->zendServer = new Server($logger);
-        $this->router = $router;
-        $this->environment = $environment;
-        $this->rpcSecurity = $rpcSecurity;
+        $this->zendServer = new UfoZendServer($logger);
     }
 
     /**
-     * @return object|Server JsonRpc Server
+     * @return UfoZendServer JsonRpc Server
      */
-    public function getServer()
+    public function getServer(): UfoZendServer
     {
         return $this->zendServer;
     }
@@ -72,10 +59,10 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
     /**
      * @param IRpcService $procedure
      * @param string $namespace
-     * @param mixed|null $argv
+     * @param mixed $argv
      * @return $this
      */
-    public function addProcedure(IRpcService $procedure, $namespace = '', $argv = null)
+    public function addProcedure(IRpcService $procedure, string $namespace = '', mixed $argv = null): static
     {
         if (empty($namespace) && is_object($procedure)) {
             $className = explode('\\', get_class($procedure));

@@ -15,20 +15,10 @@ use Ufo\JsonRpcBundle\SoupUi\Node\Interfaces\ISoupUiNode;
 class RequestNode implements ISoupUiNode
 {
 
-    protected $attributes = [
+    protected array $attributes = [
         'name' => 'JsonRPC',
         'mediaType' => 'application/json',
     ];
-
-    /**
-     * @var string
-     */
-    protected $endpoint;
-
-    /**
-     * @var array
-     */
-    protected $body;
 
     /**
      * RequestNode constructor.
@@ -36,10 +26,8 @@ class RequestNode implements ISoupUiNode
      * @param array $attributes
      * @param array $body
      */
-    public function __construct($endpoint, array $attributes = [], array $body = [])
+    public function __construct(protected string $endpoint, array $attributes = [], protected array $body = [])
     {
-        $this->endpoint = $endpoint;
-        $this->body = $body;
         $this->attributes['name'] = 'request_' . uniqid();
         $this->attributes = array_merge($this->attributes, $attributes);
     }
@@ -47,7 +35,7 @@ class RequestNode implements ISoupUiNode
     /**
      * @return array
      */
-    public function getAttributes()
+    public function getAttributes(): array
     {
         return $this->attributes;
     }
@@ -55,7 +43,7 @@ class RequestNode implements ISoupUiNode
     /**
      * @return string
      */
-    public function getTag()
+    public function getTag(): string
     {
         return 'request';
     }
@@ -63,7 +51,7 @@ class RequestNode implements ISoupUiNode
     /**
      * @return array
      */
-    public function toArray()
+    public function toArray(): array
     {
         return [
             '@ns' => ISoupUiNode::SOUPUI_NS,

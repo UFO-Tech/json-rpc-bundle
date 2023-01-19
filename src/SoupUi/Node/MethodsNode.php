@@ -33,7 +33,7 @@ class MethodsNode implements ISoupUiNode, IHaveChildNodes
     /**
      * @return array
      */
-    public function getAttributes()
+    public function getAttributes(): array
     {
         return [];
     }
@@ -41,7 +41,7 @@ class MethodsNode implements ISoupUiNode, IHaveChildNodes
     /**
      * @return string
      */
-    public function getTag()
+    public function getTag(): string
     {
         return static::NODE_NAME;
     }
@@ -49,7 +49,7 @@ class MethodsNode implements ISoupUiNode, IHaveChildNodes
     /**
      * @return array
      */
-    public function toArray()
+    public function toArray(): array
     {
         $content = [
             '@ns' => static::SOUPUI_NS,

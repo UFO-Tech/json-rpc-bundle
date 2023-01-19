@@ -12,8 +12,7 @@ namespace Ufo\JsonRpcBundle\SoupUi;
 
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
-use Symfony\Component\Routing\Router;
-use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
+use Symfony\Component\Routing\RouterInterface;
 use Ufo\JsonRpcBundle\SoupUi\Node\EndpointsNode;
 use Ufo\JsonRpcBundle\SoupUi\Node\InterfaceNode;
 use Ufo\JsonRpcBundle\SoupUi\Node\Interfaces\ISoupUiNode;
@@ -32,37 +31,22 @@ class ProjectGenerator
     /**
      * @var Request
      */
-    protected $request;
+    protected Request $request;
 
     /**
      * @var array
      */
-    protected $methods = [];
+    protected array $methods = [];
 
     /**
      * @var \SimpleXMLElement
      */
-    protected $xmlNode;
+    protected \SimpleXMLElement $xmlNode;
 
     /**
      * @var \SimpleXMLElement
      */
-    protected $resourcePost;
-
-    /**
-     * @var Router
-     */
-    protected $router;
-
-    /**
-     * @var string
-     */
-    protected $env;
-
-    /**
-     * @var string
-     */
-    protected $tokenKey;
+    protected \SimpleXMLElement $resourcePost;
 
     /**
      * @var array
@@ -70,24 +54,20 @@ class ProjectGenerator
     protected $services = [];
 
     /**
-     * ProjectGenerator constructor.
      * @param RequestStack $requestStack
-     * @param Router $router
-     * @param string $environment
-     * @param null $soaTokenKey
+     * @param RouterInterface $router
+     * @param string $env
+     * @param string|null $tokenKey
      */
-    public function __construct(RequestStack $requestStack, Router $router, $environment = 'prod', $soaTokenKey = null)
+    public function __construct(RequestStack $requestStack, protected RouterInterface $router, protected string $env = 'prod', protected ?string $tokenKey = null)
     {
         $this->request = $requestStack->getCurrentRequest();
-        $this->router = $router;
-        $this->env = $environment;
-        $this->tokenKey = $soaTokenKey;
     }
 
     /**
      * @return array
      */
-    protected function getSoupUiTemplate()
+    protected function getSoupUiTemplate(): array
     {
         $interface = new InterfaceNode([], [
             new EndpointsNode($this->request->getSchemeAndHttpHost()),
@@ -125,7 +105,7 @@ class ProjectGenerator
     /**
      * @return array
      */
-    protected function createParameters()
+    protected function createParameters(): array
     {
         $parameters = [];
         if ($this->env == 'dev') {
@@ -141,7 +121,7 @@ class ProjectGenerator
      * @param Service $procedure
      * @return $this
      */
-    public function addService(Service $procedure)
+    public function addService(Service $procedure): static
     {
         $showExamples = $this->request->query->get('show_examples');
         $params = [];
@@ -166,7 +146,7 @@ class ProjectGenerator
      * @param string $type
      * @return mixed
      */
-    protected function paramExampleByType($type)
+    protected function paramExampleByType(string $type): mixed
     {
         switch ($type) {
             case 'string':
@@ -187,7 +167,7 @@ class ProjectGenerator
     /**
      * @return string
      */
-    public function createXml()
+    public function createXml(): string
     {
         $root = new RootNode([
             'name' => $this->request->getHost()
@@ -205,7 +185,7 @@ class ProjectGenerator
      * @param array $params
      * @return array
      */
-    protected function createRequestBody($method, $params = [])
+    protected function createRequestBody(string $method, array $params = []): array
     {
         return [
             'id' => null,

@@ -16,18 +16,9 @@ use Laminas\Json\Server\Server;
 
 class UfoZendServer extends Server
 {
-    /**
-     * @var LoggerInterface
-     */
-    protected $logger;
 
-    /**
-     * UfoZendServer constructor.
-     * @param LoggerInterface $logger
-     */
-    public function __construct(LoggerInterface $logger = null)
+    public function __construct(protected ?LoggerInterface $logger = null)
     {
-        $this->logger = $logger;
         parent::__construct();
     }
 
@@ -39,7 +30,7 @@ class UfoZendServer extends Server
      * @param  mixed $data
      * @return Error
      */
-    public function fault($fault = null, $code = 404, $data = null)
+    public function fault($fault = null, $code = 404, $data = null): Error
     {
         $error = parent::fault($fault, $code, $data);
         if ($this->logger instanceof LoggerInterface) {

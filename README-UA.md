@@ -1,5 +1,5 @@
-# ufo-cms/json-rpc-bundle v.3.*
-JSON-RPC 2.0 сервер для Symfony
+# ufo-cms/json-rpc-bundle v.4.*
+JSON-RPC 2.0 сервер для Symfony v.6.*
 
 Пакет для легкого створення api за допомогою сервера laminas json-rpc
 
@@ -39,7 +39,7 @@ ufo_json_rpc:
         # default parameters is enabled
 
 ```
-В подальшому конфігурувати пакет ми будем тут
+Надалі конфігурувати пакет ми будем тут
 
 
 ### Крок 4: Реєстрація маршрутів
@@ -153,16 +153,6 @@ class MyRpcProcedure implements IRpcService
         return static::HELLO . ', ' . $name;
     }
 }
-```
-Якщо у вас відключений autowire, зареєструйте ваш клас як сервіс та маркуйте його тегом ***ufo.rpc.service***:
-```yaml
-# @MyBundle/Resources/config/services.yml
-services:
-    rpc.my_procedure:
-        class: MyBundle\RpcService\MyRpcProcedure
-        tags:
-            - { name: ufo.rpc.service }
-
 ```
 ### Крок 6: Профіт
 Виконайте GET запит до API, щоб переконатися, що ваші нові методи доступні:

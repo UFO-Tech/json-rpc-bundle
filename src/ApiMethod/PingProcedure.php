@@ -16,7 +16,7 @@ class PingProcedure implements IRpcService
     /**
      * @return string
      */
-    public function ping()
+    public function ping(): string
     {
         return "PONG";
     }

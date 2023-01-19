@@ -1,26 +1,21 @@
-# ufo-cms/json-rpc-bundle v.3.*
-JSON-RPC 2.0 Server for Symfony 4+
+# ufo-cms/json-rpc-bundle v.4.*
+JSON-RPC 2.0 server for Symfony v.6.*
 
-The bundle for simple usage api with laminas json-rpc server
-
-## What's new?
-* Added automatic processing of multi-requests (Butch Requests)
+A package to easily create an api using json-rpc server laminas
 
 ## Getting Started
 
-### Step 1: Install the Bundle
+### Step 1: Installation
 
-Open a command console, enter your project directory and execute the following command to download the latest stable version of this bundle:
-
+From the console in the project folder, run this command to download the latest version of this package:
 ```console
-$ composer require ufo-cms/json-rpc-bundle 3.*
+$ composer requires ufo-cms/json-rpc-bundle 3.*
 ```
+This command is relevant if you have installed Composer globally as described in [doc](https://getcomposer.org/doc/00-intro.md) Composer documentation.
 
-This command requires you to have Composer installed globally, as explained in the [installation chapter](https://getcomposer.org/doc/00-intro.md) of the Composer documentation.
+### Step 2: Register the package
 
-### Step 2: Register the Bundle
-
-Then, register the bundle in the `config/bundles.php` file of your project:
+Make sure that the bundle is automatically registered in your project's `config/bundles.php' file:
 
 ```php
 <?php
@@ -33,42 +28,42 @@ return [
 ];
 
 ```
+### Step 3: Adding parameters
 
-### Step 3 : Add configs section
-
-Add empty config section for default values:
-
+Add an empty parameters section:
+In the `config/bundles` folder, add the `ufo_api.yaml` file with the following content
 ```yaml
-# config/services.yaml
+# config/bundles/ufo_api.yaml
 ufo_json_rpc:
     security:
         # default parameters is enabled
-
-
-services:
-    #Controllers section
-    Ufo\JsonRpcBundle\Controller\ApiController:
-        class: 'Ufo\JsonRpcBundle\Controller\ApiController'
-        arguments: ['@ufo_api_server.zend_json_rpc_server_facade', '@ufo_api_server.soupui.project_generator']
-        tags: ['controller.service_arguments']
 ```
+In the future, we will configure the package here
 
-### Step 4: Register the routes
 
-Register this bundle's routes by adding the following to your project's routing file:
+### Step 4: Registration of routes
 
+In the `config/routes` folder, add the `ufo_api.yaml` file with the following content
 ```yaml
-# config/routes.yaml
-ufo_api_server:
-    path:     /api
-    controller: Ufo\JsonRpcBundle\Controller\ApiController::serverAction
-    methods: ["GET", "POST"]
+# config/routes/ufo_api.yaml
+ufo_json_rpc_bundle:
+    resource: "@UfoJsonRpcBundle/Resources/config/routing.yml"
 ```
+By default, the API is available at the url **http://example.com/api**
+If you need to change the url, reconfigure the route as follows:
+```yaml
+# config/routes/ufo_api.yaml
+ufo_api_server:
+     path: /my_new_api_path
+     controller: UfoJsonRpcBundle:Api:server
+     methods: ["GET", "POST"]
+```
+The API will be available at the url **http://example.com/my_new_api_path**
 
-Congratulations, your RPC server is ready to use!!!
+##Congratulations, your RPC server is ready to go!!!
 
-Execute GET request on url you use to access your server.
-GET /api:
+### Examples of use
+**GET** `/api`:
 
 ```json
 {
@@ -99,29 +94,30 @@ GET /api:
 
 }
 ```
-The **ping** method is available by default and you can immediately execute a POST request to make sure that the server is working as it should.
+The **ping** method is set right away, you can do a POST request right away to make sure the server is working.
 
-POST /api
+**POST** `/api`
+
 Request:
 ```json
 {
-    "id":123,
-    "method": "ping"
+     "id":123,
+     "method": "ping"
 }
 ```
 Response:
 ```json
 {
-    "result": "PONG",
-    "id": "123"
+     "result": "PONG",
+     "id": "123"
 }
 ```
 
-### Step 4: Add your procedures to rpc server
+### Step 5: Adding custom procedures to the rpc server
 
-You can easily add methods in rpc server:
+You can easily add methods to the rpc server:
 
-Create any class, implement interface ***Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService***
+Create any class that will implement ***Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService*** interface and implement any public method in that class
 ```php
 <?php
 
@@ -131,176 +127,169 @@ use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 
 class MyRpcProcedure implements IRpcService
 {
-    /**
-     * @var string
-     */
-    const HELLO = 'Hello';
+     /**
+      * @var string
+      */
+     const HELLO = 'Hello';
 
-    /**
-     * @return string
-     */
-    public function sayHello()
-    {
-        return static::HELLO;
-    }
+     /**
+      * @return string
+      */
+     public function sayHello()
+     {
+         return static::HELLO;
+     }
 
-    /**
-     * @param string $name
-     * @return string
-     */
-    public function sayHelloName($name)
-    {
-        return static::HELLO . ', ' . $name;
-    }
+     /**
+      * @param string $name
+      * @return string
+      */
+     public function sayHelloName($name)
+     {
+         return static::HELLO . ', '. $name;
+     }
 }
 ```
-Register your class as service and mark tag ***ufo.rpc.service***:
-```yaml
-# @MyBundle/Resources/config/services.yml
-services:
-    rpc.my_procedure:
-        class: MyBundle\RpcService\MyRpcProcedure
-        tags:
-            - { name: ufo.rpc.service }
+### Step 6: Profit
+Make a GET request to the API to make sure your new methods are available:
 
-```
-### Step 5: Profit
-Execute GET request to the API to make sure that your new methods are available:
-
+**GET** `/api`:
 ```json
 {
-    "transport": "POST",
-    "envelope": "JSON-RPC-2.0",
-    "contentType": "application/json",
-    "SMDVersion": "2.0",
-    "description": null,
-    "target": "/api",
-    "services": {
-        "ping": {
-            "envelope": "JSON-RPC-2.0",
-            "transport": "POST",
-            "name": "ping",
-            "parameters": [],
-            "returns": "string"
-        },
-        "MyRpcProcedure.sayHello": {
-            "envelope": "JSON-RPC-2.0",
-            "transport": "POST",
-            "name": "ping",
-            "parameters": [],
-            "returns": "string"
-        },
-        "MyRpcProcedure.sayHelloName": {
-            "envelope": "JSON-RPC-2.0",
-            "transport": "POST",
-            "name": "ping",
-            "parameters": [
-                {
-                    "type": "string",
-                    "name": "name",
-                    "optional": false
-                }
-            ],
-            "returns": "string"
-        }
-    },
-    "methods": {
-        "ping": {
-            "envelope": "JSON-RPC-2.0",
-            "transport": "POST",
-            "name": "ping",
-            "parameters": [],
-            "returns": "string"
-        },
-        "MyRpcProcedure.sayHello": {
-            "envelope": "JSON-RPC-2.0",
-            "transport": "POST",
-            "name": "ping",
-            "parameters": [],
-            "returns": "string"
-        },
-        "MyRpcProcedure.sayHelloName": {
-            "envelope": "JSON-RPC-2.0",
-            "transport": "POST",
-            "name": "ping",
-            "parameters": [
-                {
-                    "type": "string",
-                    "name": "name",
-                    "optional": false
-                }
-            ],
-            "returns": "string"
-        }
-    }
+     "transport": "POST",
+     "envelope": "JSON-RPC-2.0",
+     "contentType": "application/json",
+     "SMDVersion": "2.0",
+     "description": null,
+     "target": "/api",
+     "services": {
+         "ping": {
+             "envelope": "JSON-RPC-2.0",
+             "transport": "POST",
+             "name": "ping",
+             "parameters": [],
+             "returns": "string"
+         },
+         "MyRpcProcedure.sayHello": {
+             "envelope": "JSON-RPC-2.0",
+             "transport": "POST",
+             "name": "ping",
+             "parameters": [],
+             "returns": "string"
+         },
+         "MyRpcProcedure.sayHelloName": {
+             "envelope": "JSON-RPC-2.0",
+             "transport": "POST",
+             "name": "ping",
+             "parameters": [
+                 {
+                     "type": "string",
+                     "name": "name",
+                     "optional": false
+                 }
+             ],
+             "returns": "string"
+         }
+     },
+     "methods": {
+         "ping": {
+             "envelope": "JSON-RPC-2.0",
+             "transport": "POST",
+             "name": "ping",
+             "parameters": [],
+             "returns": "string"
+         },
+         "MyRpcProcedure.sayHello": {
+             "envelope": "JSON-RPC-2.0",
+             "transport": "POST",
+             "name": "ping",
+             "parameters": [],
+             "returns": "string"
+         },
+         "MyRpcProcedure.sayHelloName": {
+             "envelope": "JSON-RPC-2.0",
+             "transport": "POST",
+             "name": "ping",
+             "parameters": [
+                 {
+                     "type": "string",
+                     "name": "name",
+                     "optional": false
+                 }
+             ],
+             "returns": "string"
+         }
+     }
 
 }
 ```
-And test call your new methods:
+And make test calls to your new methods:
 
-POST /api
+**POST** `/api`
+### #1
 Request:
 ```json
 {
-    "id":123,
-    "method": "MyRpcProcedure.sayHello"
+     "id":123,
+     "method": "MyRpcProcedure.sayHello"
 }
 ```
 Response:
 ```json
 {
-    "result": "Hello",
-    "id": "123"
+     "result": "Hello",
+     "id": "123"
 }
 ```
-
+### #2
 Request:
 ```json
 {
-    "id":123,
-    "method": "MyRpcProcedure.sayHelloName",
-    "params": {
-        "operation": "Mr. Anderson"
-    }
+     "id":123,
+     "method": "MyRpcProcedure.sayHelloName",
+     "params": {
+         "operation": "Mr. Anderson"
+     }
 }
 ```
 Response:
 ```json
 {
-    "result": "Hello, Mr. Anderson",
-    "id": "123"
+     "result": "Hello, Mr. Anderson",
+     "id": "123"
 }
 ```
 
-### Step 6: Security
-By default, security is disabled.
+### Step 7: Security
 
-The bundle supports security on the client's token.
+Security is disabled by default
 
-To enable safe mode, you must add the settings to the ```services.yaml``` file.
+The package supports client key validation.
+
+To enable safe mode, you must add the appropriate settings to `config/bundles/ufo_api.yaml`.
 
 ```yml
-# config/services.yaml
+# config/bundles/ufo_api.yaml
 ufo_json_rpc:
-    security:
-        protected_get: true                     # Protected GET requests
-        protected_post: true                    # Protected POST requests
-        token_key_in_header: "Ufo-RPC-Token"    # Default token key 
-        clients_tokens:
-            - "ClientTokenExample"              # Example client token. IMPORTANT!!! Change or remove this!
-            - "ExampleOfAnotherClientToken"     # Example client token. IMPORTANT!!! Change or remove this!
+     security:
+         protected_get: true # protect GET request
+         protected_post: true # protection of POST requests
+         token_key_in_header: 'Ufo-RPC-Token' # Name of the key in the header
+         clients_tokens:
+             - 'ClientTokenExample' # hardcoded token example. Importantly!!! Replace or delete it!
+             - '%env(resolve:API_TOKEN)%e' # token example from .env.local
 ```
-If you enable safe mode requests must contain the header key from ***token_key_in_header*** parameter.
+If secure mode is enabled, your requests must contain the header specified in ***token_key_in_header***.
 
 For example: ```Ufo-RPC-Token: ClientTokenExample```
 
-## Importing your RPC project to the SoapUI
+## Integration of your RPC project with SoapUI
 
-Your RPC project can be imported to the SoapUI application.
+Your RPC project can be imported into a SoapUI application.
 
-In order to do this, it will be enough to import the remote project to the SoapUI Application ```File -> Import Remote Project``` and specify the xml export link of your project **http://example.com/api/soapui.xml**. 
-As a result, you will get a ready project with a list of all available methods in SoupUI.
+In order to do this, you need to import the remote project ```File -> Import Remote Project``` into SoupUI and specify the link to the xml export of your project **http://example.com/api/soapui.xml** .
+In SoupUI, you will receive a ready-made project with a list of all available methods.
 
-URL **http://example.com/api/soapui.xml** can accept the following optional query parameters:
-* `Token` (string) is a client token to access your RPC project (it is substituted to the SoupUI parameters of your project)
-* `Show_examples` (boolean), which accepts values 1 or 0: to substitute an example of values ​​in methods  (1 - by default) or to specify the types of parameters (0)
+The URL **http://example.com/api/soapui.xml** can accept the following optional query parameters:
+* ```token``` (string) client token for accessing your RPC project (it will be substituted in the SoupUI parameters of the project)
+* ```show_examples``` (boolean) takes the value 1|0 - substitute example values in methods (1 - by default) or specify parameter types (0)

@@ -44,7 +44,7 @@ class MethodNode implements ISoupUiNode, IHaveChildNodes
     /**
      * @return array
      */
-    public function getAttributes()
+    public function getAttributes(): array
     {
         return $this->attributes;
     }
@@ -52,7 +52,7 @@ class MethodNode implements ISoupUiNode, IHaveChildNodes
     /**
      * @return string
      */
-    public function getTag()
+    public function getTag(): string
     {
         return '';
     }
@@ -60,7 +60,7 @@ class MethodNode implements ISoupUiNode, IHaveChildNodes
     /**
      * @return array
      */
-    public function toArray()
+    public function toArray(): array
     {
         $content = [];
         foreach ($this->getChildNodes() as $node) {

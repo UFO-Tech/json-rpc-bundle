@@ -20,11 +20,11 @@ interface ISoupUiNode extends ICanTransformToArray
     /**
      * @return string
      */
-    public function getTag();
+    public function getTag(): string;
 
     /**
      * @return array
      */
-    public function getAttributes();
+    public function getAttributes(): array;
 
 }

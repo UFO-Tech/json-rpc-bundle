@@ -31,11 +31,11 @@ class UfoJsonRpcExtension extends Extension
 
         $this->mapTreeToParams($config, 'ufo_json_rpc');
 
-        $loader = new Loader\YamlFileLoader($this->container, new FileLocator(__DIR__ . '/../Resources/config'));
+        $loader = new Loader\YamlFileLoader($this->container, new FileLocator(__DIR__ . '/../../config'));
         $loader->load('services.yml');
     }
 
-    protected function mapTreeToParams($paramsArray, $paramKey)
+    protected function mapTreeToParams(array $paramsArray, string $paramKey)
     {
         foreach ($paramsArray as $key => $value) {
             $newKey = $paramKey . '.' . $key;

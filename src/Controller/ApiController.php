@@ -4,6 +4,7 @@ namespace Ufo\JsonRpcBundle\Controller;
 
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Ufo\JsonRpcBundle\Facade\Interfaces\IFacadeJsonRpcServer;
 use Ufo\JsonRpcBundle\Facade\ZendJsonRpcServerFacade;
 use Ufo\JsonRpcBundle\SoupUi\ProjectGenerator;
 use Ufo\JsonRpcBundle\Exceptions\InvalidButchRequestExceptions;
@@ -17,22 +18,22 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 class ApiController extends AbstractController
 {
     /**
-     * @var ZendJsonRpcServerFacade
+     * @var IFacadeJsonRpcServer
      */
-    private $rpcServerFacade;
+    private IFacadeJsonRpcServer $rpcServerFacade;
 
     /**
      * @var ProjectGenerator
      */
-    private $soupUiProjectGenerator;
+    private ProjectGenerator $soupUiProjectGenerator;
 
     /**
      * ApiController constructor.
      *
-     * @param ZendJsonRpcServerFacade $rpcServerFacade
+     * @param IFacadeJsonRpcServer $rpcServerFacade
      * @param ProjectGenerator $soupUiProjectGenerator
      */
-    public function __construct(ZendJsonRpcServerFacade $rpcServerFacade, ProjectGenerator $soupUiProjectGenerator)
+    public function __construct(IFacadeJsonRpcServer $rpcServerFacade, ProjectGenerator $soupUiProjectGenerator)
     {
         $this->rpcServerFacade = $rpcServerFacade;
         $this->soupUiProjectGenerator = $soupUiProjectGenerator;
@@ -42,7 +43,7 @@ class ApiController extends AbstractController
      * @param Request $request
      * @return Response
      */
-    public function serverAction(Request $request)
+    public function serverAction(Request $request): Response
     {
         if (Request::METHOD_GET == $request->getMethod()) {
             $smd = $this->rpcServerFacade->getServiceMap();
@@ -60,8 +61,9 @@ class ApiController extends AbstractController
     /**
      * @param Request $request
      * @return Response
+     * @throws InvalidButchRequestExceptions
      */
-    public function butchRequestAction(Request $request)
+    public function butchRequestAction(Request $request): Response
     {
         $raw = json_decode($request->getContent(), true);
         if (false === isset($raw[0])
@@ -84,7 +86,7 @@ class ApiController extends AbstractController
     /**
      * @return Response
      */
-    public function soapUiAction()
+    public function soapUiAction(): Response
     {
         /** @var Smd $smd */
         $smd = $this->rpcServerFacade->getServer()->getServiceMap();

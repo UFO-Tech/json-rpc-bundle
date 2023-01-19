@@ -24,7 +24,7 @@ interface IFacadeJsonRpcServer
      * @param mixed|null $argv
      * @return $this
      */
-    public function addProcedure(IRpcService $procedure, $namespace = '', $argv = null);
+    public function addProcedure(IRpcService $procedure, string $namespace = '', mixed $argv = null): static;
 
     /**
      * @return mixed

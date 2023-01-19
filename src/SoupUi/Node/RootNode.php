@@ -16,7 +16,7 @@ class RootNode implements ISoupUiNode
 {
     const NODE_NAME = 'soapui-project';
 
-    protected $rootAttributes = [
+    protected array $rootAttributes = [
         'xmlns:con' => self::SOUPUI_NS_URL,
         'soapui-version' => self::SOUPUI_VERSION,
         'runType' => 'SEQUENTIAL',
@@ -37,7 +37,7 @@ class RootNode implements ISoupUiNode
     /**
      * @return array
      */
-    public function getAttributes()
+    public function getAttributes(): array
     {
         return $this->rootAttributes;
     }
@@ -45,7 +45,7 @@ class RootNode implements ISoupUiNode
     /**
      * @return string
      */
-    public function getTag()
+    public function getTag(): string
     {
         return static::NODE_NAME;
     }
@@ -53,7 +53,7 @@ class RootNode implements ISoupUiNode
     /**
      * @return array
      */
-    public function toArray()
+    public function toArray(): array
     {
         return [];
     }

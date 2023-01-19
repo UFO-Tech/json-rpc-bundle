@@ -22,7 +22,7 @@ class ResourceNode implements ISoupUiNode, IHaveChildNodes
     /**
      * @var array
      */
-    protected $attributes = [
+    protected array $attributes = [
         'path' => '/api',
         'name' => '',
     ];
@@ -32,7 +32,7 @@ class ResourceNode implements ISoupUiNode, IHaveChildNodes
      * @param array $attributes
      * @param array $nodes
      */
-    public function __construct(array $attributes = [], $nodes = [])
+    public function __construct(array $attributes = [], array $nodes = [])
     {
         $this->attributes = array_merge($this->attributes, $attributes);
         $this->setChild($nodes);
@@ -41,7 +41,7 @@ class ResourceNode implements ISoupUiNode, IHaveChildNodes
     /**
      * @return array
      */
-    public function getAttributes()
+    public function getAttributes(): array
     {
         return $this->attributes;
     }
@@ -49,7 +49,7 @@ class ResourceNode implements ISoupUiNode, IHaveChildNodes
     /**
      * @return string
      */
-    public function getTag()
+    public function getTag(): string
     {
         return 'resource';
     }
@@ -57,7 +57,7 @@ class ResourceNode implements ISoupUiNode, IHaveChildNodes
     /**
      * @return array
      */
-    public function toArray()
+    public function toArray(): array
     {
         $content = [
             '@ns' => static::SOUPUI_NS,
