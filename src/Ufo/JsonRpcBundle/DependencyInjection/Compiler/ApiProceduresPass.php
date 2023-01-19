@@ -29,7 +29,7 @@ class ApiProceduresPass implements CompilerPassInterface
 
         $definition = $container->findDefinition('ufo_api_server.zend_json_rpc_server_facade');
 
-        $taggedServices = $container->findTaggedServiceIds('rpc.service');
+        $taggedServices = $container->findTaggedServiceIds('ufo.rpc.service');
 
         foreach ($this->sortByPriority($taggedServices) as $id) {
             $definition->addMethodCall('addProcedure', [new Reference($id)]);

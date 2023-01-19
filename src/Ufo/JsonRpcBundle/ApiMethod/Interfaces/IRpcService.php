@@ -8,7 +8,9 @@
 
 namespace Ufo\JsonRpcBundle\ApiMethod\Interfaces;
 
+use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
+#[AutoconfigureTag('ufo.rpc.service')]
 interface IRpcService
 {
 }

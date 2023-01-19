@@ -1,7 +1,7 @@
 # ufo-cms/json-rpc-bundle v.3.*
 JSON-RPC 2.0 Server for Symfony 4+
 
-The bundle for simple usage api with zend json-rpc server
+The bundle for simple usage api with laminas json-rpc server
 
 ## What's new?
 * Added automatic processing of multi-requests (Butch Requests)
@@ -154,14 +154,14 @@ class MyRpcProcedure implements IRpcService
     }
 }
 ```
-Register your class as service and mark tag ***rpc.service***:
+Register your class as service and mark tag ***ufo.rpc.service***:
 ```yaml
 # @MyBundle/Resources/config/services.yml
 services:
     rpc.my_procedure:
         class: MyBundle\RpcService\MyRpcProcedure
         tags:
-            - { name: rpc.service }
+            - { name: ufo.rpc.service }
 
 ```
 ### Step 5: Profit
