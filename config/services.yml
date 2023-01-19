@@ -1,0 +1,22 @@
+services:
+    # default configuration for services in *this* file
+    _defaults:
+        autowire: true      # Automatically injects dependencies in your services.
+        autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+
+    _instanceof:
+        Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService:
+            tags: [ 'ufo.rpc.service' ]
+
+    Ufo\JsonRpcBundle\:
+        resource: '../src/'
+        exclude:
+            - '../src/DependencyInjection/'
+            - '../src/UfoJsonRpcBundle.php'
+
+    #Controllers section
+    Ufo\JsonRpcBundle\Controller\ApiController:
+        class: 'Ufo\JsonRpcBundle\Controller\ApiController'
+        arguments: ['@ufo_api_server.zend_json_rpc_server_facade', '@ufo_api_server.soupui.project_generator']
+        tags: ['controller.service_arguments']
+

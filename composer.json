@@ -24,7 +24,7 @@
         "laminas/laminas-json-server": ">=3.2"
     },
     "autoload" : {
-        "psr-4" : { "Ufo\\JsonRpcBundle\\" : "src/Ufo/JsonRpcBundle/" }
+        "psr-4" : { "Ufo\\JsonRpcBundle\\" : "src/" }
     },
     "extra" : {
         "branch-alias" : {
