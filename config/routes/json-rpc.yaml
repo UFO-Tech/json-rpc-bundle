@@ -1,3 +1,0 @@
-ufo_json_rpc_bundle:
-  resource: ../../vendor/ufo-cms/json-rpc-bundle/config/routing.yml
-  prefix: /api

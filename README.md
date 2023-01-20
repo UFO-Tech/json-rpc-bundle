@@ -33,7 +33,7 @@ return [
 Add an empty parameters section:
 In the `config/packages` folder, add the `ufo_api.yaml` file with the following content
 ```yaml
-# config/packages/json-rpc.yaml
+# config/packages/ufo_json_rpc.yaml
 ufo_json_rpc:
     security:
         # default parameters is enabled
@@ -45,17 +45,17 @@ In the future, we will configure the package here
 
 In the `config/routes` folder, add the `ufo_api.yaml` file with the following content
 ```yaml
-# config/routes/json-rpc.yaml
+# config/routes/ufo_json_rpc.yaml
 ufo_json_rpc_bundle:
-  resource: ../../vendor/ufo-cms/json-rpc-bundle/config/routing.yml
+  resource: ../../vendor/ufo-cms/json-rpc-bundle/config/router.yaml
   prefix: /api
 ```
 By default, the API is available at the url **http://example.com/api**
 If you need to change the url, reconfigure the route as follows:
 ```yaml
-# config/routes/json-rpc.yaml
+# config/routes/ufo_json_rpc.yaml
 ufo_json_rpc_bundle:
-  resource: ../../vendor/ufo-cms/json-rpc-bundle/config/routing.yml
+  resource: ../../vendor/ufo-cms/json-rpc-bundle/config/router.yaml
   prefix: /my_new_api_path
 ```
 The API will be available at the url **http://example.com/my_new_api_path**
@@ -269,7 +269,7 @@ The package supports client key validation.
 To enable safe mode, you must add the appropriate settings to `config/packages/ufo_api.yaml`.
 
 ```yml
-# config/packages/json-rpc.yaml
+# config/packages/ufo_json_rpc.yaml
 ufo_json_rpc:
      security:
          protected_get: true # protect GET request

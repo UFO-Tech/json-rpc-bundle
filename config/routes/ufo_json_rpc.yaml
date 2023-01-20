@@ -1,0 +1,4 @@
+# config/routes/ufo_json_rpc.yaml
+ufo_json_rpc:
+  resource: ../../vendor/ufo-cms/json-rpc-bundle/config/router.yaml
+  prefix: /api

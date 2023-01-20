@@ -32,7 +32,8 @@ class UfoJsonRpcExtension extends Extension
         $this->mapTreeToParams($config, 'ufo_json_rpc');
 
         $loader = new Loader\YamlFileLoader($this->container, new FileLocator(__DIR__ . '/../../config'));
-        $loader->load('services.yml');
+        $loader->load('services.yaml');
+        $loader->load('router.yaml');
     }
 
     protected function mapTreeToParams(array $paramsArray, string $paramKey)
@@ -45,4 +46,10 @@ class UfoJsonRpcExtension extends Extension
             }
         }
     }
+
+    public function getAlias(): string
+    {
+        return 'ufo_json_rpc';
+    }
+
 }

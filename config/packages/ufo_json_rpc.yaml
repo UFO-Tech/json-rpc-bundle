@@ -1,4 +1,4 @@
-# config/packages/json-rpc.yaml
+# config/packages/ufo_json_rpc.yaml
 ufo_json_rpc:
   security:
     protected_get: false                     # protect GET request

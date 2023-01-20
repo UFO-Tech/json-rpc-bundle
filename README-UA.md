@@ -33,7 +33,7 @@ return [
 Добавьте пустую секцию параметров:
 В теку `config/packages` додайте файл `ufo_api.yaml` із наступним змістом
 ```yaml
-# config/packages/json-rpc.yaml
+# config/packages/ufo_json_rpc.yaml
 ufo_json_rpc:
     security:
         # default parameters is enabled
@@ -47,9 +47,9 @@ ufo_json_rpc:
 В теку `config/routes` додайте файл `ufo_api.yaml` із наступним змістом
 
 ```yaml
-# config/routes/json-rpc.yaml
+# config/routes/ufo_json_rpc.yaml
 ufo_json_rpc_bundle:
-  resource: ../../vendor/ufo-cms/json-rpc-bundle/config/routing.yml
+  resource: ../../vendor/ufo-cms/json-rpc-bundle/config/router.yaml
   prefix: /api
 
 ```
@@ -57,9 +57,9 @@ ufo_json_rpc_bundle:
 За замовченням, API доступно по url **http://example.com/api**
 Якщо вам потрібно змінити url, переконфігуруйте маршрут наступним чином:
 ```yaml
-# config/routes/json-rpc.yaml
+# config/routes/ufo_json_rpc.yaml
 ufo_json_rpc_bundle:
-  resource: ../../vendor/ufo-cms/json-rpc-bundle/config/routing.yml
+  resource: ../../vendor/ufo-cms/json-rpc-bundle/config/router.yaml
   prefix: /my_new_api_path
 
 ```
@@ -275,7 +275,7 @@ Response:
 Щоб увімкнути безпечний режим, вы повинні додати відповідні налаштування в `config/packages/ufo_api.yaml`.
 
 ```yml
-# config/packages/json-rpc.yaml
+# config/packages/ufo_json_rpc.yaml
 ufo_json_rpc:
     security:
         protected_get: true                     # захист GET запиту
