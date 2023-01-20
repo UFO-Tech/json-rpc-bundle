@@ -22,7 +22,7 @@
         "laminas/laminas-json": ">=3.1",
         "laminas/laminas-http": ">=2.11",
         "laminas/laminas-json-server": ">=3.2",
-        "composer require slowprog/composer-copy-file": "*"
+        "slowprog/composer-copy-file": "*"
     },
     "autoload" : {
         "psr-4" : {
