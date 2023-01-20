@@ -31,6 +31,12 @@
     "extra" : {
         "branch-alias" : {
             "dev-master" : "1.0.x-dev"
+        },
+        "symfony": {
+            "endpoint": [
+                "https://api.github.com/repos/UFO-CMS/recipes/contents/index.json?ref=main",
+                "flex://defaults"
+            ]
         }
     },
     "scripts": {

@@ -6,4 +6,4 @@ ufo_json_rpc:
     token_key_in_header: 'Ufo-RPC-Token'    # Name of the key in the header
     clients_tokens:
       - 'ClientTokenExample'                # hardcoded token example. Importantly!!! Replace or delete it!
-      - '%env(resolve:API_TOKEN)%e'         # token example from .env.local
+      - '%env(resolve:UFO_API_TOKEN)%e'         # token example from .env.local
