@@ -2,8 +2,10 @@
 
 namespace Ufo\JsonRpcBundle\Controller;
 
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Annotation\Route;
 use Ufo\JsonRpcBundle\Facade\Interfaces\IFacadeJsonRpcServer;
 use Ufo\JsonRpcBundle\Facade\ZendJsonRpcServerFacade;
 use Ufo\JsonRpcBundle\SoupUi\ProjectGenerator;
@@ -43,6 +45,7 @@ class ApiController extends AbstractController
      * @param Request $request
      * @return Response
      */
+    #[Route('', name: 'ufo_rpc_api_server', methods: ["GET", "POST"])]
     public function serverAction(Request $request): Response
     {
         if (Request::METHOD_GET == $request->getMethod()) {
@@ -80,12 +83,13 @@ class ApiController extends AbstractController
         }
         $result = '[' . implode(', ', $responses) . ']';
 
-        return new Response($result, 200, ['Content-Type' => 'application/json']);
+        return new JsonResponse($result);
     }
 
     /**
      * @return Response
      */
+    #[Route('/soapui.xml', name: 'ufo_rpc_api_soapui_xml', methods: ["GET", "POST"])]
     public function soapUiAction(): Response
     {
         /** @var Smd $smd */
@@ -95,6 +99,9 @@ class ApiController extends AbstractController
             $this->soupUiProjectGenerator->addService($service);
         }
 
-        return new Response($this->soupUiProjectGenerator->createXml(), 200, ['Content-Type' => 'text/xml']);
+        return new Response(
+            $this->soupUiProjectGenerator->createXml(), 
+            headers: ['Content-Type' => 'text/xml']
+        );
     }
 }

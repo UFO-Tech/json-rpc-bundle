@@ -1,0 +1,9 @@
+# config/bundles/ufo_api.yaml
+ufo_json_rpc:
+  security:
+    protected_get: false                     # protect GET request
+    protected_post: false                    # protection of POST requests
+    token_key_in_header: 'Ufo-RPC-Token'    # Name of the key in the header
+    clients_tokens:
+      - 'ClientTokenExample'                # hardcoded token example. Importantly!!! Replace or delete it!
+      - '%env(resolve:API_TOKEN)%e'         # token example from .env.local

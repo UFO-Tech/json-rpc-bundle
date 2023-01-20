@@ -49,17 +49,19 @@ ufo_json_rpc:
 ```yaml
 # config/routes/ufo_api.yaml
 ufo_json_rpc_bundle:
-    resource: "@UfoJsonRpcBundle/Resources/config/routing.yml"
+  resource: ../../vendor/ufo-cms/json-rpc-bundle/config/routing.yml
+  prefix: /api
+
 ```
 
 За замовченням, API доступно по url **http://example.com/api**
 Якщо вам потрібно змінити url, переконфігуруйте маршрут наступним чином:
 ```yaml
 # config/routes/ufo_api.yaml
-ufo_api_server:
-    path:     /my_new_api_path
-    controller: UfoJsonRpcBundle:Api:server 
-    methods: ["GET", "POST"]
+ufo_json_rpc_bundle:
+  resource: ../../vendor/ufo-cms/json-rpc-bundle/config/routing.yml
+  prefix: /my_new_api_path
+
 ```
 API буде доступне по url **http://example.com/my_new_api_path**
 

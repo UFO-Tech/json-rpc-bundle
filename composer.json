@@ -21,17 +21,28 @@
         "laminas/laminas-server": ">=2.8",
         "laminas/laminas-json": ">=3.1",
         "laminas/laminas-http": ">=2.11",
-        "laminas/laminas-json-server": ">=3.2"
+        "laminas/laminas-json-server": ">=3.2",
+        "composer require slowprog/composer-copy-file": "*"
     },
     "autoload" : {
-        "psr-4" : { "Ufo\\JsonRpcBundle\\" : "src/" }
+        "psr-4" : {
+            "Ufo\\JsonRpcBundle\\" : "src/",
+            "Ufo\\JsonRpcBundle\\Install\\": "install/"
+        }
     },
     "extra" : {
         "branch-alias" : {
             "dev-master" : "1.0.x-dev"
+        },
+        "copy-file": {
+            "vendor/ufo-cms/json-rpc-bundle/install/configs/routes.ufo_api.yaml": "config/routes/ufo_api.yaml",
+            "vendor/ufo-cms/json-rpc-bundle/install/configs/packages.ufo_api.yaml": "config/routes/packages/ufo_api.yaml"
         }
     },
     "scripts": {
+        "post-package-install": [
+            "Ufo\\JsonRpcBundle\\Install\\Installer::copy"
+        ],
         "auto-scripts": {
             "cache:clear": "symfony-cmd",
             "assets:install --symlink --relative %PUBLIC_DIR%": "symfony-cmd"

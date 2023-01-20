@@ -47,16 +47,16 @@ In the `config/routes` folder, add the `ufo_api.yaml` file with the following co
 ```yaml
 # config/routes/ufo_api.yaml
 ufo_json_rpc_bundle:
-    resource: "@UfoJsonRpcBundle/Resources/config/routing.yml"
+  resource: ../../vendor/ufo-cms/json-rpc-bundle/config/routing.yml
+  prefix: /api
 ```
 By default, the API is available at the url **http://example.com/api**
 If you need to change the url, reconfigure the route as follows:
 ```yaml
 # config/routes/ufo_api.yaml
-ufo_api_server:
-     path: /my_new_api_path
-     controller: UfoJsonRpcBundle:Api:server
-     methods: ["GET", "POST"]
+ufo_json_rpc_bundle:
+  resource: ../../vendor/ufo-cms/json-rpc-bundle/config/routing.yml
+  prefix: /my_new_api_path
 ```
 The API will be available at the url **http://example.com/my_new_api_path**
 
