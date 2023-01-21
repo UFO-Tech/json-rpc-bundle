@@ -34,8 +34,7 @@
         },
         "symfony": {
             "endpoint": [
-                "https://api.github.com/repos/UFO-CMS/recipes/contents/index.json?ref=main",
-                "flex://defaults"
+                "https://api.github.com/repos/UFO-CMS/recipes/contents/index.json?ref=main"
             ]
         }
     },
