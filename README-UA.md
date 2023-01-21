@@ -1,16 +1,55 @@
-# ufo-cms/json-rpc-bundle v.4.*
+# ufo-cms/json-rpc-bundle 4
+![Ukraine](https://img.shields.io/badge/%D0%A1%D0%BB%D0%B0%D0%B2%D0%B0-%D0%A3%D0%BA%D1%80%D0%B0%D1%97%D0%BD%D1%96-yellow?labelColor=blue)
+
 JSON-RPC 2.0 сервер для Symfony v.6.*
 
-Пакет для легкого створення api за допомогою сервера laminas json-rpc
+### Про цей пакет
 
-## Початок роботи
+Пакет для легкого створення api за допомогою сервера laminas json-rpc  
+![License](https://img.shields.io/badge/license-MIT-green?labelColor=7b8185) ![Size](https://img.shields.io/github/repo-size/ufo-cms/json-rpc-bundle?label=Size%20of%20the%20repository) ![package_version](https://img.shields.io/github/v/tag/ufo-cms/json-rpc-bundle?color=blue&label=Latest%20Version&logo=Packagist&logoColor=white&labelColor=7b8185) ![fork](https://img.shields.io/github/forks/ufo-cms/json-rpc-bundle?color=green&logo=github&style=flat)
+
+### Вимоги до оточення
+![php_version](https://img.shields.io/packagist/dependency-v/ufo-cms/json-rpc-bundle/php?logo=PHP&logoColor=white) ![symfony_version](https://img.shields.io/packagist/dependency-v/ufo-cms/json-rpc-bundle/symfony/framework?label=Symfony&logo=Symfony&logoColor=white) ![laminas-json_version](https://img.shields.io/packagist/dependency-v/ufo-cms/json-rpc-bundle/laminas/laminas-json?label=laminas-json&logo=JSON&logoColor=white)
+
+## Автоматичне встановлення пакету в Symfony
+
+### Крок 0 (РЕКОМЕНДОВАНО): Налаштування Composer
+Для того, щоб при додаванні пакету, ваш Symfony Flex автоматично зробив всі необхідні налаштування, потрібно внести наступні зміни в ваш `composer.json`
+
+```json 
+// composer.json    
+
+// ...  
+  
+    "extra" : {
+  
+        // ...  
+  
+        "symfony": {
+  
+            // ...  
+  
+            "endpoint": [
+                "https://api.github.com/repos/UFO-CMS/recipes/contents/index.json?ref=main",
+                "flex://defaults"
+            ]
+        }
+  
+        // ...  
+  
+    },
+
+// ...  
+  
+```
+Детально про Symfony Flex в [документації](https://symfony.com/doc/current/setup/flex_private_recipes.html)
 
 ### Крок 1: Встановлення
 
 В консолі в теці проєкту виконайте цю команду, щоб завантажити останню версію цього пакету:
-```console
-$ composer require ufo-cms/json-rpc-bundle 3.*
-```
+```console  
+$ composer require ufo-cms/json-rpc-bundle 4.*  
+```  
 Ця команда актуальна якщо ви встановили Composer глобально, як описано в [документації](https://getcomposer.org/doc/00-intro.md) документации Composer.
 
 ### Крок 2: Реєстрація пакету
@@ -29,40 +68,38 @@ return [
 
 ```
 ### Крок 3: Додавання параметрів
+If you performed "Step 0", the parameters were set automatically, you can skip this step.
 
-Добавьте пустую секцию параметров:
-В теку `config/packages` додайте файл `ufo_api.yaml` із наступним змістом
+Otherwise, manually add the package options section.
+To do this, add the file `ufo_json_rpc.yaml` with the following content to the `config/packages` folder
 ```yaml
 # config/packages/ufo_json_rpc.yaml
-ufo_json_rpc:
+ufo_json_rpc:  
     security:
-        # default parameters is enabled
-
+        # default - security disabled
 ```
 Надалі конфігурувати пакет ми будем тут
 
-
 ### Крок 4: Реєстрація маршрутів
+If you performed "Step 0", the parameters were set automatically, you can skip this step.
 
-В теку `config/routes` додайте файл `ufo_api.yaml` із наступним змістом
+Otherwise, manually add the route section of the package.В теку `config/routes` додайте файл `ufo_json_rpc.yaml` із наступним змістом
 
 ```yaml
-# config/routes/ufo_json_rpc.yaml
-ufo_json_rpc_bundle:
-  resource: ../../vendor/ufo-cms/json-rpc-bundle/config/router.yaml
-  prefix: /api
+# config/routes/ufo_json_rpc.yaml  
+ufo_json_rpc_bundle:  
+    resource: ../../vendor/ufo-cms/json-rpc-bundle/config/router.yaml 
+    prefix: /api  
+```  
 
-```
-
-За замовченням, API доступно по url **http://example.com/api**
+За замовченням, API доступно по url **http://example.com/api**  
 Якщо вам потрібно змінити url, переконфігуруйте маршрут наступним чином:
 ```yaml
-# config/routes/ufo_json_rpc.yaml
-ufo_json_rpc_bundle:
-  resource: ../../vendor/ufo-cms/json-rpc-bundle/config/router.yaml
-  prefix: /my_new_api_path
-
-```
+# config/routes/ufo_json_rpc.yaml  
+ufo_json_rpc_bundle:  
+    resource: ../../vendor/ufo-cms/json-rpc-bundle/config/router.yaml 
+    prefix: /my_new_api_path  
+```  
 API буде доступне по url **http://example.com/my_new_api_path**
 
 ##Вітаю, ваш RPC сервер готовий до роботи!!!
@@ -283,7 +320,7 @@ ufo_json_rpc:
         token_key_in_header: 'Ufo-RPC-Token'    # Назва ключу в хедері 
         clients_tokens:
             - 'ClientTokenExample'              # приклад хардкодного токену. Важливо!!! Замініть, або видаліть це!
-            - '%env(resolve:API_TOKEN)%e'       # приклад токену з .env.local 
+            - '%env(resolve:UFO_API_TOKEN)%e'       # приклад токену з .env.local 
 ```
 Якщо безпечний режим ввімкнуто, ваші запити мають містити в headers заголовок, вказанный в ***token_key_in_header***. 
 

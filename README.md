@@ -1,15 +1,57 @@
-# ufo-cms/json-rpc-bundle v.4.*
+# ufo-cms/json-rpc-bundle 4
+![Ukraine](https://img.shields.io/badge/%D0%A1%D0%BB%D0%B0%D0%B2%D0%B0-%D0%A3%D0%BA%D1%80%D0%B0%D1%97%D0%BD%D1%96-yellow?labelColor=blue)
+
 JSON-RPC 2.0 server for Symfony v.6.*
 
-A package to easily create an api using json-rpc server laminas
+### About this package
 
-## Getting Started
+Package for easy api creation using laminas json-rpc server
+
+![License](https://img.shields.io/badge/license-MIT-green?labelColor=7b8185) ![Size](https://img.shields.io/github/repo-size/ufo-cms/json-rpc-bundle?label=Size%20of%20the%20repository) ![package_version](https://img.shields.io/github/v/tag/ufo-cms/json-rpc-bundle?color=blue&label=Latest%20Version&logo=Packagist&logoColor=white&labelColor=7b8185) ![fork](https://img.shields.io/github/forks/ufo-cms/json-rpc-bundle?color=green&logo=github&style=flat)
+
+### Environmental requirements
+![php_version](https://img.shields.io/packagist/dependency-v/ufo-cms/json-rpc-bundle/php?logo=PHP&logoColor=white) ![symfony_version](https://img.shields.io/packagist/dependency-v/ufo-cms/json-rpc-bundle/symfony/framework?label=Symfony&logo=Symfony&logoColor=white) ![laminas-json_version](https://img.shields.io/packagist/dependency-v/ufo-cms/json-rpc-bundle/laminas/laminas-json?label=laminas-json&logo=JSON&logoColor=white)
+
+## Automatic package installation in Symfony
+
+### Step 0 (RECOMMENDED): Configure Composer
+In order for your Symfony Flex to automatically make all the necessary settings when you add a package, you need to make the following changes to your `composer.json`
+
+```json 
+// composer.json    
+
+// ...  
+  
+    "extra" : {
+  
+        // ...  
+  
+        "symfony": {
+  
+            // ...  
+  
+            "endpoint": [
+                "https://api.github.com/repos/UFO-CMS/recipes/contents/index.json?ref=main",
+                "flex://defaults"
+            ]
+        }
+  
+        // ...  
+  
+    },
+
+// ...  
+  
+```
+More about Symfony Flex in [doc](https://symfony.com/doc/current/setup/flex_private_recipes.html)
+
+
 
 ### Step 1: Installation
 
 From the console in the project folder, run this command to download the latest version of this package:
 ```console
-$ composer requires ufo-cms/json-rpc-bundle 3.*
+$ composer requires ufo-cms/json-rpc-bundle 4.*
 ```
 This command is relevant if you have installed Composer globally as described in [doc](https://getcomposer.org/doc/00-intro.md) Composer documentation.
 
@@ -35,8 +77,8 @@ In the `config/packages` folder, add the `ufo_api.yaml` file with the following 
 ```yaml
 # config/packages/ufo_json_rpc.yaml
 ufo_json_rpc:
-    security:
-        # default parameters is enabled
+  security:
+    # default parameters is enabled
 ```
 In the future, we will configure the package here
 
@@ -277,7 +319,7 @@ ufo_json_rpc:
          token_key_in_header: 'Ufo-RPC-Token' # Name of the key in the header
          clients_tokens:
              - 'ClientTokenExample' # hardcoded token example. Importantly!!! Replace or delete it!
-             - '%env(resolve:API_TOKEN)%e' # token example from .env.local
+             - '%env(resolve:UFO_API_TOKEN)%e' # token example from .env.local
 ```
 If secure mode is enabled, your requests must contain the header specified in ***token_key_in_header***.
 

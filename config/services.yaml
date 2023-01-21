@@ -14,9 +14,9 @@ services:
         $environment: '%kernel.environment%'
 
     Ufo\JsonRpcBundle\Security\TokenRpcSecurity:
-        $protectedGet: '%ufo_json_rpc.security.protected_get%'
-        $protectedPost: '%ufo_json_rpc.security.protected_post%'
-        $tokenHeaderKey: '%ufo_json_rpc.security.token_key_in_header%'
+        $protectedGet: ["@=container.hasParameter('ufo_json_rpc.security.protected_get') ? parameter('ufo_json_rpc.security.protected_get') : false"]
+        $protectedPost: ["@=container.hasParameter('ufo_json_rpc.security.protected_post') ? parameter('ufo_json_rpc.security.protected_post') : false"]
+        $tokenHeaderKey: ["@=container.hasParameter('ufo_json_rpc.security.token_key_in_header') ? parameter('ufo_json_rpc.security.token_key_in_header') : 'Ufo-RPC-Token'"]
 
     Ufo\JsonRpcBundle\Security\SimpleTokenValidator:
-        $clientsTokens: '%ufo_json_rpc.security.clients_tokens%'
+        $clientsTokens: [ "@=container.hasParameter('ufo_json_rpc.security.clients_tokens') ? parameter('ufo_json_rpc.security.clients_tokens') : []" ]
