@@ -139,7 +139,7 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
     {
         try {
             $this->rpcSecurity->isValidGetRequest();
-            $this->zendServer->setTarget($this->router->generate('ufo_api_server'))
+            $this->zendServer->setTarget($this->router->generate('ufo_rpc_api_server'))
                 ->setEnvelope(\Laminas\Json\Server\Smd::ENV_JSONRPC_2);
             $response = $this->zendServer->getServiceMap();
         } catch (\Exception $e) {

@@ -77,8 +77,8 @@ In the `config/packages` folder, add the `ufo_api.yaml` file with the following 
 ```yaml
 # config/packages/ufo_json_rpc.yaml
 ufo_json_rpc:
-  security:
-    # default parameters is enabled
+    security:
+        # default parameters is enabled
 ```
 In the future, we will configure the package here
 
@@ -89,16 +89,18 @@ In the `config/routes` folder, add the `ufo_api.yaml` file with the following co
 ```yaml
 # config/routes/ufo_json_rpc.yaml
 ufo_json_rpc_bundle:
-  resource: ../../vendor/ufo-cms/json-rpc-bundle/config/router.yaml
-  prefix: /api
+    resource: ../../vendor/ufo-cms/json-rpc-bundle/config/router.yaml
+    prefix: /api
+    trailing_slash_on_root: false
 ```
 By default, the API is available at the url **http://example.com/api**
 If you need to change the url, reconfigure the route as follows:
 ```yaml
 # config/routes/ufo_json_rpc.yaml
 ufo_json_rpc_bundle:
-  resource: ../../vendor/ufo-cms/json-rpc-bundle/config/router.yaml
-  prefix: /my_new_api_path
+    resource: ../../vendor/ufo-cms/json-rpc-bundle/config/router.yaml
+    prefix: /my_new_api_path
+    trailing_slash_on_root: false
 ```
 The API will be available at the url **http://example.com/my_new_api_path**
 

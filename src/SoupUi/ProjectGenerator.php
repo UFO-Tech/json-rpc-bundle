@@ -1,6 +1,6 @@
 <?php
 /**
- * @author Doctor <doctor.netpeak@gmail.com>
+ * @author Doctor <ashterix69@gmail.com>
  *
  *
  * Date: 19.05.2017
@@ -72,7 +72,7 @@ class ProjectGenerator
         $interface = new InterfaceNode([], [
             new EndpointsNode($this->request->getSchemeAndHttpHost()),
             new ResourceNode([
-                'path' => $this->router->generate('ufo_api_server'),
+                'path' => $this->router->generate('ufo_rpc_api_server'),
             ], [
                 new ParametersNode($this->createParameters()),
                 new MethodsNode([

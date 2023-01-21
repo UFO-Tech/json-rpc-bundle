@@ -1,6 +1,6 @@
 <?php
 /**
- * @author Doctor <doctor.netpeak@gmail.com>
+ * @author Doctor <ashterix69@gmail.com>
  *
  *
  * Date: 08.06.2017

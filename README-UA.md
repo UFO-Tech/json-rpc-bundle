@@ -89,7 +89,8 @@ Otherwise, manually add the route section of the package.В теку `config/rou
 # config/routes/ufo_json_rpc.yaml  
 ufo_json_rpc_bundle:  
     resource: ../../vendor/ufo-cms/json-rpc-bundle/config/router.yaml 
-    prefix: /api  
+    prefix: /api
+    trailing_slash_on_root: false
 ```  
 
 За замовченням, API доступно по url **http://example.com/api**  
@@ -98,7 +99,8 @@ ufo_json_rpc_bundle:
 # config/routes/ufo_json_rpc.yaml  
 ufo_json_rpc_bundle:  
     resource: ../../vendor/ufo-cms/json-rpc-bundle/config/router.yaml 
-    prefix: /my_new_api_path  
+    prefix: /my_new_api_path
+    trailing_slash_on_root: false
 ```  
 API буде доступне по url **http://example.com/my_new_api_path**
 

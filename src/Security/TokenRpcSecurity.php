@@ -1,6 +1,6 @@
 <?php
 /**
- * @author Doctor <doctor.netpeak@gmail.com>
+ * @author Doctor <ashterix69@gmail.com>
  *
  *
  * Date: 21.04.2017
@@ -55,7 +55,7 @@ class TokenRpcSecurity implements IRpcSecurity
         $this->request = $requestStack->getCurrentRequest();
         $this->tokenHeader = $tokenHeaderKey;
         if (!is_null($router)) {
-            $this->protectedPath = $router->getRouteCollection()->get('ufo_api_server')->getPath();
+            $this->protectedPath = $router->getRouteCollection()->get('ufo_rpc_api_server')->getPath();
         }
     }
 
