@@ -1,11 +1,4 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: ashterix
- * Date: 26.09.16
- * Time: 19:04
- */
-
 namespace Ufo\JsonRpcBundle\Facade;
 
 
@@ -19,6 +12,8 @@ use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
 use Laminas\Json\Server\Error;
 use Laminas\Json\Server\Response\Http;
 use Ufo\JsonRpcBundle\Server\UfoZendServer;
+use Laminas\Json\Server\Response;
+
 
 class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
 {
@@ -50,7 +45,7 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
     }
 
     /**
-     * @return UfoZendServer JsonRpc Server
+     * @return UfoZendServer Server
      */
     public function getServer(): UfoZendServer
     {
@@ -80,10 +75,10 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
     /**
      * @return mixed
      */
-    public function handle()
+    public function handle(): Response
     {
         try {
-            $this->rpcSecurity->isValidPostRequest();
+            $this->rpcSecurity->isValidRequest();
             $requestId = $this->zendServer->getRequest()->getId();
             if (is_null($requestId) || empty($requestId)) {
                 $this->zendServer->getRequest()->setId(uniqid());
@@ -120,7 +115,7 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
      * @param mixed $data
      * @return Http
      */
-    protected function createErrorResponse($message, $code, $data = null)
+    protected function createErrorResponse($message, $code, $data = null): Http
     {
         if ($code == Error::ERROR_OTHER && $this->environment != 'dev') {
             $message = 'Everything is bad. Call admin.';
@@ -135,7 +130,7 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
     /**
      * @return mixed
      */
-    public function getServiceMap()
+    public function getServiceMap(): mixed
     {
         try {
             $this->rpcSecurity->isValidGetRequest();
@@ -154,7 +149,7 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
      * @param string $namespace
      * @return $this
      */
-    public function addNsAlias($namespace, $alias)
+    public function addNsAlias($namespace, $alias): static
     {
         $this->nsAliases[$alias] = $namespace;
         return $this;
@@ -163,7 +158,7 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
     /**
      * @return array
      */
-    public function getNsAliases()
+    public function getNsAliases(): array
     {
         return $this->nsAliases;
     }
@@ -172,7 +167,7 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
      * @param string $alias
      * @return string
      */
-    public function checkNsAlias($alias)
+    public function checkNsAlias($alias): string
     {
         return isset($this->nsAliases[$alias]) ? $this->nsAliases[$alias] : $alias;
     }
@@ -181,7 +176,7 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
      * @param string $methodName
      * @return string
      */
-    protected function checkNsAliasFromMethodName($methodName)
+    protected function checkNsAliasFromMethodName($methodName): string
     {
         $n = explode('.', $methodName);
         if (count($n) != 2) {

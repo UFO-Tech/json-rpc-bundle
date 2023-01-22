@@ -2,6 +2,7 @@
 
 namespace Ufo\JsonRpcBundle\Controller;
 
+use Laminas\Json\Server\Request as JsonRequest;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -77,9 +78,12 @@ class ApiController extends AbstractController
         }
 
         $responses = [];
+        $server = $this->rpcServerFacade->getServer();
         foreach ($raw as $options) {
-            $this->rpcServerFacade->getServer()->clearRequestAndResponse();
-            $this->rpcServerFacade->getServer()->getRequest()->setOptions($options);
+            $server->clearRequestAndResponse();
+            $singleRequest = new JsonRequest();
+            $singleRequest->setOptions($options);
+            $server->setRequest($singleRequest);
 
             $responses[] = $this->rpcServerFacade->handle()->toJson();
         }

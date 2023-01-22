@@ -10,13 +10,14 @@ namespace Ufo\JsonRpcBundle\Facade\Interfaces;
 
 
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
+use Ufo\JsonRpcBundle\Server\UfoZendServer;
 
 interface IFacadeJsonRpcServer
 {
     /**
-     * @return object JsonRpc Server
+     * @return UfoZendServer Server
      */
-    public function getServer();
+    public function getServer(): UfoZendServer;
 
     /**
      * @param IRpcService $procedure
