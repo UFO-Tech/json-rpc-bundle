@@ -107,7 +107,9 @@ class ApiController extends AbstractController
 
     /**
      * @param array $postpone
-     * @return array
+     * @param array $responses
+     * @return void
+     * @throws InvalidButchRequestExceptions
      */
     protected function providePostponeFromButch(array $postpone, array &$responses)
     {
@@ -118,7 +120,7 @@ class ApiController extends AbstractController
                 if (!isset($responses[$manches[1]])
                     || !isset($responses[$manches[1]]['result'][$manches[2]])
                 ) {
-                    throw new InvalidButchRequestExceptions('Not found tatget response for ' . $subject);
+                    throw new InvalidButchRequestExceptions('Not found target response for ' . $subject);
                 }
                 $item['request']['params'][$key] = $responses[$manches[1]]['result'][$manches[2]];
                 $response = $this->handleSingleRequestFromButch($item['request']);
