@@ -12,6 +12,7 @@ JSON-RPC 2.0 сервер для Symfony v.6.*
 ![php_version](https://img.shields.io/packagist/dependency-v/ufo-cms/json-rpc-bundle/php?logo=PHP&logoColor=white) ![symfony_version](https://img.shields.io/packagist/dependency-v/ufo-cms/json-rpc-bundle/symfony/framework-bundle?label=Symfony&logo=Symfony&logoColor=white) ![laminas-json_version](https://img.shields.io/packagist/dependency-v/ufo-cms/json-rpc-bundle/laminas/laminas-json?label=laminas-json&logo=JSON&logoColor=white)
 
 #Що нового?
+
 ###Версія 4.1.0
 - Повноцінна підтримка butch запитів з можливістю передачі результатів одного запиту, до параметрів другого
 
@@ -52,6 +53,7 @@ Response:
 ```
 
 #Початок роботи
+
 ## Автоматичне встановлення пакету в Symfony
 
 ### Крок 0 (РЕКОМЕНДОВАНО): Налаштування Composer
