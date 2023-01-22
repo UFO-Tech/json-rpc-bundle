@@ -11,7 +11,46 @@ Package for easy api creation using laminas json-rpc server
 
 ### Environmental requirements
 ![php_version](https://img.shields.io/packagist/dependency-v/ufo-cms/json-rpc-bundle/php?logo=PHP&logoColor=white) ![symfony_version](https://img.shields.io/packagist/dependency-v/ufo-cms/json-rpc-bundle/symfony/framework-bundle?label=Symfony&logo=Symfony&logoColor=white) ![laminas-json_version](https://img.shields.io/packagist/dependency-v/ufo-cms/json-rpc-bundle/laminas/laminas-json?label=laminas-json&logo=JSON&logoColor=white)
+#What's new?
+###Version 4.1.0
+- Full support for butch requests with the possibility of transferring the results of one request to the parameters of the second
+Request:
+```json
+[
+    {
+        "id": "someIdForCreateWebhook",
+        "method": "SomeEntityProcedure.create",
+        "params":{
+            "name": "test"
+        }
+    },
+    {
+        "id": "someIdForActivateWebhook",
+        "method": "SomeEntityProcedure.changeStatus",
+        "params":{
+            "id": "@FROM:someIdForCreateWebhook(id)",
+            "status": 1
+        }
+    }
+]
+```
+Response:
+```json
+[
+    {
+        "id": "someIdForCreateWebhook",
+        "result": {
+            "id": 123
+        }
+    },
+    {
+        "id": "someIdForActivateWebhook",
+        "result": "SomeEntity 123 have status 1"
+    }
+]
+```
 
+#Getting Started
 ## Automatic package installation in Symfony
 
 ### Step 0 (RECOMMENDED): Configure Composer

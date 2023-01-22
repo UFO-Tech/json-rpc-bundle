@@ -78,18 +78,53 @@ class ApiController extends AbstractController
         }
 
         $responses = [];
-        $server = $this->rpcServerFacade->getServer();
+        $postpone = [];
         foreach ($raw as $options) {
-            $server->clearRequestAndResponse();
-            $singleRequest = new JsonRequest();
-            $singleRequest->setOptions($options);
-            $server->setRequest($singleRequest);
-
-            $responses[] = $this->rpcServerFacade->handle()->toJson();
+            if (!empty($options['params'])
+                && $matched = preg_grep('/^\@FROM\:/i', $options['params'])) {
+                $postpone[$options['method']] = [
+                    'request' => $options,
+                    'match' => $matched
+                ];
+                continue;
+            }
+            $response = $this->handleSingleRequestFromButch($options);
+            $responses[$response['id']] = $response;
         }
-        $result = '[' . implode(', ', $responses) . ']';
+        $this->providePostponeFromButch($postpone, $responses);
+        return new JsonResponse(array_values($responses));
+    }
 
-        return new JsonResponse($result);
+    protected function handleSingleRequestFromButch(array $options): array
+    {
+        $server = $this->rpcServerFacade->getServer();
+        $server->clearRequestAndResponse();
+        $singleRequest = new JsonRequest();
+        $singleRequest->setOptions($options);
+        $server->setRequest($singleRequest);
+        return json_decode($this->rpcServerFacade->handle()->toJson(), true);
+    }
+
+    /**
+     * @param array $postpone
+     * @return array
+     */
+    protected function providePostponeFromButch(array $postpone, array &$responses)
+    {
+        foreach ($postpone as $item) {
+            foreach ($item['match'] as $key => $subject) {
+                $manches = [];
+                preg_match('/^\@FROM\:(\w+)\((\w+)\)$/i', $subject, $manches);
+                if (!isset($responses[$manches[1]])
+                    || !isset($responses[$manches[1]]['result'][$manches[2]])
+                ) {
+                    throw new InvalidButchRequestExceptions('Not found tatget response for ' . $subject);
+                }
+                $item['request']['params'][$key] = $responses[$manches[1]]['result'][$manches[2]];
+                $response = $this->handleSingleRequestFromButch($item['request']);
+                $responses[$response['id']] = $response;
+            }
+        }
     }
 
     /**
@@ -106,7 +141,7 @@ class ApiController extends AbstractController
         }
 
         return new Response(
-            $this->soupUiProjectGenerator->createXml(), 
+            $this->soupUiProjectGenerator->createXml(),
             headers: ['Content-Type' => 'text/xml']
         );
     }
