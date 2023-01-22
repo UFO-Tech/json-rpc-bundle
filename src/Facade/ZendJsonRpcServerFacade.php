@@ -79,13 +79,17 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
     {
         try {
             $this->rpcSecurity->isValidRequest();
-            $requestId = $this->zendServer->getRequest()->getId();
-            if (is_null($requestId) || empty($requestId)) {
-                $this->zendServer->getRequest()->setId(uniqid());
+            $singleRequest = $this->zendServer->getRequest();
+            if ($singleRequest->isParseError()) {
+                throw new BadRequestException('Invalid json object. Can\'t parse.');
             }
-            $requestMethod = $this->zendServer->getRequest()->getMethod();
+            $requestId = $singleRequest->getId();
+            if (is_null($requestId) || empty($requestId)) {
+                $singleRequest->setId(uniqid());
+            }
+            $requestMethod = $singleRequest->getMethod();
             if (false === $this->zendServer->getServiceMap()->getService($requestMethod)) {
-                $this->zendServer->getRequest()->setMethod($this->checkNsAliasFromMethodName($requestMethod));
+                $singleRequest->setMethod($this->checkNsAliasFromMethodName($requestMethod));
             }
             $response = $this->zendServer->handle();
         } catch (BadRequestException $e) {
@@ -133,7 +137,7 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
     public function getServiceMap(): mixed
     {
         try {
-            $this->rpcSecurity->isValidGetRequest();
+            $this->rpcSecurity->isValidRequest();
             $this->zendServer->setTarget($this->router->generate(ApiController::API_ROUTE))
                 ->setEnvelope(\Laminas\Json\Server\Smd::ENV_JSONRPC_2);
             $response = $this->zendServer->getServiceMap();
