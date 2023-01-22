@@ -12,9 +12,9 @@ Package for easy api creation using laminas json-rpc server
 ### Environmental requirements
 ![php_version](https://img.shields.io/packagist/dependency-v/ufo-cms/json-rpc-bundle/php?logo=PHP&logoColor=white) ![symfony_version](https://img.shields.io/packagist/dependency-v/ufo-cms/json-rpc-bundle/symfony/framework-bundle?label=Symfony&logo=Symfony&logoColor=white) ![laminas-json_version](https://img.shields.io/packagist/dependency-v/ufo-cms/json-rpc-bundle/laminas/laminas-json?label=laminas-json&logo=JSON&logoColor=white)
 
-#What's new?
+# What's new?
 
-###Version 4.1.0
+### Version 4.1.0
 - Full support for butch requests with the possibility of transferring the results of one request to the parameters of the second
 Request:
 ```json
@@ -52,7 +52,7 @@ Response:
 ]
 ```
 
-#Getting Started
+# Getting Started
 
 ## Automatic package installation in Symfony
 
