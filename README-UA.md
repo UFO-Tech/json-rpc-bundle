@@ -317,12 +317,11 @@ Response:
 # config/packages/ufo_json_rpc.yaml
 ufo_json_rpc:
     security:
-        protected_get: true                     # захист GET запиту
-        protected_post: true                    # захист POST запитів
-        token_key_in_header: 'Ufo-RPC-Token'    # Назва ключу в хедері 
+        protected_methods: ['GET', 'POST']      # protection of GET and POST requests
+        token_key_in_header: 'Ufo-RPC-Token'    # Name of the key in the header
         clients_tokens:
-            - 'ClientTokenExample'              # приклад хардкодного токену. Важливо!!! Замініть, або видаліть це!
-            - '%env(resolve:UFO_API_TOKEN)%e'       # приклад токену з .env.local 
+            - 'ClientTokenExample'              # hardcoded token example. Importantly!!! Replace or delete it!
+            - '%env(resolve:UFO_API_TOKEN)%e'   # token example from .env.local
 ```
 Якщо безпечний режим ввімкнуто, ваші запити мають містити в headers заголовок, вказанный в ***token_key_in_header***. 
 

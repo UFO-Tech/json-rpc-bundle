@@ -10,9 +10,13 @@
 namespace Ufo\JsonRpcBundle\Security;
 
 
+namespace Ufo\JsonRpcBundle\Security;
+
+
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Routing\RouterInterface;
+use Ufo\JsonRpcBundle\Controller\ApiController;
 use Ufo\JsonRpcBundle\Exceptions\InvalidTokenException;
 use Ufo\JsonRpcBundle\Exceptions\TokenNotFoundInHeaderException;
 use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
@@ -37,42 +41,24 @@ class TokenRpcSecurity implements IRpcSecurity
 
     /**
      * @param RequestStack $requestStack
-     * @param bool $protectedGet
-     * @param bool $protectedPost
      * @param string $tokenHeaderKey
      * @param ITokenValidator $tokenValidator
-     * @param ?RouterInterface $router
+     * @param array $protectedMethods
+     * @param RouterInterface|null $router
      */
     public function __construct(
         RequestStack $requestStack,
-        protected bool $protectedGet,
-        protected bool $protectedPost,
         protected string $tokenHeaderKey,
         protected ITokenValidator $tokenValidator,
+        protected array $protectedMethods = [],
         ?RouterInterface $router = null
     )
     {
         $this->request = $requestStack->getCurrentRequest();
         $this->tokenHeader = $tokenHeaderKey;
         if (!is_null($router)) {
-            $this->protectedPath = $router->getRouteCollection()->get('ufo_rpc_api_server')->getPath();
+            $this->protectedPath = $router->getRouteCollection()->get(ApiController::API_ROUTE)->getPath();
         }
-    }
-
-    /**
-     * @return bool
-     */
-    public function isProtectedGet(): bool
-    {
-        return $this->protectedGet;
-    }
-
-    /**
-     * @return bool
-     */
-    public function isProtectedPost(): bool
-    {
-        return $this->protectedPost;
     }
 
     /**
@@ -90,7 +76,7 @@ class TokenRpcSecurity implements IRpcSecurity
      * @throws InvalidTokenException
      * @throws TokenNotFoundInHeaderException
      */
-    protected function isValidRequest(): bool
+    protected function validateRequest(): bool
     {
         $res = true;
         if ($this->routeMustBeProtected()) {
@@ -98,7 +84,6 @@ class TokenRpcSecurity implements IRpcSecurity
             $res = $this->isValidToken($token);
         }
         return $res;
-
     }
 
     /**
@@ -122,24 +107,13 @@ class TokenRpcSecurity implements IRpcSecurity
      * @throws InvalidTokenException
      * @throws TokenNotFoundInHeaderException
      */
-    public function isValidGetRequest(): bool
+    public function isValidRequest(): bool
     {
-        if ($this->isProtectedGet()) {
-            $this->isValidRequest();
+        $requestMethod = $this->request->getMethod();
+        if (in_array($requestMethod, $this->protectedMethods)) {
+            $this->validateRequest();
         }
         return true;
     }
 
-    /**
-     * @return bool
-     * @throws InvalidTokenException
-     * @throws TokenNotFoundInHeaderException
-     */
-    public function isValidPostRequest(): bool
-    {
-        if ($this->isProtectedPost()) {
-            $this->isValidRequest();
-        }
-        return true;
-    }
 }

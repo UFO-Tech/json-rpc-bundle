@@ -13,6 +13,7 @@ namespace Ufo\JsonRpcBundle\SoupUi;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Routing\RouterInterface;
+use Ufo\JsonRpcBundle\Controller\ApiController;
 use Ufo\JsonRpcBundle\SoupUi\Node\EndpointsNode;
 use Ufo\JsonRpcBundle\SoupUi\Node\InterfaceNode;
 use Ufo\JsonRpcBundle\SoupUi\Node\Interfaces\ISoupUiNode;
@@ -72,7 +73,7 @@ class ProjectGenerator
         $interface = new InterfaceNode([], [
             new EndpointsNode($this->request->getSchemeAndHttpHost()),
             new ResourceNode([
-                'path' => $this->router->generate('ufo_rpc_api_server'),
+                'path' => $this->router->generate(ApiController::API_ROUTE),
             ], [
                 new ParametersNode($this->createParameters()),
                 new MethodsNode([

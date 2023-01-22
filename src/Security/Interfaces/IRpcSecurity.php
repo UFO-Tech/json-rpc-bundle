@@ -17,16 +17,6 @@ use Ufo\JsonRpcBundle\Exceptions\TokenNotFoundInHeaderException;
 interface IRpcSecurity
 {
     /**
-     * @return bool
-     */
-    public function isProtectedGet(): bool;
-
-    /**
-     * @return bool
-     */
-    public function isProtectedPost(): bool;
-
-    /**
      * @return string
      */
     public function getTokenHeader(): string;
@@ -43,13 +33,6 @@ interface IRpcSecurity
      * @throws InvalidTokenException
      * @throws TokenNotFoundInHeaderException
      */
-    public function isValidGetRequest(): bool;
-
-    /**
-     * @return bool
-     * @throws InvalidTokenException
-     * @throws TokenNotFoundInHeaderException
-     */
-    public function isValidPostRequest(): bool;
+    public function isValidRequest(): bool;
 
 }

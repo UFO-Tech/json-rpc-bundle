@@ -19,6 +19,8 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
  */
 class ApiController extends AbstractController
 {
+    const API_ROUTE = 'ufo_rpc_api_server';
+
     /**
      * @var IFacadeJsonRpcServer
      */
@@ -45,7 +47,7 @@ class ApiController extends AbstractController
      * @param Request $request
      * @return Response
      */
-    #[Route('', name: 'ufo_rpc_api_server', methods: ["GET", "POST"])]
+    #[Route('', name: self::API_ROUTE, methods: ["GET", "POST"])]
     public function serverAction(Request $request): Response
     {
         if (Request::METHOD_GET == $request->getMethod()) {

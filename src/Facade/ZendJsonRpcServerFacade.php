@@ -12,6 +12,7 @@ namespace Ufo\JsonRpcBundle\Facade;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Routing\RouterInterface;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
+use Ufo\JsonRpcBundle\Controller\ApiController;
 use Ufo\JsonRpcBundle\Exceptions\BadRequestException;
 use Ufo\JsonRpcBundle\Facade\Interfaces\IFacadeJsonRpcServer;
 use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
@@ -127,8 +128,7 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
         }
 
         $response = new Http();
-        $error = new Error($message, $code, $data);
-        $response->setError($error);
+        $response->setError(new Error($message, $code, $data));
         return $response;
     }
 
@@ -139,7 +139,7 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
     {
         try {
             $this->rpcSecurity->isValidGetRequest();
-            $this->zendServer->setTarget($this->router->generate('ufo_rpc_api_server'))
+            $this->zendServer->setTarget($this->router->generate(ApiController::API_ROUTE))
                 ->setEnvelope(\Laminas\Json\Server\Smd::ENV_JSONRPC_2);
             $response = $this->zendServer->getServiceMap();
         } catch (\Exception $e) {
@@ -148,7 +148,7 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
 
         return $response;
     }
-    
+
     /**
      * @param string $alias
      * @param string $namespace
