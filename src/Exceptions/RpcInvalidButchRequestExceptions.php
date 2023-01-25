@@ -9,7 +9,6 @@
 namespace Ufo\JsonRpcBundle\Exceptions;
 
 
-class InvalidButchRequestExceptions extends \Exception
+class RpcInvalidButchRequestExceptions extends AbstractJsonRpcBundleException implements IUserInputExceptionInterface
 {
-
 }

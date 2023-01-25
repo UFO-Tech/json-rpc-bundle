@@ -12,7 +12,7 @@ namespace Ufo\JsonRpcBundle\DependencyInjection\Compiler;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
-use Ufo\JsonRpcBundle\Facade\ZendJsonRpcServerFacade;
+use Ufo\JsonRpcBundle\Server\RpcServerFacade;
 
 class ApiProceduresPass implements CompilerPassInterface
 {
@@ -24,11 +24,11 @@ class ApiProceduresPass implements CompilerPassInterface
      */
     public function process(ContainerBuilder $container)
     {
-        if (!$container->has(ZendJsonRpcServerFacade::class)) {
+        if (!$container->has(RpcServerFacade::class)) {
             return;
         }
 
-        $definition = $container->findDefinition(ZendJsonRpcServerFacade::class);
+        $definition = $container->findDefinition(RpcServerFacade::class);
 
         $taggedServices = $container->findTaggedServiceIds('ufo.rpc.service');
 

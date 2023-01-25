@@ -17,8 +17,8 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Routing\RouterInterface;
 use Ufo\JsonRpcBundle\Controller\ApiController;
-use Ufo\JsonRpcBundle\Exceptions\InvalidTokenException;
-use Ufo\JsonRpcBundle\Exceptions\TokenNotFoundInHeaderException;
+use Ufo\JsonRpcBundle\Exceptions\RpcInvalidTokenException;
+use Ufo\JsonRpcBundle\Exceptions\RpcTokenNotFoundInHeaderException;
 use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
 use Ufo\JsonRpcBundle\Security\Interfaces\ITokenValidator;
 
@@ -64,7 +64,7 @@ class TokenRpcSecurity implements IRpcSecurity
     /**
      * @param $token
      * @return bool
-     * @throws InvalidTokenException
+     * @throws RpcInvalidTokenException
      */
     public function isValidToken($token): bool
     {
@@ -73,8 +73,8 @@ class TokenRpcSecurity implements IRpcSecurity
 
     /**
      * @return bool
-     * @throws InvalidTokenException
-     * @throws TokenNotFoundInHeaderException
+     * @throws RpcInvalidTokenException
+     * @throws RpcTokenNotFoundInHeaderException
      */
     protected function validateRequest(): bool
     {
@@ -104,8 +104,8 @@ class TokenRpcSecurity implements IRpcSecurity
 
     /**
      * @return bool
-     * @throws InvalidTokenException
-     * @throws TokenNotFoundInHeaderException
+     * @throws RpcInvalidTokenException
+     * @throws RpcTokenNotFoundInHeaderException
      */
     public function isValidRequest(): bool
     {

@@ -3,5 +3,6 @@ controllers:
         path: ../src/Controller/
         namespace: Ufo\JsonRpcBundle\Controller
     type: attribute
+    format: json
 
 

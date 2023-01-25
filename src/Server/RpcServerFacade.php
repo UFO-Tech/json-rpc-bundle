@@ -1,26 +1,30 @@
 <?php
-namespace Ufo\JsonRpcBundle\Facade;
+namespace Ufo\JsonRpcBundle\Server;
 
 
+use Laminas\Json\Server\Error;
+use Laminas\Json\Server\Response;
+use Laminas\Json\Server\Response\Http;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Routing\RouterInterface;
+use Symfony\Component\Serializer\SerializerInterface;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 use Ufo\JsonRpcBundle\Controller\ApiController;
-use Ufo\JsonRpcBundle\Exceptions\BadRequestException;
-use Ufo\JsonRpcBundle\Facade\Interfaces\IFacadeJsonRpcServer;
+use Ufo\JsonRpcBundle\Exceptions\AbstractJsonRpcBundleException;
+use Ufo\JsonRpcBundle\Exceptions\RpcBadRequestException;
+use Ufo\JsonRpcBundle\Exceptions\WrongWayException;
+use Ufo\JsonRpcBundle\Interfaces\IFacadeRpcServer;
 use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
-use Laminas\Json\Server\Error;
-use Laminas\Json\Server\Response\Http;
-use Ufo\JsonRpcBundle\Server\UfoZendServer;
-use Laminas\Json\Server\Response;
+use \Laminas\Json\Server\Smd;
 
-
-class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
+class RpcServerFacade implements IFacadeRpcServer
 {
     /**
-     * @var UfoZendServer
+     * @var RpcServer
      */
-    protected UfoZendServer $zendServer;
+    protected RpcServer $rpcServer;
+    
+    protected RpcRequestObject $requestObject;
 
     /**
      * @var array
@@ -28,28 +32,29 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
     protected array $nsAliases = [];
 
     /**
-     * ZendJsonRpcServerFacade constructor.
      * @param RouterInterface $router
      * @param IRpcSecurity $rpcSecurity
      * @param string $environment
+     * @param SerializerInterface $serializer
      * @param LoggerInterface|null $logger
      */
     public function __construct(
         protected RouterInterface $router,
         protected IRpcSecurity $rpcSecurity,
         protected string $environment,
+        protected SerializerInterface $serializer,
         LoggerInterface $logger = null
     )
     {
-        $this->zendServer = new UfoZendServer($logger);
+        $this->rpcServer = new RpcServer($logger, $this->serializer);
     }
 
     /**
-     * @return UfoZendServer Server
+     * @return RpcServer Server
      */
-    public function getServer(): UfoZendServer
+    public function getServer(): RpcServer
     {
-        return $this->zendServer;
+        return $this->rpcServer;
     }
 
     /**
@@ -68,39 +73,41 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
             }
             $this->setNamespaceAliasesForProxyAccess($procedure, $namespace);
         }
-        $this->zendServer->setClass($procedure, $namespace, $argv);
+        $this->rpcServer->setClass($procedure, $namespace, $argv);
         return $this;
     }
 
     /**
      * @return mixed
      */
-    public function handle(): Response
+    public function handle(RpcRequestObject $singleRequest): RpcResponseObject
     {
+        $this->rpcServer->clearRequestAndResponse();
+        
         try {
             $this->rpcSecurity->isValidRequest();
-            $singleRequest = $this->zendServer->getRequest();
-            if ($singleRequest->isParseError()) {
-                throw new BadRequestException('Invalid json object. Can\'t parse.');
+            
+            if ($singleRequest->hasError()) {
+                throw new WrongWayException();
             }
-            $requestId = $singleRequest->getId();
-            if (is_null($requestId) || empty($requestId)) {
-                $singleRequest->setId(uniqid());
-            }
-            $requestMethod = $singleRequest->getMethod();
-            if (false === $this->zendServer->getServiceMap()->getService($requestMethod)) {
-                $singleRequest->setMethod($this->checkNsAliasFromMethodName($requestMethod));
-            }
-            $response = $this->zendServer->handle();
-        } catch (BadRequestException $e) {
-            $response = $this->getServer()->fault($e->getMessage(), Error::ERROR_INVALID_PARAMS, $e);
+            
+            $response = $this->rpcServer->handleRpcRequest($singleRequest);
+        } catch (WrongWayException) {
+            // error in request
+            $response = $this->handleError($singleRequest->getError());
         } catch (\Exception $e) {
-            $response = $this->getServer()->fault($e->getMessage(), Error::ERROR_OTHER, $e);
+            $response = $this->handleError($e);
         }
 
         return $response;
     }
 
+    protected function handleError(\Throwable $e): RpcResponseObject
+    {
+        $code = ($e instanceof AbstractJsonRpcBundleException) ? $e->getCode() : AbstractJsonRpcBundleException::DEFAULT_CODE;
+        return $this->getServer()->handleError($e->getMessage(), $code, $e);
+    }
+    
     /**
      * @param $procedure
      * @param $namespace
@@ -114,35 +121,17 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
     }
 
     /**
-     * @param string $message
-     * @param int $code
-     * @param mixed $data
-     * @return Http
-     */
-    protected function createErrorResponse($message, $code, $data = null): Http
-    {
-        if ($code == Error::ERROR_OTHER && $this->environment != 'dev') {
-            $message = 'Everything is bad. Call admin.';
-            $data = null;
-        }
-
-        $response = new Http();
-        $response->setError(new Error($message, $code, $data));
-        return $response;
-    }
-
-    /**
      * @return mixed
      */
     public function getServiceMap(): mixed
     {
         try {
             $this->rpcSecurity->isValidRequest();
-            $this->zendServer->setTarget($this->router->generate(ApiController::API_ROUTE))
-                ->setEnvelope(\Laminas\Json\Server\Smd::ENV_JSONRPC_2);
-            $response = $this->zendServer->getServiceMap();
+            $this->rpcServer->setTarget($this->router->generate(ApiController::API_ROUTE))
+                ->setEnvelope(Smd::ENV_JSONRPC_2);
+            $response = $this->rpcServer->getServiceMap();
         } catch (\Exception $e) {
-            $response = $this->createErrorResponse($e->getMessage(), Error::ERROR_OTHER, $e);
+            $response = $this->handleError($e);
         }
 
         return $response;
@@ -153,7 +142,7 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
      * @param string $namespace
      * @return $this
      */
-    public function addNsAlias($namespace, $alias): static
+    public function addNsAlias(string $namespace, string $alias): static
     {
         $this->nsAliases[$alias] = $namespace;
         return $this;
@@ -171,7 +160,7 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
      * @param string $alias
      * @return string
      */
-    public function checkNsAlias($alias): string
+    public function checkNsAlias(string $alias): string
     {
         return isset($this->nsAliases[$alias]) ? $this->nsAliases[$alias] : $alias;
     }
@@ -180,7 +169,7 @@ class ZendJsonRpcServerFacade implements IFacadeJsonRpcServer
      * @param string $methodName
      * @return string
      */
-    protected function checkNsAliasFromMethodName($methodName): string
+    protected function checkNsAliasFromMethodName(string $methodName): string
     {
         $n = explode('.', $methodName);
         if (count($n) != 2) {

@@ -11,7 +11,7 @@ namespace Ufo\JsonRpcBundle\Security;
 
 
 use Symfony\Component\HttpFoundation\Request;
-use Ufo\JsonRpcBundle\Exceptions\TokenNotFoundInHeaderException;
+use Ufo\JsonRpcBundle\Exceptions\RpcTokenNotFoundInHeaderException;
 
 class Helper
 {
@@ -19,13 +19,13 @@ class Helper
      * @param Request $request
      * @param string $tokenHeaderKey
      * @return string
-     * @throws TokenNotFoundInHeaderException
+     * @throws RpcTokenNotFoundInHeaderException
      */
     public static function tokenFromRequest(Request $request, string $tokenHeaderKey): string
     {
         $token = $request->headers->get($tokenHeaderKey);
         if (is_null($token)) {
-            throw new TokenNotFoundInHeaderException();
+            throw new RpcTokenNotFoundInHeaderException();
         }
         return $token;
     }

@@ -9,14 +9,14 @@
 namespace Ufo\JsonRpcBundle\Security\Interfaces;
 
 
-use Ufo\JsonRpcBundle\Exceptions\InvalidTokenException;
+use Ufo\JsonRpcBundle\Exceptions\RpcInvalidTokenException;
 
 interface ITokenValidator
 {
     /**
      * @param string $token
      * @return bool
-     * @throws InvalidTokenException
+     * @throws RpcInvalidTokenException
      */
     public function isValid(string $token): bool;
 }

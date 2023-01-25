@@ -13,7 +13,7 @@
 namespace Ufo\JsonRpcBundle\Exceptions;
 
 
-class BadRequestException extends \Exception
+class RpcBadRequestException extends AbstractJsonRpcBundleException implements IUserInputExceptionInterface
 {
-
+    protected $code = -32600;
 }

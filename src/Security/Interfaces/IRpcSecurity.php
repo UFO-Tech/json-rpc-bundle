@@ -11,8 +11,8 @@ namespace Ufo\JsonRpcBundle\Security\Interfaces;
 
 
 use Symfony\Component\HttpFoundation\Request;
-use Ufo\JsonRpcBundle\Exceptions\InvalidTokenException;
-use Ufo\JsonRpcBundle\Exceptions\TokenNotFoundInHeaderException;
+use Ufo\JsonRpcBundle\Exceptions\RpcInvalidTokenException;
+use Ufo\JsonRpcBundle\Exceptions\RpcTokenNotFoundInHeaderException;
 
 interface IRpcSecurity
 {
@@ -24,14 +24,14 @@ interface IRpcSecurity
     /**
      * @param $token
      * @return bool
-     * @throws InvalidTokenException
+     * @throws RpcInvalidTokenException
      */
     public function isValidToken($token): bool;
 
     /**
      * @return bool
-     * @throws InvalidTokenException
-     * @throws TokenNotFoundInHeaderException
+     * @throws RpcInvalidTokenException
+     * @throws RpcTokenNotFoundInHeaderException
      */
     public function isValidRequest(): bool;
 

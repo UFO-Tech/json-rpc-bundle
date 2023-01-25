@@ -9,7 +9,7 @@
 namespace Ufo\JsonRpcBundle\Security;
 
 
-use Ufo\JsonRpcBundle\Exceptions\InvalidTokenException;
+use Ufo\JsonRpcBundle\Exceptions\RpcInvalidTokenException;
 use Ufo\JsonRpcBundle\Security\Interfaces\ITokenValidator;
 
 class SimpleTokenValidator implements ITokenValidator
@@ -26,12 +26,12 @@ class SimpleTokenValidator implements ITokenValidator
     /**
      * @param string $token
      * @return bool
-     * @throws InvalidTokenException
+     * @throws RpcInvalidTokenException
      */
     public function isValid(string $token): bool
     {
         if (false === in_array($token, $this->clientsTokens)) {
-            throw new InvalidTokenException();
+            throw new RpcInvalidTokenException();
         }
         return true;
     }

@@ -6,18 +6,20 @@
  * Time: 18:58
  */
 
-namespace Ufo\JsonRpcBundle\Facade\Interfaces;
+namespace Ufo\JsonRpcBundle\Interfaces;
 
 
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
-use Ufo\JsonRpcBundle\Server\UfoZendServer;
+use Ufo\JsonRpcBundle\Server\RpcRequestObject;
+use Ufo\JsonRpcBundle\Server\RpcResponseObject;
+use Ufo\JsonRpcBundle\Server\RpcServer;
 
-interface IFacadeJsonRpcServer
+interface IFacadeRpcServer
 {
     /**
-     * @return UfoZendServer Server
+     * @return RpcServer Server
      */
-    public function getServer(): UfoZendServer;
+    public function getServer(): RpcServer;
 
     /**
      * @param IRpcService $procedure
@@ -30,7 +32,7 @@ interface IFacadeJsonRpcServer
     /**
      * @return mixed
      */
-    public function handle();
+    public function handle(RpcRequestObject $singleRequest): RpcResponseObject;
 
     /**
      * @return mixed

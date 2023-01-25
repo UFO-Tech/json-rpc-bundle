@@ -13,7 +13,7 @@
 namespace Ufo\JsonRpcBundle\Exceptions;
 
 
-class NotFoundException extends \Exception
+class RpcDataNotFoundException extends AbstractJsonRpcBundleException implements IProcedureExceptionInterface
 {
-
+    protected $code = -32000;
 }

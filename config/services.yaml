@@ -10,7 +10,7 @@ services:
             - '../src/DependencyInjection/'
             - '../src/UfoJsonRpcBundle.php'
 
-    Ufo\JsonRpcBundle\Facade\ZendJsonRpcServerFacade:
+    Ufo\JsonRpcBundle\Server\RpcServerFacade:
         $environment: '%kernel.environment%'
 
     Ufo\JsonRpcBundle\Security\TokenRpcSecurity:
@@ -19,3 +19,13 @@ services:
 
     Ufo\JsonRpcBundle\Security\SimpleTokenValidator:
         $clientsTokens: "@=container.hasParameter('ufo_json_rpc.security.clients_tokens') ? parameter('ufo_json_rpc.security.clients_tokens') : []"
+
+    Ufo\JsonRpcBundle\EventListener\HandleExceptionListener:
+        arguments:
+            $environment: '%kernel.environment%'
+        tags:
+            - { name: kernel.event_listener, event: kernel.exception, priority: 10 }
+
+    Ufo\JsonRpcBundle\Serializer\RpcErrorNormalizer:
+        arguments:
+            $environment: '%kernel.environment%'
