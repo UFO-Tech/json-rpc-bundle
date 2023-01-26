@@ -28,9 +28,9 @@ class RpcServer extends Server
     protected RpcRequestObject $requestObject;
 
     public function __construct(
-        protected ?LoggerInterface $logger = null,
-        protected SerializerInterface $serializer
-    )
+        protected SerializerInterface $serializer,         
+        protected ?LoggerInterface $logger = null
+ )
     {
         parent::__construct();
     }

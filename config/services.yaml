@@ -10,8 +10,26 @@ services:
             - '../src/DependencyInjection/'
             - '../src/UfoJsonRpcBundle.php'
 
+    Ufo\JsonRpcBundle\Controller\ApiController:
+        $rpcServerFacade: '@Ufo\JsonRpcBundle\Server\RpcServerFacade'
+
+    Ufo\JsonRpcBundle\Server\RpcRequestHandler:
+        $rpcServerFacade: '@Ufo\JsonRpcBundle\Server\RpcServerFacade'
+
     Ufo\JsonRpcBundle\Server\RpcServerFacade:
         $environment: '%kernel.environment%'
+        $rpcSecurity: '@Ufo\JsonRpcBundle\Security\TokenRpcSecurity'
+
+    Ufo\JsonRpcBundle\Server\RpcServerFacadeCli:
+        arguments:
+            $logger: null
+            $rpcSecurity: '@Ufo\JsonRpcBundle\Security\TokenRpcCliSecurity'
+            $environment: '%kernel.environment%'
+
+    Ufo\JsonRpcBundle\Server\RpcRequestHandlerCli:
+        class:  'Ufo\JsonRpcBundle\Server\RpcRequestHandler'
+        arguments:
+            $rpcServerFacade: '@Ufo\JsonRpcBundle\Server\RpcServerFacadeCli'
 
     Ufo\JsonRpcBundle\Security\TokenRpcSecurity:
         $tokenHeaderKey: "@=container.hasParameter('ufo_json_rpc.security.token_key_in_header') ? parameter('ufo_json_rpc.security.token_key_in_header') : 'Ufo-RPC-Token'"
@@ -29,3 +47,12 @@ services:
     Ufo\JsonRpcBundle\Serializer\RpcErrorNormalizer:
         arguments:
             $environment: '%kernel.environment%'
+
+    Ufo\JsonRpcBundle\CliCommand\UfoRpcProcessCommand:
+        arguments:
+            $rpcSecurity: '@Ufo\JsonRpcBundle\Security\TokenRpcCliSecurity'
+            $requestHandler: '@Ufo\JsonRpcBundle\Server\RpcRequestHandlerCli'
+
+    Ufo\JsonRpcBundle\EventListener\HandleCliListener:
+        $rpcSecurity: '@Ufo\JsonRpcBundle\Security\TokenRpcCliSecurity'
+        $protectedMethods: "@=container.hasParameter('ufo_json_rpc.security.protected_methods') ? parameter('ufo_json_rpc.security.protected_methods') : []"

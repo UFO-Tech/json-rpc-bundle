@@ -28,7 +28,6 @@ final class RpcErrorNormalizer implements NormalizerInterface
      */
     public function normalize($object, string $format = null, array $context = []): array
     {
-        $this->environment = 'prod';
         $normalized = new ExceptionToArrayTransformer($object, $this->environment);
 
         return $normalized->infoByEnvirontment();

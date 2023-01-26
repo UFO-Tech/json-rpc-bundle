@@ -165,7 +165,7 @@ class RpcRequestObject
         return isset($this->requireIds[$id]);
     }
 
-    public function getCurrentRequireId(): string|int
+    public function getCurrentRequireId(): string|int|null
     {
         return array_key_first($this->requireIds);
     }

@@ -2,7 +2,6 @@
 
 namespace Ufo\JsonRpcBundle\Server;
 
-use Laminas\Json\Server\Request as JsonRequest;
 use Laminas\Json\Server\Smd;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Serializer\Context\Normalizer\ObjectNormalizerContextBuilder;
@@ -64,8 +63,8 @@ class RpcRequestHandler
     
     protected function smartHandle(): array
     {
-        $result = [];
         if ($this->isButchRequest) {
+            $result = [];
             $queue = &$this->butchRequestObject->getReadyToHandle();
             foreach ($queue as $key => &$singleRequest) {
                 $this->rpcServerFacade->getServer()->newRequest($singleRequest);
@@ -79,22 +78,27 @@ class RpcRequestHandler
 
             $result = $this->butchRequestObject->getResults(false);
         } else {
-            return $this->provideSingleRequest($this->requestObject);
+            $result = $this->provideSingleRequest($this->requestObject);
         }
         return $result;
     }
 
-    protected function provideSingleRequest(RpcRequestObject $singleRequest): array
+    public function provideSingleRequest(RpcRequestObject $singleRequest): array
     {
-        $this->rpcServerFacade->getServer()->newRequest($singleRequest);
-        $result = $this->rpcServerFacade->handle($singleRequest);
-
+        $result = $this->provideSingleRequestObjectResponse($singleRequest);
         $context = [
             AbstractNormalizer::GROUPS => [$result->getResponseSignature()],
             RpcErrorNormalizer::RPC_CONTEXT => true,
         ];
-
         return $this->serializer->normalize($result, context: $context);
+    }
+
+    public function provideSingleRequestObjectResponse(RpcRequestObject $singleRequest): RpcResponseObject
+    {
+        $this->rpcServerFacade->getServer()->newRequest($singleRequest);
+        $result = $this->rpcServerFacade->handle($singleRequest);
+
+        return $result;
     }
 
     protected function checkButchRequest(): static

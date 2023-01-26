@@ -30,6 +30,11 @@ interface IFacadeRpcServer
     public function addProcedure(IRpcService $procedure, string $namespace = '', mixed $argv = null): static;
 
     /**
+     * @param IRpcService[] $procedures
+     */
+    public function setProcedures(iterable $procedures): void;
+
+    /**
      * @return mixed
      */
     public function handle(RpcRequestObject $singleRequest): RpcResponseObject;

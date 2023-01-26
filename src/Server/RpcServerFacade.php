@@ -5,7 +5,9 @@ namespace Ufo\JsonRpcBundle\Server;
 use Laminas\Json\Server\Error;
 use Laminas\Json\Server\Response;
 use Laminas\Json\Server\Response\Http;
+use phpDocumentor\Reflection\Types\Iterable_;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\DependencyInjection\Attribute\TaggedIterator;
 use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\Serializer\SerializerInterface;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
@@ -36,6 +38,7 @@ class RpcServerFacade implements IFacadeRpcServer
      * @param IRpcSecurity $rpcSecurity
      * @param string $environment
      * @param SerializerInterface $serializer
+     * @param IRpcService[] $procedures
      * @param LoggerInterface|null $logger
      */
     public function __construct(
@@ -43,10 +46,18 @@ class RpcServerFacade implements IFacadeRpcServer
         protected IRpcSecurity $rpcSecurity,
         protected string $environment,
         protected SerializerInterface $serializer,
+        #[TaggedIterator('ufo.rpc.service')] iterable $procedures,
         LoggerInterface $logger = null
     )
     {
-        $this->rpcServer = new RpcServer($logger, $this->serializer);
+        $this->rpcServer = new RpcServer($this->serializer, $logger);
+        $this->init();
+        $this->setProcedures($procedures);
+    }
+
+    protected function init(): void
+    {
+        $this->rpcSecurity->isValidRequest();
     }
 
     /**
@@ -75,6 +86,17 @@ class RpcServerFacade implements IFacadeRpcServer
         }
         $this->rpcServer->setClass($procedure, $namespace, $argv);
         return $this;
+    }
+
+    /**
+     * @param IRpcService[] $procedures
+     * @return void
+     */
+    public function setProcedures(iterable $procedures): void
+    {
+        foreach ($procedures as $procedure) {
+            $this->addProcedure($procedure);
+        }
     }
 
     /**

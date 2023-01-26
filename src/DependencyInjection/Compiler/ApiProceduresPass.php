@@ -14,6 +14,9 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
 use Ufo\JsonRpcBundle\Server\RpcServerFacade;
 
+/**
+ * @deprecated will be removed or radically changed in version 5
+ */
 class ApiProceduresPass implements CompilerPassInterface
 {
 
@@ -33,7 +36,7 @@ class ApiProceduresPass implements CompilerPassInterface
         $taggedServices = $container->findTaggedServiceIds('ufo.rpc.service');
 
         foreach ($this->sortByPriority($taggedServices) as $id) {
-            $definition->addMethodCall('addProcedure', [new Reference($id)]);
+//            $definition->addMethodCall('addProcedure', [new Reference($id)]);
         }
     }
 
