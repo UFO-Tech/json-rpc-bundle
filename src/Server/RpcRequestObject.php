@@ -9,6 +9,7 @@ use Ufo\JsonRpcBundle\Exceptions\AbstractJsonRpcBundleException;
 use Ufo\JsonRpcBundle\Exceptions\IProcedureExceptionInterface;
 use Ufo\JsonRpcBundle\Exceptions\IServerExceptionInterface;
 use Ufo\JsonRpcBundle\Exceptions\IUserInputExceptionInterface;
+use Ufo\JsonRpcBundle\Exceptions\RpcAsyncRequestException;
 use Ufo\JsonRpcBundle\Exceptions\RpcBadRequestException;
 use Ufo\JsonRpcBundle\Exceptions\RpcJsonParseException;
 use Ufo\JsonRpcBundle\Exceptions\RuntimeException;
@@ -30,8 +31,8 @@ class RpcRequestObject
         protected string     $method,
         protected array      $params = [],
         protected string     $version = self::DEFAULT_VERSION,
-        protected ?string    $rawJson = null,
-        protected array      $async = []
+        protected ?string    $callback = null,
+        protected ?string    $rawJson = null
     )
     {
         $this->analyzeParams();
@@ -54,6 +55,10 @@ class RpcRequestObject
                 $self->requireIds[$requireRequestId] = $self->requireIds[$requireRequestId] ?? 0;
                 $self->requireIds[$requireRequestId]++;
             });
+        }
+        
+        if ($this->callback) {
+            // todo: url validator for callback url
         }
     }
 
@@ -102,9 +107,9 @@ class RpcRequestObject
             $data['id'] ?? uniqid(),
             $data['method'] ?? '',
             $data['params'] ?? [],
-            $data['version'] ?? static::DEFAULT_VERSION,
-            json_encode($data),
-            $data['async'] ?? []
+            $data['jsonrpc'] ?? static::DEFAULT_VERSION,
+            $data['callback'] ?? null,
+            json_encode($data)
         );
         
         if (!isset($data['method'])) {
@@ -153,11 +158,22 @@ class RpcRequestObject
     }
 
     /**
-     * @return array
+     * @return bool
      */
-    public function getAsync(): array
+    public function isAsync(): bool
     {
-        return $this->async;
+        return !is_null($this->callback);
+    }
+
+    /**
+     * @return string
+     */
+    public function getCallbackUrl(): string
+    {
+        if (!$this->isAsync()) {
+            throw new RpcAsyncRequestException('Callback url not set');
+        }
+        return $this->callback;
     }
 
     public function checkRequireId(string|int $id): bool
@@ -193,10 +209,22 @@ class RpcRequestObject
             
             $this->params[$paramName] = $newValue;
             $this->analyzeParams();
+            $this->refreshRawJson();
             
         } catch (\Throwable $e) {
             $this->error = $e;
         }
+    }
+
+    public function refreshRawJson()
+    {
+        $this->rawJson = json_encode([
+            'id' => $this->getId(),
+            'method' => $this->getMethod(),
+            'params' => $this->getParams(),
+            'jsonrpc' => $this->getVersion(),
+            'callback' => $this->callback
+        ]);
     }
 
     public function hasRequire(): bool
@@ -256,4 +284,6 @@ class RpcRequestObject
     {
         $this->error = $error;
     }
+
+
 }

@@ -30,7 +30,11 @@ class HandleExceptionListener implements EventSubscriberInterface
 
         $responseData = [
             'id' => 'uncatchedError',
-            'error' => $exceptionToArray->infoByEnvirontment(),
+            'error' => [
+                'code' => $event->getThrowable()->getCode(),
+                'message' => $event->getThrowable()->getMessage(),
+                'data' => $exceptionToArray->infoByEnvirontment(),
+            ],
             'jsorpc' => RpcServer::VERSION_2
         ];
 

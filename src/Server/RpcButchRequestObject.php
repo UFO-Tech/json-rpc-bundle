@@ -23,6 +23,11 @@ class RpcButchRequestObject
 
     private array $results = [];
 
+    /**
+     * @var RpcRequestObject[]
+     */
+    protected array $foreAsync = [];
+
     public static function fromJson(string $json): static
     {
         try {
@@ -70,6 +75,11 @@ class RpcButchRequestObject
     {
         $collectionName = $requestObject->hasRequire() ? 'waitForOtherResponse' : 'readyToHandle';
         $this->{$collectionName}[$requestObject->getId()] = $requestObject;
+        
+        if ($requestObject) {
+            $this->foreAsync[$requestObject->getId()] = $requestObject;
+        }
+        
         return $this;
     }
 

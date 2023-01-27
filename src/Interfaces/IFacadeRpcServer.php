@@ -10,6 +10,7 @@ namespace Ufo\JsonRpcBundle\Interfaces;
 
 
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
+use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
 use Ufo\JsonRpcBundle\Server\RpcRequestObject;
 use Ufo\JsonRpcBundle\Server\RpcResponseObject;
 use Ufo\JsonRpcBundle\Server\RpcServer;
@@ -43,5 +44,7 @@ interface IFacadeRpcServer
      * @return mixed
      */
     public function getServiceMap();
+
+    public function getSecurity(): IRpcSecurity;
         
 }

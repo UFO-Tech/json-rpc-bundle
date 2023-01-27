@@ -4,16 +4,19 @@ namespace Ufo\JsonRpcBundle\Server;
 
 use Laminas\Json\Server\Smd;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Process\Process;
 use Symfony\Component\Serializer\Context\Normalizer\ObjectNormalizerContextBuilder;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\Normalizer\ProblemNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
+use Ufo\JsonRpcBundle\CliCommand\UfoRpcProcessCommand;
 use Ufo\JsonRpcBundle\Exceptions\RpcBadRequestException;
 use Ufo\JsonRpcBundle\Exceptions\RpcJsonParseException;
 use Ufo\JsonRpcBundle\Exceptions\RuntimeException;
 use Ufo\JsonRpcBundle\Exceptions\WrongWayException;
 use Ufo\JsonRpcBundle\Interfaces\IFacadeRpcServer;
 use Ufo\JsonRpcBundle\Serializer\RpcErrorNormalizer;
+use Ufo\JsonRpcBundle\Server\Async\RpcAsyncProcessor;
 
 class RpcRequestHandler
 {
@@ -25,12 +28,14 @@ class RpcRequestHandler
     
     protected RpcButchRequestObject $butchRequestObject;
     protected RpcRequestObject $requestObject;
+    protected RpcAsyncProcessor $asyncProcessor;
     
     public function __construct(
         protected IFacadeRpcServer    $rpcServerFacade,
         protected SerializerInterface $serializer
     )
     {
+        $this->asyncProcessor = new RpcAsyncProcessor();
     }
 
     public function handle(Request $request, bool $json = false): array|string
@@ -60,23 +65,51 @@ class RpcRequestHandler
             ->smartHandle()
         ;
     }
-    
+
+    protected function processQueue(array &$queue, ?\Closure $callback)
+    {
+        foreach ($queue as $key => &$singleRequest) {
+
+            $this->asyncProcessor->createProcesses(
+                $singleRequest,
+                $this->rpcServerFacade->getSecurity()->getToken(),
+                timeout: 30
+            );
+            unset($queue[$key]);
+        }
+
+        $this->asyncProcessor->process($callback);
+    }
+
+    protected function callbackAsyncResponse(): \Closure
+    {
+        $self = $this;
+         return function (string $output) use ($self) {
+             $butchRequestObject = $self->butchRequestObject;
+
+            // todo use serializer  $self->serializer;
+            $butchRequestObject->addResult(json_decode($output, true));
+
+            if ($butchRequestObject->getReadyToHandle()) {
+                $self->processQueue($butchRequestObject->getReadyToHandle(), $self->callbackAsyncResponse());
+            }
+        };
+}
     protected function smartHandle(): array
     {
+        $butchRequestObject = $this->butchRequestObject;
         if ($this->isButchRequest) {
-            $result = [];
-            $queue = &$this->butchRequestObject->getReadyToHandle();
-            foreach ($queue as $key => &$singleRequest) {
-                $this->rpcServerFacade->getServer()->newRequest($singleRequest);
-                $this->butchRequestObject->addResult($this->provideSingleRequest($singleRequest));
-                unset($queue[$key]);
+            $this->processQueue(
+                $butchRequestObject->getReadyToHandle(),
+                $this->callbackAsyncResponse()
+            );
+
+            foreach ($butchRequestObject->provideUnprocessedRequests() as $key => $unprocessedRequest) {
+                $butchRequestObject->addResult($this->provideSingleRequest($unprocessedRequest));
+
             }
 
-            foreach ($this->butchRequestObject->provideUnprocessedRequests() as $key => $unprocessedRequest) {
-                $this->butchRequestObject->addResult($this->provideSingleRequest($unprocessedRequest));
-            }
-
-            $result = $this->butchRequestObject->getResults(false);
+            $result = $butchRequestObject->getResults(false);
         } else {
             $result = $this->provideSingleRequest($this->requestObject);
         }

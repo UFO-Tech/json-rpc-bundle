@@ -19,7 +19,12 @@ interface IRpcSecurity
     /**
      * @return string
      */
-    public function getTokenHeader(): string;
+    public function getTokenHeaderKey(): string;
+
+   /**
+     * @return string
+     */
+    public function getToken(): string;
 
     /**
      * @param $token

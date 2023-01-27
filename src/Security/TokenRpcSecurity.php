@@ -55,7 +55,6 @@ class TokenRpcSecurity implements IRpcSecurity
     )
     {
         $this->request = $requestStack->getCurrentRequest();
-        $this->tokenHeader = $tokenHeaderKey;
         if (!is_null($router)) {
             $this->protectedPath = $router->getRouteCollection()->get(ApiController::API_ROUTE)->getPath();
         }
@@ -80,8 +79,9 @@ class TokenRpcSecurity implements IRpcSecurity
     {
         $res = true;
         if ($this->routeMustBeProtected()) {
-            $token = Helper::tokenFromRequest($this->request, $this->getTokenHeader());
+            $token = Helper::tokenFromRequest($this->request, $this->getTokenHeaderKey());
             $res = $this->isValidToken($token);
+            $this->tokenHeader = $token;
         }
         return $res;
     }
@@ -97,7 +97,15 @@ class TokenRpcSecurity implements IRpcSecurity
     /**
      * @return string
      */
-    public function getTokenHeader(): string
+    public function getTokenHeaderKey(): string
+    {
+        return $this->tokenHeaderKey;
+    }
+
+    /**
+     * @return string
+     */
+    public function getToken(): string
     {
         return $this->tokenHeader;
     }

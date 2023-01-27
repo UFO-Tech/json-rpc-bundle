@@ -59,7 +59,12 @@ class TokenRpcCliSecurity implements IRpcSecurity
         return $this->isValidToken($this->token);
     }
 
-    public function getTokenHeader(): string
+    public function getTokenHeaderKey(): string
+    {
+        return '';
+    }
+
+    public function getToken(): string
     {
         return $this->token;
     }

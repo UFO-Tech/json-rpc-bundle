@@ -14,6 +14,7 @@ use Symfony\Component\HttpKernel\Event\GetResponseForExceptionEvent;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpKernel\KernelEvents;
+use Ufo\JsonRpcBundle\CliCommand\UfoRpcProcessCommand;
 use Ufo\JsonRpcBundle\Controller\ApiController;
 use Ufo\JsonRpcBundle\Exceptions\AbstractJsonRpcBundleException;
 use Ufo\JsonRpcBundle\Exceptions\ExceptionToArrayTransformer;
@@ -64,7 +65,7 @@ class HandleCliListener implements EventSubscriberInterface
     {
         $io = new SymfonyStyle($event->getInput(), $event->getOutput());
 
-        if ($event->getCommand()->getName() === 'ufo:rpc:process') {
+        if ($event->getCommand()->getName() === UfoRpcProcessCommand::COMMAND_NAME) {
             try {
                 if (in_array('POST', $this->protectedMethods)) {
                     if (!($token = $event->getInput()->getOption('token'))) {

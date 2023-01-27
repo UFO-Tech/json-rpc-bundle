@@ -2,6 +2,7 @@
 
 namespace Ufo\JsonRpcBundle\CliCommand;
 
+use App\Kernel;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -18,11 +19,12 @@ use Ufo\JsonRpcBundle\Server\RpcRequestHandler;
 use Ufo\JsonRpcBundle\Server\RpcRequestObject;
 
 #[AsCommand(
-    name: 'ufo:rpc:process',
+    name: UfoRpcProcessCommand::COMMAND_NAME,
     description: 'Handle async rpc request',
 )]
 class UfoRpcProcessCommand extends Command
 {
+    const COMMAND_NAME = 'ufo:rpc:process';
 
     public function __construct(
         protected IRpcSecurity $rpcSecurity,
@@ -44,11 +46,11 @@ class UfoRpcProcessCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        global $argv;
         $io = new SymfonyStyle($input, $output);
-//        $io->progressStart(100);
         try {
 
-            $json = $input->getArgument('json');
+            $json = trim($input->getArgument('json'), '"');
             $requestObject = RpcRequestObject::fromJson($json);
             $result = $this->requestHandler->provideSingleRequestObjectResponse($requestObject);
             $context = [
@@ -64,8 +66,6 @@ class UfoRpcProcessCommand extends Command
                 $e->getFile() . ': ' . $e->getLine()
             ]);
             return Command::FAILURE;
-        } finally {
-//            $io->progressFinish();
         }
     }
 }

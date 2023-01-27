@@ -201,4 +201,10 @@ class RpcServerFacade implements IFacadeRpcServer
 
         return  implode('.', array_diff($n, ['']));
     }
+
+    public function getSecurity(): IRpcSecurity
+    {
+        return $this->rpcSecurity;
+    }
+
 }
