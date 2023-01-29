@@ -48,6 +48,7 @@ class RpcAsyncProcessor
         $start = [
             '../bin/console',
             UfoRpcProcessCommand::COMMAND_NAME,
+            // todo regenerate raw json
             $requestObject->getRawJson(),
         ];
         if (!is_null($token)) {
@@ -109,7 +110,6 @@ class RpcAsyncProcessor
                 if ($id !== static::R) {
                     if (time() >= $process->getStartTime() + $process->getTimeout()) {
                         $needRefresh = false;
-
                         $process->stop(0);
                         $this->requestObjects[$id]->setError(
                             new RpcAsyncRequestException('Asynchronous request does not respond')
@@ -124,7 +124,7 @@ class RpcAsyncProcessor
 
             $results[$id] = $process->getOutput();
             if (!is_null($callback)) {
-                $callback($results[$id]);
+                $callback($results[$id], $this->requestObjects[$id]);
             }
             $this->removeProcessFromPull($id);
         }

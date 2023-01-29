@@ -12,7 +12,35 @@ JSON-RPC 2.0 сервер для Symfony v.6.*
 ![php_version](https://img.shields.io/packagist/dependency-v/ufo-cms/json-rpc-bundle/php?logo=PHP&logoColor=white) ![symfony_version](https://img.shields.io/packagist/dependency-v/ufo-cms/json-rpc-bundle/symfony/framework-bundle?label=Symfony&logo=Symfony&logoColor=white) ![symfony_version](https://img.shields.io/packagist/dependency-v/ufo-cms/json-rpc-bundle/symfony/serializer?label=SymfonySerializer&logo=Symfony&logoColor=white)
 # Що нового?
 
-### Версія 4.1.0
+### Версія 4.2
+- Впроваджена мультипроцесна обробка butch запитів, що зменшує час відповіді до часу найдовшого запиту
+- Реалізований механізм підписки на відповідь, завдяки службовому параметру `$rpc.callback`
+Request:
+```json
+{
+    "id": "someIdForCreateWebhook",
+    "method": "SomeEntityProcedure.create",
+    "params": {
+        "name": "test",
+        "$rpc.callback": "https://mycalback.url/endpoint"
+    }
+}
+```
+Response:
+```json
+{
+    "id": "someIdForCreateWebhook",
+    "result": {
+        "callback": {
+            "url": "https://mycalback.url/endpoint",
+            "status": true,
+            "data": []
+        }
+    },
+    "jsonrpc": "2.0"
+}
+```
+### Версія 4.1
 - Повноцінна підтримка butch запитів з можливістю передачі результатів одного запиту, до параметрів другого
 
 Request:

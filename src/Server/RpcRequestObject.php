@@ -2,8 +2,16 @@
 
 namespace Ufo\JsonRpcBundle\Server;
 
-use Laminas\Json\Server\Request as ServerRequestObject;
+use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Serializer\Annotation\Ignore;
+use Symfony\Component\Serializer\Annotation\SerializedName;
+use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
+use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\ConstraintViolation;
+use Symfony\Component\Validator\Validation;
+use Throwable;
 use TypeError;
 use Ufo\JsonRpcBundle\Exceptions\AbstractJsonRpcBundleException;
 use Ufo\JsonRpcBundle\Exceptions\IProcedureExceptionInterface;
@@ -13,25 +21,40 @@ use Ufo\JsonRpcBundle\Exceptions\RpcAsyncRequestException;
 use Ufo\JsonRpcBundle\Exceptions\RpcBadRequestException;
 use Ufo\JsonRpcBundle\Exceptions\RpcJsonParseException;
 use Ufo\JsonRpcBundle\Exceptions\RuntimeException;
+use Ufo\JsonRpcBundle\RpcCallback\CallbackObject;
 
 class RpcRequestObject
 {
+    const S_GROUP = 'raw';
     const DEFAULT_VERSION = '2.0';
 
-    protected ?\Throwable $error = null;
+    #[Ignore]
+    protected ?Throwable $error = null;
 
     /**
      * @var RpcRequestRequireParamFromResponse[]
      */
+    #[Ignore]
     protected array $require = [];
+    #[Ignore]
     protected array $requireIds = [];
+    #[Ignore]
+    protected ?SpecialRpcParams $rpcParams = null;
+
+    #[Ignore]
+    protected ?RpcResponseObject $responseObject = null;
 
     public function __construct(
+        #[Groups([self::S_GROUP])]
         protected string|int $id,
+        #[Groups([self::S_GROUP])]
         protected string     $method,
+        #[Ignore]
         protected array      $params = [],
+        #[Groups([self::S_GROUP])]
+        #[SerializedName('jsonrpc')]
         protected string     $version = self::DEFAULT_VERSION,
-        protected ?string    $callback = null,
+        #[Ignore]
         protected ?string    $rawJson = null
     )
     {
@@ -56,10 +79,8 @@ class RpcRequestObject
                 $self->requireIds[$requireRequestId]++;
             });
         }
+
         
-        if ($this->callback) {
-            // todo: url validator for callback url
-        }
     }
 
     protected function clearRequire()
@@ -79,6 +100,16 @@ class RpcRequestObject
     public function getParams(): array
     {
         return $this->params;
+    }
+
+    /**
+     * @return array
+     */
+    #[Groups([self::S_GROUP])]
+    #[SerializedName('params')]
+    public function getAllParams(): array
+    {
+        return $this->params + $this->getSpecialParams();
     }
 
     /**
@@ -103,26 +134,49 @@ class RpcRequestObject
      */
     public static function fromArray(array $data): static
     {
-        $object = new static(
-            $data['id'] ?? uniqid(),
-            $data['method'] ?? '',
-            $data['params'] ?? [],
-            $data['jsonrpc'] ?? static::DEFAULT_VERSION,
-            $data['callback'] ?? null,
-            json_encode($data)
-        );
-        
-        if (!isset($data['method'])) {
-            $object->setError(
-                throw new RpcBadRequestException('Message must have attribute "method"')
+        $validator = Validation::createValidator();
+        $errors = $validator->validate($data, static::getValidationConstrainForBuild());
+
+        $specialParams = [];
+        if (isset($data['params'])
+            && $matched = preg_grep('/^\\$rpc\./i', array_keys($data['params']))
+        ) {
+            $params = &$data['params'];
+
+            array_walk($matched, function ($v) use (&$specialParams, &$params) {
+                $specialParams[$v] = $params[$v];
+                unset($params[$v]);
+            });
+            unset($params);
+        }
+        try {
+            $object = new static(
+                $data['id'] ?? uniqid(),
+                (string)$data['method'] ?? '',
+                $data['params'] ?? [],
+                $data['jsonrpc'] ?? static::DEFAULT_VERSION,
+                json_encode($data)
             );
+        } catch (Throwable) {
+            $object = new static('', '');
+        }
+
+        if ($errors->count() > 0) {
+            $exceptionMsg = $errors[0]->getPropertyPath() . ': ' . $errors[0]->getMessage();
+            $object->setError(new RpcBadRequestException($exceptionMsg));
+        }
+        if ($specialParams) {
+            $object->setRpcParams(SpecialRpcParams::fromArray($specialParams, $object));
         }
         return $object;
     }
 
-    public function toArray(NormalizerInterface $serializer): array
+    public function toArray(NormalizerInterface $serializer, array $context = []): array
     {
-        return $serializer->normalize($this);
+        $context = array_merge([
+            AbstractNormalizer::GROUPS => [static::S_GROUP],
+        ], $context);
+        return $serializer->normalize($this, context: $context);
     }
 
     /**
@@ -159,21 +213,35 @@ class RpcRequestObject
 
     /**
      * @return bool
+     * @throws RuntimeException
      */
     public function isAsync(): bool
     {
-        return !is_null($this->callback);
+        return $this->hasRpcParams() && $this->getRpcParams()->hasCallback();
     }
 
     /**
      * @return string
+     * @throws RpcAsyncRequestException
      */
     public function getCallbackUrl(): string
     {
-        if (!$this->isAsync()) {
-            throw new RpcAsyncRequestException('Callback url not set');
+        try {
+            return (string)$this->getRpcParams()->getCallbackObject();
+        } catch (RuntimeException) {
+            throw new RpcAsyncRequestException('Request is not async');
         }
-        return $this->callback;
+    }
+
+    /**
+     * @return CallbackObject
+     */
+    public function getCallbackObject(): CallbackObject
+    {
+        if (!$this->isAsync()) {
+            throw new RpcAsyncRequestException('Request is not async');
+        }
+        return $this->getRpcParams()->getCallbackObject();
     }
 
     public function checkRequireId(string|int $id): bool
@@ -206,25 +274,22 @@ class RpcRequestObject
                     )
                 );
             }
-            
+
             $this->params[$paramName] = $newValue;
             $this->analyzeParams();
             $this->refreshRawJson();
-            
-        } catch (\Throwable $e) {
+
+        } catch (Throwable $e) {
             $this->error = $e;
         }
     }
 
-    public function refreshRawJson()
+    public function refreshRawJson(SerializerInterface $serializer, array $context = [])
     {
-        $this->rawJson = json_encode([
-            'id' => $this->getId(),
-            'method' => $this->getMethod(),
-            'params' => $this->getParams(),
-            'jsonrpc' => $this->getVersion(),
-            'callback' => $this->callback
-        ]);
+        $context = array_merge([
+            AbstractNormalizer::GROUPS => [static::S_GROUP]
+        ], $context);
+        $this->rawJson = $serializer->serialize($this, 'json', $context);
     }
 
     public function hasRequire(): bool
@@ -266,24 +331,142 @@ class RpcRequestObject
 
     public function hasError(): bool
     {
-        return $this->error instanceof \Throwable;
+        return $this->error instanceof Throwable;
     }
 
     /**
-     * @return \Throwable|null
+     * @return Throwable|null
      */
-    public function getError(): ?\Throwable
+    public function getError(): ?Throwable
     {
         return $this->error;
     }
 
     /**
-     * @param \Throwable $error
+     * @param Throwable $error
      */
-    public function setError(\Throwable $error): void
+    public function setError(Throwable $error): void
     {
         $this->error = $error;
     }
 
+    /**
+     * @return bool
+     */
+    public function isProcessed(): bool
+    {
+        return !is_null($this->responseObject);
+    }
 
+    /**
+     * @return RpcResponseObject|null
+     */
+    public function getResponseObject(): ?RpcResponseObject
+    {
+        return $this->responseObject;
+    }
+
+    /**
+     * @param RpcResponseObject $responseObject
+     */
+    public function setResponse(RpcResponseObject $responseObject): void
+    {
+        $this->responseObject = $responseObject;
+    }
+
+    /**
+     * @return Assert\Collection Validate ruls for create Request from array
+     */
+    public static function getValidationConstrainForBuild(): Assert\Collection
+    {
+        return new Assert\Collection([
+            'fields' => [
+                'id' => new Assert\Optional([
+                    //                new Assert\Type(['int', 'string'], message: 'Request field "{}" must be of type string or int'),
+                    new Assert\Type(['int', 'string'],),
+                    new Assert\NotBlank(),
+                ]),
+                'method' => [
+                    new Assert\Type('string'),
+                    new Assert\Required(),
+                    new Assert\NotBlank(),
+                ],
+                'jsonrpc' => new Assert\Optional([
+                    new Assert\Type('string'),
+                    new Assert\Regex('/\d\.\d/'),
+                ]),
+                'params' => new Assert\Optional([
+
+                    new Assert\Type('array'),
+                    new Assert\Count(['min' => 1]),
+                    new Assert\Collection([
+                        'fields' => [
+                            '$rpc.callback' => new Assert\Optional(CallbackObject::getValidationConstrainForBuild()),
+                            '$rpc.timeout' => new Assert\Optional([
+                                new Assert\Optional([
+                                    new Assert\NotBlank(),
+                                    new Assert\Type(['int', 'float']),
+                                    new Assert\Range([
+                                        'min'=> 10,
+                                        'max' => 120
+                                    ])
+                                ]),
+                            ]),
+                        ],
+                        'allowExtraFields' => true
+                    ]),
+                ]),
+            ],
+            'allowExtraFields' => true
+        ]);
+    }
+
+    /**
+     * @return array
+     */
+    public function getRequireIds(): array
+    {
+        return $this->requireIds;
+    }
+
+    /**
+     * @param array $requireIds
+     */
+    public function setRequireIds(array $requireIds): void
+    {
+        $this->requireIds = $requireIds;
+    }
+
+    /**
+     * @return bool
+     */
+    public function hasRpcParams(): bool
+    {
+        return !is_null($this->rpcParams);
+    }
+
+    /**
+     * @return SpecialRpcParams
+     * @throws RuntimeException
+     */
+    public function getRpcParams(): SpecialRpcParams
+    {
+        if (!$this->hasRpcParams()) {
+            throw new RuntimeException('Additional rpc params not set');
+        }
+        return $this->rpcParams;
+    }
+
+    /**
+     * @param SpecialRpcParams $rpcParams
+     */
+    public function setRpcParams(SpecialRpcParams $rpcParams): void
+    {
+        $this->rpcParams = $rpcParams;
+    }
+
+    public function getSpecialParams(): array
+    {
+        return $this->getRpcParams()->toArray();
+    }
 }

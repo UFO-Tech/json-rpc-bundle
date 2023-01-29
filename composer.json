@@ -23,7 +23,9 @@
         "laminas/laminas-server": ">=2.8",
         "laminas/laminas-json": ">=3.1",
         "laminas/laminas-http": ">=2.11",
-        "laminas/laminas-json-server": ">=3.2"
+        "laminas/laminas-json-server": ">=3.2",
+        "psr/http-client": "*",
+        "nyholm/psr7": "*"
     },
     "autoload" : {
         "psr-4" : {

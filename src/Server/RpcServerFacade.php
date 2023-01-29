@@ -105,14 +105,15 @@ class RpcServerFacade implements IFacadeRpcServer
     public function handle(RpcRequestObject $singleRequest): RpcResponseObject
     {
         $this->rpcServer->clearRequestAndResponse();
-        
+        $this->rpcServer->newRequest($singleRequest);
+
         try {
             $this->rpcSecurity->isValidRequest();
-            
+
             if ($singleRequest->hasError()) {
                 throw new WrongWayException();
             }
-            
+
             $response = $this->rpcServer->handleRpcRequest($singleRequest);
         } catch (WrongWayException) {
             // error in request
@@ -120,7 +121,7 @@ class RpcServerFacade implements IFacadeRpcServer
         } catch (\Exception $e) {
             $response = $this->handleError($e);
         }
-
+        $singleRequest->setResponse($response);
         return $response;
     }
 

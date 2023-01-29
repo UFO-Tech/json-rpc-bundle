@@ -30,11 +30,6 @@ class RpcResponseObject
     {
     }
 
-    public static function fromReques()
-    {
-        
-    }
-
     /**
      * @return int|string
      */
@@ -75,7 +70,7 @@ class RpcResponseObject
         return $this->requestObject;
     }
 
-    public function getResponseSignature(): string
+    #[Ignore] public function getResponseSignature(): string
     {
         return is_null($this->error) ? static::IS_RESULT : static::IS_ERROR;
     }

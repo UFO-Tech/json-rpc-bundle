@@ -46,7 +46,6 @@ class UfoRpcProcessCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        global $argv;
         $io = new SymfonyStyle($input, $output);
         try {
 

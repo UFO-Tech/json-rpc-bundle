@@ -10,6 +10,8 @@ use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\Normalizer\ProblemNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
 use Ufo\JsonRpcBundle\CliCommand\UfoRpcProcessCommand;
+use Ufo\JsonRpcBundle\Exceptions\AbstractJsonRpcBundleException;
+use Ufo\JsonRpcBundle\Exceptions\RpcAsyncRequestException;
 use Ufo\JsonRpcBundle\Exceptions\RpcBadRequestException;
 use Ufo\JsonRpcBundle\Exceptions\RpcJsonParseException;
 use Ufo\JsonRpcBundle\Exceptions\RuntimeException;
@@ -17,6 +19,7 @@ use Ufo\JsonRpcBundle\Exceptions\WrongWayException;
 use Ufo\JsonRpcBundle\Interfaces\IFacadeRpcServer;
 use Ufo\JsonRpcBundle\Serializer\RpcErrorNormalizer;
 use Ufo\JsonRpcBundle\Server\Async\RpcAsyncProcessor;
+use Ufo\JsonRpcBundle\Server\Async\RpcCallbackProcessor;
 
 class RpcRequestHandler
 {
@@ -28,14 +31,14 @@ class RpcRequestHandler
     
     protected RpcButchRequestObject $butchRequestObject;
     protected RpcRequestObject $requestObject;
-    protected RpcAsyncProcessor $asyncProcessor;
     
     public function __construct(
         protected IFacadeRpcServer    $rpcServerFacade,
-        protected SerializerInterface $serializer
+        protected SerializerInterface $serializer,
+        protected RpcAsyncProcessor $asyncProcessor,
+        protected RpcCallbackProcessor $callbackProcessor,
     )
     {
-        $this->asyncProcessor = new RpcAsyncProcessor();
     }
 
     public function handle(Request $request, bool $json = false): array|string
@@ -69,11 +72,14 @@ class RpcRequestHandler
     protected function processQueue(array &$queue, ?\Closure $callback)
     {
         foreach ($queue as $key => &$singleRequest) {
-
+            /**
+             * @var RpcRequestObject $singleRequest
+             */
+            $singleRequest->refreshRawJson($this->serializer);
             $this->asyncProcessor->createProcesses(
                 $singleRequest,
                 $this->rpcServerFacade->getSecurity()->getToken(),
-                timeout: 30
+                timeout: $singleRequest->getRpcParams()->getTimeout()
             );
             unset($queue[$key]);
         }
@@ -81,32 +87,58 @@ class RpcRequestHandler
         $this->asyncProcessor->process($callback);
     }
 
-    protected function callbackAsyncResponse(): \Closure
+    protected function closureSetResponse(): \Closure
     {
         $self = $this;
-         return function (string $output) use ($self) {
+         return function (string $output, RpcRequestObject $requestObject) use ($self) {
              $butchRequestObject = $self->butchRequestObject;
 
-            // todo use serializer  $self->serializer;
-            $butchRequestObject->addResult(json_decode($output, true));
+             try {
+                 if (empty($output)) {
+                     throw new RpcAsyncRequestException(
+                         'The async process did not return any results. Try increasing the timeout by adding the "$rpc.timeout" parameter on params request'
+                     );
+                 }
+                 /**
+                  * @var RpcResponseObject $response
+                  */
+                 $response = $self->serializer->deserialize($output, RpcResponseObject::class, 'json');
+             } catch (\Throwable $e) {
+                 if ($e instanceof AbstractJsonRpcBundleException) {
+                     $error = new RpcErrorObject($e->getCode(), $e->getMessage(), $e);
+                 } else {
+                     $error = new RpcErrorObject(
+                         AbstractJsonRpcBundleException::DEFAULT_CODE,
+                         'Uncatch async error',
+                         $e
+                     );
+                 }
+                 $response = new RpcResponseObject(
+                     id: $requestObject->getId(),
+                     error: $error,
+                     version: $requestObject->getVersion(),
+                     requestObject: $requestObject
+                 );
+             }
+             $result = $self->serializer->normalize($response, context: [AbstractNormalizer::GROUPS => [$response->getResponseSignature()]]);
+             $butchRequestObject->addResult($result);
 
             if ($butchRequestObject->getReadyToHandle()) {
-                $self->processQueue($butchRequestObject->getReadyToHandle(), $self->callbackAsyncResponse());
+                $self->processQueue($butchRequestObject->getReadyToHandle(), $self->closureSetResponse());
             }
         };
 }
     protected function smartHandle(): array
     {
-        $butchRequestObject = $this->butchRequestObject;
         if ($this->isButchRequest) {
+            $butchRequestObject = $this->butchRequestObject;
             $this->processQueue(
                 $butchRequestObject->getReadyToHandle(),
-                $this->callbackAsyncResponse()
+                $this->closureSetResponse()
             );
 
             foreach ($butchRequestObject->provideUnprocessedRequests() as $key => $unprocessedRequest) {
                 $butchRequestObject->addResult($this->provideSingleRequest($unprocessedRequest));
-
             }
 
             $result = $butchRequestObject->getResults(false);
@@ -128,9 +160,29 @@ class RpcRequestHandler
 
     public function provideSingleRequestObjectResponse(RpcRequestObject $singleRequest): RpcResponseObject
     {
-        $this->rpcServerFacade->getServer()->newRequest($singleRequest);
         $result = $this->rpcServerFacade->handle($singleRequest);
-
+        if (!$singleRequest->hasError() && $singleRequest->isAsync()) {
+            try {
+                $status = true;
+                $data = [];
+                $this->callbackProcessor->process($singleRequest);
+            } catch (RpcAsyncRequestException $e) {
+                $status = false;
+                $data = $e;
+            }
+            $result = new RpcResponseObject(
+                $singleRequest->getId(),
+                [
+                    'callback' => [
+                        'url' => (string)$singleRequest->getRpcParams()->getCallbackObject(),
+                        'status' => $status,
+                        'data' => $data
+                    ]
+                ],
+                version: $singleRequest->getVersion(),
+                requestObject: $singleRequest
+            );
+        }
         return $result;
     }
 

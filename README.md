@@ -14,7 +14,36 @@ Package for easy api creation using json-rpc server
 
 # What's new?
 
-### Version 4.1.0
+### Version 4.2
+- Implemented multi-process processing of butch requests, which reduces the response time to the time of the longest request
+- Implemented response subscription mechanism thanks to service parameter `$rpc.callback`
+  Request:
+```json
+{
+    "id": "someIdForCreateWebhook",
+    "method": "SomeEntityProcedure.create",
+    "params": {
+        "name": "test",
+        "$rpc.callback": "https://mycalback.url/endpoint"
+    }
+}
+```
+Response:
+```json
+{
+    "id": "someIdForCreateWebhook",
+    "result": {
+        "callback": {
+            "url": "https://mycalback.url/endpoint",
+            "status": true,
+            "data": []
+        }
+    },
+    "jsonrpc": "2.0"
+}
+```
+
+### Version 4.1
 - Full support for butch requests with the possibility of transferring the results of one request to the parameters of the second
 Request:
 ```json
