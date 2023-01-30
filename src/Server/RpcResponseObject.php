@@ -16,7 +16,7 @@ class RpcResponseObject
         protected string|int $id,
 
         #[Groups([self::IS_RESULT])]
-        protected array $result = [],
+        protected array|string $result = [],
 
         #[Groups([self::IS_ERROR])]
         protected ?RpcErrorObject $error = null,
@@ -39,9 +39,9 @@ class RpcResponseObject
     }
 
     /**
-     * @return array
+     * @return array|string
      */
-    public function getResult(): array
+    public function getResult(): array|string
     {
         return $this->result;
     }

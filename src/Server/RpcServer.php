@@ -30,7 +30,7 @@ class RpcServer extends Server
     public function __construct(
         protected SerializerInterface $serializer,         
         protected ?LoggerInterface $logger = null
- )
+    )
     {
         parent::__construct();
     }
@@ -92,7 +92,7 @@ class RpcServer extends Server
 
         return new RpcResponseObject(
             id: $request->getId(),
-            result: is_array($result) ? $result : ['response' => $result],
+            result: $result,
             version: $request->getVersion(),
             requestObject: $request
         );
