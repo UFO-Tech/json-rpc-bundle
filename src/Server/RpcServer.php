@@ -30,7 +30,7 @@ class RpcServer extends Server
     public function __construct(
         protected SerializerInterface $serializer,         
         protected ?LoggerInterface $logger = null
-    )
+ )
     {
         parent::__construct();
     }

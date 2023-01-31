@@ -1,4 +1,4 @@
-# ufo-cms/json-rpc-bundle 4
+# ufo-tech/json-rpc-bundle 4
 ![Ukraine](https://img.shields.io/badge/%D0%A1%D0%BB%D0%B0%D0%B2%D0%B0-%D0%A3%D0%BA%D1%80%D0%B0%D1%97%D0%BD%D1%96-yellow?labelColor=blue)
 
 JSON-RPC 2.0 сервер для Symfony v.6.*
@@ -6,10 +6,10 @@ JSON-RPC 2.0 сервер для Symfony v.6.*
 ### Про цей пакет
 
 Пакет для легкого створення api за допомогою json-rpc сервера   
-![License](https://img.shields.io/badge/license-MIT-green?labelColor=7b8185) ![Size](https://img.shields.io/github/repo-size/ufo-cms/json-rpc-bundle?label=Size%20of%20the%20repository) ![package_version](https://img.shields.io/github/v/tag/ufo-cms/json-rpc-bundle?color=blue&label=Latest%20Version&logo=Packagist&logoColor=white&labelColor=7b8185) ![fork](https://img.shields.io/github/forks/ufo-cms/json-rpc-bundle?color=green&logo=github&style=flat)
+![License](https://img.shields.io/badge/license-MIT-green?labelColor=7b8185) ![Size](https://img.shields.io/github/repo-size/ufo-tech/json-rpc-bundle?label=Size%20of%20the%20repository) ![package_version](https://img.shields.io/github/v/tag/ufo-tech/json-rpc-bundle?color=blue&label=Latest%20Version&logo=Packagist&logoColor=white&labelColor=7b8185) ![fork](https://img.shields.io/github/forks/ufo-tech/json-rpc-bundle?color=green&logo=github&style=flat)
 
 ### Вимоги до оточення
-![php_version](https://img.shields.io/packagist/dependency-v/ufo-cms/json-rpc-bundle/php?logo=PHP&logoColor=white) ![symfony_version](https://img.shields.io/packagist/dependency-v/ufo-cms/json-rpc-bundle/symfony/framework-bundle?label=Symfony&logo=Symfony&logoColor=white) ![symfony_version](https://img.shields.io/packagist/dependency-v/ufo-cms/json-rpc-bundle/symfony/serializer?label=SymfonySerializer&logo=Symfony&logoColor=white)
+![php_version](https://img.shields.io/packagist/dependency-v/ufo-tech/json-rpc-bundle/php?logo=PHP&logoColor=white) ![symfony_version](https://img.shields.io/packagist/dependency-v/ufo-tech/json-rpc-bundle/symfony/framework-bundle?label=Symfony&logo=Symfony&logoColor=white) ![symfony_version](https://img.shields.io/packagist/dependency-v/ufo-tech/json-rpc-bundle/symfony/serializer?label=SymfonySerializer&logo=Symfony&logoColor=white)
 # Що нового?
 
 ### Версія 4.2
@@ -100,7 +100,7 @@ Response:
             // ...  
   
             "endpoint": [
-                "https://api.github.com/repos/UFO-CMS/recipes/contents/index.json?ref=main",
+                "https://api.github.com/repos/ufo-tech/recipes/contents/index.json?ref=main",
                 "flex://defaults"
             ]
         }
@@ -118,7 +118,7 @@ Response:
 
 В консолі в теці проєкту виконайте цю команду, щоб завантажити останню версію цього пакету:
 ```console  
-$ composer require ufo-cms/json-rpc-bundle 4.*  
+$ composer require ufo-tech/json-rpc-bundle 4.*  
 ```  
 Ця команда актуальна якщо ви встановили Composer глобально, як описано в [документації](https://getcomposer.org/doc/00-intro.md) документации Composer.
 
@@ -158,7 +158,7 @@ Otherwise, manually add the route section of the package.В теку `config/rou
 ```yaml
 # config/routes/ufo_json_rpc.yaml  
 ufo_json_rpc_bundle:  
-    resource: ../../vendor/ufo-cms/json-rpc-bundle/config/router.yaml 
+    resource: ../../vendor/ufo-tech/json-rpc-bundle/config/router.yaml 
     prefix: /api
     trailing_slash_on_root: false
 ```  
@@ -168,7 +168,7 @@ ufo_json_rpc_bundle:
 ```yaml
 # config/routes/ufo_json_rpc.yaml  
 ufo_json_rpc_bundle:  
-    resource: ../../vendor/ufo-cms/json-rpc-bundle/config/router.yaml 
+    resource: ../../vendor/ufo-tech/json-rpc-bundle/config/router.yaml 
     prefix: /my_new_api_path
     trailing_slash_on_root: false
 ```  

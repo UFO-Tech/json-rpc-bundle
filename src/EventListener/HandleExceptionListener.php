@@ -38,7 +38,7 @@ class HandleExceptionListener implements EventSubscriberInterface
             'jsorpc' => RpcServer::VERSION_2
         ];
 
-        $event->setResponse(new JsonResponse($responseData, 400));
+        $event->setResponse(new JsonResponse($responseData, 200));
     }
 
     public static function getSubscribedEvents()

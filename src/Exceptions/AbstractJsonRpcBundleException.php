@@ -2,6 +2,8 @@
 
 namespace Ufo\JsonRpcBundle\Exceptions;
 
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
+
 /**
  * ERROR CODES
  * ╔══════════════╦═══════════════════╦════════════════════════════════════════════════════╗
@@ -27,10 +29,12 @@ namespace Ufo\JsonRpcBundle\Exceptions;
  * ║ to   -32099  ║                   ║                                                    ║
  * ╚══════════════╩═══════════════════╩════════════════════════════════════════════════════╝
  */
-abstract class AbstractJsonRpcBundleException extends \Exception
+abstract class AbstractJsonRpcBundleException extends \Exception implements HttpExceptionInterface
 {
     const DEFAULT_CODE = -32603;
+    
     protected $code = self::DEFAULT_CODE;
+    protected array $headers = [];
 
     public static function fromThrowable(\Throwable $e)
     {
@@ -40,4 +44,22 @@ abstract class AbstractJsonRpcBundleException extends \Exception
             $e
         );
     }
+    /**
+     * Returns the status code.
+     */
+    public function getStatusCode(): int
+    {
+        return 200;
+    }
+
+    public function getHeaders(): array
+    {
+        return $this->headers;
+    }
+
+    public function setHeaders(array $headers)
+    {
+        $this->headers = $headers;
+    }
+
 }

@@ -1,5 +1,5 @@
 {
-    "name": "ufo-cms/json-rpc-bundle",
+    "name": "ufo-tech/json-rpc-bundle",
     "description": "The bundle for easy using json-rpc api on your project",
     "license": "MIT",
     "authors": [
@@ -13,7 +13,7 @@
         }
     ],
     "type" : "symfony-bundle",
-    "homepage": "https://github.com/UFO-CMS/json-rpc-bundle",
+    "homepage": "https://github.com/ufo-tech/json-rpc-bundle",
     "keywords" : ["ufo", "symfony", "api", "bundle", "json-rpc"],
     "minimum-stability" : "dev",
     "require" : {
@@ -38,7 +38,7 @@
         },
         "symfony": {
             "endpoint": [
-                "https://api.github.com/repos/UFO-CMS/recipes/contents/index.json?ref=main"
+                "https://api.github.com/repos/ufo-tech/recipes/contents/index.json?ref=main"
             ]
         }
     },
