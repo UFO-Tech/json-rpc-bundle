@@ -2,19 +2,14 @@
 
 namespace Ufo\JsonRpcBundle\Controller;
 
-use Laminas\Json\Server\Request as JsonRequest;
 use Laminas\Json\Server\Smd;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
-use Ufo\JsonRpcBundle\Exceptions\RpcBadRequestException;
-use Ufo\JsonRpcBundle\Exceptions\RpcInvalidButchRequestExceptions;
-use Ufo\JsonRpcBundle\Exceptions\RpcTokenNotFoundInHeaderException;
 use Ufo\JsonRpcBundle\Interfaces\IFacadeRpcServer;
 use Ufo\JsonRpcBundle\Server\RpcRequestHandler;
-use Ufo\JsonRpcBundle\Server\RpcRequestObject;
 use Ufo\JsonRpcBundle\SoupUi\ProjectGenerator;
 
 /**
@@ -36,7 +31,6 @@ class ApiController extends AbstractController
     /**
      * @param Request $request
      * @return Response
-     * @throws \Ufo\JsonRpcBundle\Exceptions\RpcBadRequestException
      */
     #[Route('', name: self::API_ROUTE, methods: ["GET", "POST"], format: 'json')]
     public function serverAction(Request $request): Response

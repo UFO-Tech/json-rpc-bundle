@@ -10,9 +10,9 @@
 namespace Ufo\JsonRpcBundle\Security\Interfaces;
 
 
-use Symfony\Component\HttpFoundation\Request;
-use Ufo\JsonRpcBundle\Exceptions\RpcInvalidTokenException;
-use Ufo\JsonRpcBundle\Exceptions\RpcTokenNotFoundInHeaderException;
+
+use Ufo\RpcError\RpcInvalidTokenException;
+use Ufo\RpcError\RpcTokenNotFoundInHeaderException;
 
 interface IRpcSecurity
 {

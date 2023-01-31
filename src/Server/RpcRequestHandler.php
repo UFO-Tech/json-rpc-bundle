@@ -2,20 +2,14 @@
 
 namespace Ufo\JsonRpcBundle\Server;
 
-use Laminas\Json\Server\Smd;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Process\Process;
-use Symfony\Component\Serializer\Context\Normalizer\ObjectNormalizerContextBuilder;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
-use Symfony\Component\Serializer\Normalizer\ProblemNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
-use Ufo\JsonRpcBundle\CliCommand\UfoRpcProcessCommand;
-use Ufo\JsonRpcBundle\Exceptions\AbstractJsonRpcBundleException;
-use Ufo\JsonRpcBundle\Exceptions\RpcAsyncRequestException;
-use Ufo\JsonRpcBundle\Exceptions\RpcBadRequestException;
-use Ufo\JsonRpcBundle\Exceptions\RpcJsonParseException;
-use Ufo\JsonRpcBundle\Exceptions\RuntimeException;
-use Ufo\JsonRpcBundle\Exceptions\WrongWayException;
+use Ufo\RpcError\AbstractRpcErrorException;
+use Ufo\RpcError\RpcAsyncRequestException;
+use Ufo\RpcError\RpcBadRequestException;
+use Ufo\RpcError\RpcJsonParseException;
+use Ufo\RpcError\WrongWayException;
 use Ufo\JsonRpcBundle\Interfaces\IFacadeRpcServer;
 use Ufo\JsonRpcBundle\Serializer\RpcErrorNormalizer;
 use Ufo\JsonRpcBundle\Server\Async\RpcAsyncProcessor;
@@ -25,11 +19,8 @@ class RpcRequestHandler
 {
     protected Request $request;
     
-    protected bool $isButchRequest = false;
-    
-    protected bool $isButch = false;
-    
-    protected RpcButchRequestObject $butchRequestObject;
+    protected bool $isBatchRequest = false;
+    protected RpcBatchRequestObject $batchRequestObject;
     protected RpcRequestObject $requestObject;
     
     public function __construct(
@@ -57,13 +48,18 @@ class RpcRequestHandler
     {
         return $this->rpcServerFacade->getServiceMap()->toArray();
     }
-    
+
+    /**
+     * @return array
+     * @throws RpcJsonParseException
+     * @throws WrongWayException
+     */
     protected function handlePost(): array
     {
         if (!$this->isPost()) {
             throw new WrongWayException();
         }
-        return $this->checkButchRequest()
+        return $this->checkBatchRequest()
             ->createRequestObject()
             ->smartHandle()
         ;
@@ -91,7 +87,7 @@ class RpcRequestHandler
     {
         $self = $this;
          return function (string $output, RpcRequestObject $requestObject) use ($self) {
-             $butchRequestObject = $self->butchRequestObject;
+             $batchRequestObject = $self->batchRequestObject;
 
              try {
                  if (empty($output)) {
@@ -104,11 +100,11 @@ class RpcRequestHandler
                   */
                  $response = $self->serializer->deserialize($output, RpcResponseObject::class, 'json');
              } catch (\Throwable $e) {
-                 if ($e instanceof AbstractJsonRpcBundleException) {
+                 if ($e instanceof AbstractRpcErrorException) {
                      $error = new RpcErrorObject($e->getCode(), $e->getMessage(), $e);
                  } else {
                      $error = new RpcErrorObject(
-                         AbstractJsonRpcBundleException::DEFAULT_CODE,
+                         AbstractRpcErrorException::DEFAULT_CODE,
                          'Uncatch async error',
                          $e
                      );
@@ -121,27 +117,27 @@ class RpcRequestHandler
                  );
              }
              $result = $self->serializer->normalize($response, context: [AbstractNormalizer::GROUPS => [$response->getResponseSignature()]]);
-             $butchRequestObject->addResult($result);
+             $batchRequestObject->addResult($result);
 
-            if ($butchRequestObject->getReadyToHandle()) {
-                $self->processQueue($butchRequestObject->getReadyToHandle(), $self->closureSetResponse());
+            if ($batchRequestObject->getReadyToHandle()) {
+                $self->processQueue($batchRequestObject->getReadyToHandle(), $self->closureSetResponse());
             }
         };
 }
     protected function smartHandle(): array
     {
-        if ($this->isButchRequest) {
-            $butchRequestObject = $this->butchRequestObject;
+        if ($this->isBatchRequest) {
+            $batchRequestObject = $this->batchRequestObject;
             $this->processQueue(
-                $butchRequestObject->getReadyToHandle(),
+                $batchRequestObject->getReadyToHandle(),
                 $this->closureSetResponse()
             );
 
-            foreach ($butchRequestObject->provideUnprocessedRequests() as $key => $unprocessedRequest) {
-                $butchRequestObject->addResult($this->provideSingleRequest($unprocessedRequest));
+            foreach ($batchRequestObject->provideUnprocessedRequests() as $key => $unprocessedRequest) {
+                $batchRequestObject->addResult($this->provideSingleRequest($unprocessedRequest));
             }
 
-            $result = $butchRequestObject->getResults(false);
+            $result = $batchRequestObject->getResults(false);
         } else {
             $result = $this->provideSingleRequest($this->requestObject);
         }
@@ -186,22 +182,24 @@ class RpcRequestHandler
         return $result;
     }
 
-    protected function checkButchRequest(): static
+    protected function checkBatchRequest(): static
     {
         $firstChar = substr($this->request->getContent(), 0, 1);
         if ($firstChar === '[') {
-            $this->isButchRequest = true;
+            $this->isBatchRequest = true;
         }
         return $this;
     }
 
     /**
+     * @return $this
      * @throws RpcJsonParseException
+     * @throws RpcBadRequestException
      */
     protected function createRequestObject(): static
     {
-        if ($this->isButchRequest) {
-            $this->butchRequestObject = RpcButchRequestObject::fromJson($this->request->getContent());
+        if ($this->isBatchRequest) {
+            $this->batchRequestObject = RpcBatchRequestObject::fromJson($this->request->getContent());
         } else {
             $this->requestObject = RpcRequestObject::fromJson($this->request->getContent());
         }

@@ -9,7 +9,7 @@
 namespace Ufo\JsonRpcBundle\Security;
 
 
-use Ufo\JsonRpcBundle\Exceptions\RpcInvalidTokenException;
+use Ufo\RpcError\RpcInvalidTokenException;
 use Ufo\JsonRpcBundle\Security\Interfaces\ITokenValidator;
 
 class SimpleTokenValidator implements ITokenValidator

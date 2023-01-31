@@ -2,16 +2,13 @@
 
 namespace Ufo\JsonRpcBundle\EventListener;
 
-use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpKernel\DataCollector\RouterDataCollector;
-use Symfony\Component\HttpKernel\Event\GetResponseForExceptionEvent;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Ufo\JsonRpcBundle\Controller\ApiController;
-use Ufo\JsonRpcBundle\Exceptions\ExceptionToArrayTransformer;
 use Ufo\JsonRpcBundle\Server\RpcServer;
+use Ufo\RpcError\ExceptionToArrayTransformer;
 
 class HandleExceptionListener implements EventSubscriberInterface
 {
@@ -33,12 +30,14 @@ class HandleExceptionListener implements EventSubscriberInterface
             'error' => [
                 'code' => $event->getThrowable()->getCode(),
                 'message' => $event->getThrowable()->getMessage(),
-                'data' => $exceptionToArray->infoByEnvirontment(),
+                'data' => $exceptionToArray->infoByEnvironment(),
             ],
             'jsorpc' => RpcServer::VERSION_2
         ];
 
         $event->setResponse(new JsonResponse($responseData, 200));
+        $event->stopPropagation();
+        $event->allowCustomResponseCode();
     }
 
     public static function getSubscribedEvents()

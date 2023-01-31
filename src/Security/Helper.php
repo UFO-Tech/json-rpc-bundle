@@ -11,7 +11,7 @@ namespace Ufo\JsonRpcBundle\Security;
 
 
 use Symfony\Component\HttpFoundation\Request;
-use Ufo\JsonRpcBundle\Exceptions\RpcTokenNotFoundInHeaderException;
+use Ufo\RpcError\RpcTokenNotFoundInHeaderException;
 
 class Helper
 {

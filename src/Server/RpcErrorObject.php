@@ -2,9 +2,7 @@
 
 namespace Ufo\JsonRpcBundle\Server;
 
-use Symfony\Component\Serializer\Annotation\Context;
 use Symfony\Component\Serializer\Annotation\Groups;
-use Symfony\Component\Serializer\Normalizer\ProblemNormalizer;
 
 class RpcErrorObject
 {

@@ -1,11 +1,4 @@
 <?php
-/**
- * @author Doctor <ashterix69@gmail.com>
- *
- *
- * Date: 08.06.2017
- * Time: 16:26
- */
 
 namespace Ufo\JsonRpcBundle\SoupUi\Node;
 

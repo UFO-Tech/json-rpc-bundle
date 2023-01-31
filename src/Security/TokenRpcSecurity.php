@@ -17,8 +17,8 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Routing\RouterInterface;
 use Ufo\JsonRpcBundle\Controller\ApiController;
-use Ufo\JsonRpcBundle\Exceptions\RpcInvalidTokenException;
-use Ufo\JsonRpcBundle\Exceptions\RpcTokenNotFoundInHeaderException;
+use Ufo\RpcError\RpcInvalidTokenException;
+use Ufo\RpcError\RpcTokenNotFoundInHeaderException;
 use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
 use Ufo\JsonRpcBundle\Security\Interfaces\ITokenValidator;
 

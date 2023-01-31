@@ -1,15 +1,10 @@
 <?php
-/**
- * @author Doctor <ashterix69@gmail.com>
- *
- *
- * Date: 07.06.2017
- * Time: 9:02
- */
 
 namespace Ufo\JsonRpcBundle\SoupUi;
 
 
+
+use DOMDocument;
 
 class ArrayToXml
 {
@@ -20,7 +15,7 @@ class ArrayToXml
     /**
      * The root DOM Document.
      *
-     * @var \DOMDocument
+     * @var DOMDocument
      */
     protected $document;
 

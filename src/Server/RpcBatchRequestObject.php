@@ -3,10 +3,10 @@
 namespace Ufo\JsonRpcBundle\Server;
 
 
-use Ufo\JsonRpcBundle\Exceptions\RpcBadRequestException;
-use Ufo\JsonRpcBundle\Exceptions\RpcJsonParseException;
+use Ufo\RpcError\RpcBadRequestException;
+use Ufo\RpcError\RpcJsonParseException;
 
-class RpcButchRequestObject
+class RpcBatchRequestObject
 {
     /**
      * @var RpcRequestObject[]

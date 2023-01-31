@@ -1,15 +1,9 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: ashterix
- * Date: 30.04.17
- * Time: 8:58
- */
 
 namespace Ufo\JsonRpcBundle\Security\Interfaces;
 
 
-use Ufo\JsonRpcBundle\Exceptions\RpcInvalidTokenException;
+use Ufo\RpcError\RpcInvalidTokenException;
 
 interface ITokenValidator
 {

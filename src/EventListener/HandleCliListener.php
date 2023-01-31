@@ -2,25 +2,16 @@
 
 namespace Ufo\JsonRpcBundle\EventListener;
 
-use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\ConsoleEvents;
 use Symfony\Component\Console\Event\ConsoleCommandEvent;
 use Symfony\Component\Console\Event\ConsoleErrorEvent;
 use Symfony\Component\Console\Style\SymfonyStyle;
-use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpKernel\DataCollector\RouterDataCollector;
-use Symfony\Component\HttpKernel\Event\GetResponseForExceptionEvent;
-use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use Symfony\Component\HttpKernel\KernelEvents;
 use Ufo\JsonRpcBundle\CliCommand\UfoRpcProcessCommand;
-use Ufo\JsonRpcBundle\Controller\ApiController;
-use Ufo\JsonRpcBundle\Exceptions\AbstractJsonRpcBundleException;
-use Ufo\JsonRpcBundle\Exceptions\ExceptionToArrayTransformer;
-use Ufo\JsonRpcBundle\Exceptions\RpcTokenNotFoundInHeaderException;
 use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
-use Ufo\JsonRpcBundle\Server\RpcServer;
+use Ufo\RpcError\AbstractRpcErrorException;
+use Ufo\RpcError\RpcTokenNotFoundInHeaderException;
 
 class HandleCliListener implements EventSubscriberInterface
 {
@@ -47,7 +38,7 @@ class HandleCliListener implements EventSubscriberInterface
                     }
                     $this->rpcSecurity->isValidToken($token);
                 }
-            } catch (AbstractJsonRpcBundleException $e) {
+            } catch (AbstractRpcErrorException $e) {
                 $io->error([
                     $e->getMessage()
                 ]);
@@ -76,7 +67,7 @@ class HandleCliListener implements EventSubscriberInterface
                     }
                     $this->rpcSecurity->isValidToken($token);
                 }
-            } catch (AbstractJsonRpcBundleException $e) {
+            } catch (AbstractRpcErrorException $e) {
                 $io->error([
                     $e->getMessage()
                 ]);

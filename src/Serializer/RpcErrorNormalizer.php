@@ -3,13 +3,9 @@
 namespace Ufo\JsonRpcBundle\Serializer;
 
 
-use Symfony\Component\ErrorHandler\ErrorRenderer\ErrorRendererInterface;
-use Ufo\JsonRpcBundle\Exceptions\AbstractJsonRpcBundleException;
-use Symfony\Component\Serializer\Normalizer\CacheableSupportsMethodInterface;
 use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
-use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
-use Ufo\JsonRpcBundle\Exceptions\ExceptionToArrayTransformer;
-use Ufo\JsonRpcBundle\Server\RpcErrorObject;
+use Ufo\RpcError\AbstractRpcErrorException;
+use Ufo\RpcError\ExceptionToArrayTransformer;
 
 final class RpcErrorNormalizer implements NormalizerInterface
 {
@@ -30,12 +26,12 @@ final class RpcErrorNormalizer implements NormalizerInterface
     {
         $normalized = new ExceptionToArrayTransformer($object, $this->environment);
 
-        return $normalized->infoByEnvirontment();
+        return $normalized->infoByEnvironment();
     }
 
     public function supportsNormalization($data, string $format = null, array $context = []): bool
     {
-        return $data instanceof AbstractJsonRpcBundleException && ($context[static::RPC_CONTEXT] ?? false);
+        return $data instanceof AbstractRpcErrorException && ($context[static::RPC_CONTEXT] ?? false);
     }
 
     public function hasCacheableSupportsMethod(): bool

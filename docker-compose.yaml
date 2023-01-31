@@ -1,0 +1,22 @@
+version: "3"
+services:
+  php:
+    container_name: php_${PROJECT_NAME}
+    build:
+      context: ./
+      dockerfile: docker/configs/php/Dockerfile
+      args:
+        WORKDIR: ${WORKDIR}
+    environment:
+      WORKDIR: ${WORKDIR}
+      XDEBUG_CONFIG: remote_host={{YOUR_IP_ADDRESS}}
+      PHP_IDE_CONFIG: serverName=docker
+    volumes:
+      - ./:${WORKDIR}
+    networks:
+      - app
+
+networks:
+  app:
+    name: vitamin_bot_net_vitamin
+    external: true

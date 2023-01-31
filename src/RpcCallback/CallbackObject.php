@@ -4,8 +4,6 @@ namespace Ufo\JsonRpcBundle\RpcCallback;
 
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Validator\Validation;
-use Ufo\JsonRpcBundle\Exceptions\RpcBadRequestException;
-use Ufo\JsonRpcBundle\RpcCallback\CallbackUrlValidator;
 use Ufo\JsonRpcBundle\RpcCallback\Validator\AsertRealUrl;
 
 class CallbackObject
@@ -24,6 +22,7 @@ class CallbackObject
 
         if ($errors->count() > 0) {
             $message = $errors[0]->getPropertyPath() . ': ' . $errors[0]->getMessage();
+            // todo fix it
         }
     }
 

@@ -1,20 +1,14 @@
 <?php
 namespace Ufo\JsonRpcBundle\Server;
 
-
-use Laminas\Json\Server\Error;
-use Laminas\Json\Server\Response;
-use Laminas\Json\Server\Response\Http;
-use phpDocumentor\Reflection\Types\Iterable_;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\TaggedIterator;
 use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\Serializer\SerializerInterface;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 use Ufo\JsonRpcBundle\Controller\ApiController;
-use Ufo\JsonRpcBundle\Exceptions\AbstractJsonRpcBundleException;
-use Ufo\JsonRpcBundle\Exceptions\RpcBadRequestException;
-use Ufo\JsonRpcBundle\Exceptions\WrongWayException;
+use Ufo\RpcError\AbstractRpcErrorException;
+use Ufo\RpcError\WrongWayException;
 use Ufo\JsonRpcBundle\Interfaces\IFacadeRpcServer;
 use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
 use \Laminas\Json\Server\Smd;
@@ -127,7 +121,7 @@ class RpcServerFacade implements IFacadeRpcServer
 
     protected function handleError(\Throwable $e): RpcResponseObject
     {
-        $code = ($e instanceof AbstractJsonRpcBundleException) ? $e->getCode() : AbstractJsonRpcBundleException::DEFAULT_CODE;
+        $code = ($e instanceof AbstractRpcErrorException) ? $e->getCode() : AbstractRpcErrorException::DEFAULT_CODE;
         return $this->getServer()->handleError($e->getMessage(), $code, $e);
     }
     

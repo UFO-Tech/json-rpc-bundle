@@ -16,7 +16,7 @@ Package for easy api creation using json-rpc server
 # What's new?
 
 ### Version 4.2
-- Implemented multi-process processing of butch requests, which reduces the response time to the time of the longest request
+- Implemented multi-process processing of batch requests, which reduces the response time to the time of the longest request
 - Implemented response subscription mechanism thanks to service parameter `$rpc.callback`
   Request:
 ```json
@@ -45,7 +45,7 @@ Response:
 ```
 
 ### Version 4.1
-- Full support for butch requests with the possibility of transferring the results of one request to the parameters of the second
+- Full support for batch requests with the possibility of transferring the results of one request to the parameters of the second
 Request:
 ```json
 [

@@ -9,18 +9,16 @@ use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Constraints as Assert;
-use Symfony\Component\Validator\ConstraintViolation;
 use Symfony\Component\Validator\Validation;
 use Throwable;
 use TypeError;
-use Ufo\JsonRpcBundle\Exceptions\AbstractJsonRpcBundleException;
-use Ufo\JsonRpcBundle\Exceptions\IProcedureExceptionInterface;
-use Ufo\JsonRpcBundle\Exceptions\IServerExceptionInterface;
-use Ufo\JsonRpcBundle\Exceptions\IUserInputExceptionInterface;
-use Ufo\JsonRpcBundle\Exceptions\RpcAsyncRequestException;
-use Ufo\JsonRpcBundle\Exceptions\RpcBadRequestException;
-use Ufo\JsonRpcBundle\Exceptions\RpcJsonParseException;
-use Ufo\JsonRpcBundle\Exceptions\RuntimeException;
+use Ufo\RpcError\IProcedureExceptionInterface;
+use Ufo\RpcError\IServerExceptionInterface;
+use Ufo\RpcError\IUserInputExceptionInterface;
+use Ufo\RpcError\RpcAsyncRequestException;
+use Ufo\RpcError\RpcBadRequestException;
+use Ufo\RpcError\RpcJsonParseException;
+use Ufo\RpcError\RpcRuntimeException;
 use Ufo\JsonRpcBundle\RpcCallback\CallbackObject;
 
 class RpcRequestObject
@@ -213,7 +211,7 @@ class RpcRequestObject
 
     /**
      * @return bool
-     * @throws RuntimeException
+     * @throws RpcRuntimeException
      */
     public function isAsync(): bool
     {
@@ -228,7 +226,7 @@ class RpcRequestObject
     {
         try {
             return (string)$this->getRpcParams()->getCallbackObject();
-        } catch (RuntimeException) {
+        } catch (RpcRuntimeException) {
             throw new RpcAsyncRequestException('Request is not async');
         }
     }
@@ -258,7 +256,7 @@ class RpcRequestObject
     {
         try {
             if (!$this->hasRequire()) {
-                throw new RuntimeException(
+                throw new RpcRuntimeException(
                     sprintf(
                         'The request does not need to replace parameter "%s".',
                         $paramName
@@ -277,7 +275,6 @@ class RpcRequestObject
 
             $this->params[$paramName] = $newValue;
             $this->analyzeParams();
-            $this->refreshRawJson();
 
         } catch (Throwable $e) {
             $this->error = $e;
@@ -447,12 +444,12 @@ class RpcRequestObject
 
     /**
      * @return SpecialRpcParams
-     * @throws RuntimeException
+     * @throws RpcRuntimeException
      */
     public function getRpcParams(): SpecialRpcParams
     {
         if (!$this->hasRpcParams()) {
-            throw new RuntimeException('Additional rpc params not set');
+            throw new RpcRuntimeException('Additional rpc params not set');
         }
         return $this->rpcParams;
     }

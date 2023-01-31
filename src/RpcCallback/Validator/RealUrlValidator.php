@@ -2,15 +2,10 @@
 
 namespace Ufo\JsonRpcBundle\RpcCallback\Validator;
 
-use Psr\Http\Client\ClientInterface;
 use Symfony\Component\HttpClient\Psr18Client;
-use Symfony\Component\HttpClient\Psr18NetworkException;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\Constraints\UrlValidator;
-use Symfony\Component\Validator\ConstraintValidator;
 use Symfony\Component\Validator\Exception\UnexpectedTypeException;
-use Symfony\Component\Validator\Exception\UnexpectedValueException;
 
 class RealUrlValidator extends UrlValidator
 {

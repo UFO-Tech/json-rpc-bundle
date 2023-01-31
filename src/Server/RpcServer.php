@@ -1,26 +1,17 @@
 <?php
-/**
- * @author Doctor <ashterix69@gmail.com>
- *
- *
- * Date: 05.06.2017
- * Time: 12:53
- */
 
 namespace Ufo\JsonRpcBundle\Server;
 
 
-use Laminas\Json\Server\Request;
-use Laminas\Json\Server\Response;
 use Laminas\Server\Method\Definition;
 use Psr\Log\LoggerInterface;
 use Laminas\Json\Server\Error;
 use Laminas\Json\Server\Server;
 use Symfony\Component\Serializer\SerializerInterface;
-use Ufo\JsonRpcBundle\Exceptions\AbstractJsonRpcBundleException;
-use Ufo\JsonRpcBundle\Exceptions\RpcBadParamException;
-use Ufo\JsonRpcBundle\Exceptions\RpcMethodNotFoundExceptionRpc;
-use Ufo\JsonRpcBundle\Exceptions\RuntimeException;
+use Ufo\RpcError\AbstractRpcErrorException;
+use Ufo\RpcError\RpcBadParamException;
+use Ufo\RpcError\RpcMethodNotFoundExceptionRpc;
+use Ufo\RpcError\RpcRuntimeException;
 
 class RpcServer extends Server
 {
@@ -48,7 +39,7 @@ class RpcServer extends Server
      */
     public function handleError(
         ?string $message = null,
-        int|string $code = AbstractJsonRpcBundleException::DEFAULT_CODE, 
+        int|string $code = AbstractRpcErrorException::DEFAULT_CODE, 
         mixed $data = null
     ): RpcResponseObject
     {
@@ -87,7 +78,7 @@ class RpcServer extends Server
         try {
             $result = $this->_dispatch($invokable, $this->serializer->normalize($params));
         } catch (\Throwable $e) {
-            throw RuntimeException::fromThrowable($e);
+            throw RpcRuntimeException::fromThrowable($e);
         }
 
         return new RpcResponseObject(

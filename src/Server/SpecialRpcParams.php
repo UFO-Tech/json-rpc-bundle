@@ -2,11 +2,8 @@
 
 namespace Ufo\JsonRpcBundle\Server;
 
-use Symfony\Component\Serializer\Annotation\Groups;
-use Symfony\Component\Serializer\Annotation\SerializedName;
-use Symfony\Component\Serializer\Annotation\SerializedPath;
-use Ufo\JsonRpcBundle\Exceptions\AbstractJsonRpcBundleException;
-use Ufo\JsonRpcBundle\Exceptions\RuntimeException;
+use Ufo\RpcError\AbstractRpcErrorException;
+use Ufo\RpcError\RpcRuntimeException;
 use Ufo\JsonRpcBundle\RpcCallback\CallbackObject;
 
 class SpecialRpcParams
@@ -26,7 +23,7 @@ class SpecialRpcParams
         if (is_string($this->callbackObject)) {
             try {
                 $this->callbackObject = new CallbackObject($this->callbackObject);
-            } catch (AbstractJsonRpcBundleException $e) {
+            } catch (AbstractRpcErrorException $e) {
                 $this->parent->setError($e);
             }
         }
@@ -43,12 +40,12 @@ class SpecialRpcParams
 
     /**
      * @return CallbackObject
-     * @throws RuntimeException
+     * @throws RpcRuntimeException
      */
     public function getCallbackObject(): CallbackObject
     {
         if (!$this->hasCallback()) {
-            throw new RuntimeException('Callback is not set');
+            throw new RpcRuntimeException('Callback is not set');
         }
         return $this->callbackObject;
     }

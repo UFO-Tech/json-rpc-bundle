@@ -4,7 +4,7 @@ namespace Ufo\JsonRpcBundle\Server\Async;
 
 use Symfony\Component\Process\Process;
 use Ufo\JsonRpcBundle\CliCommand\UfoRpcProcessCommand;
-use Ufo\JsonRpcBundle\Exceptions\RpcAsyncRequestException;
+use Ufo\RpcError\RpcAsyncRequestException;
 use Ufo\JsonRpcBundle\Server\RpcRequestObject;
 
 class RpcAsyncProcessor

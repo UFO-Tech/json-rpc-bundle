@@ -2,10 +2,9 @@
 
 namespace Ufo\JsonRpcBundle\Server\Async;
 
-use Symfony\Component\HttpClient\Psr18Client;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
-use Ufo\JsonRpcBundle\Exceptions\RpcAsyncRequestException;
+use Ufo\RpcError\RpcAsyncRequestException;
 use Ufo\JsonRpcBundle\Server\RpcRequestObject;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
