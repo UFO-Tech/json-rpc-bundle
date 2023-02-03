@@ -7,21 +7,24 @@ use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
 use Ufo\RpcError\AbstractRpcErrorException;
 use Ufo\RpcError\RpcAsyncRequestException;
-use Ufo\RpcError\RpcBadRequestException;
 use Ufo\RpcError\RpcJsonParseException;
 use Ufo\RpcError\WrongWayException;
 use Ufo\JsonRpcBundle\Interfaces\IFacadeRpcServer;
 use Ufo\JsonRpcBundle\Serializer\RpcErrorNormalizer;
 use Ufo\JsonRpcBundle\Server\Async\RpcAsyncProcessor;
 use Ufo\JsonRpcBundle\Server\Async\RpcCallbackProcessor;
+use Ufo\RpcObject\RpcBatchRequest;
+use Ufo\RpcObject\RpcError;
+use Ufo\RpcObject\RpcRequest;
+use Ufo\RpcObject\RpcResponse;
 
 class RpcRequestHandler
 {
     protected Request $request;
     
     protected bool $isBatchRequest = false;
-    protected RpcBatchRequestObject $batchRequestObject;
-    protected RpcRequestObject $requestObject;
+    protected RpcBatchRequest $batchRequest;
+    protected RpcRequest $requestObject;
     
     public function __construct(
         protected IFacadeRpcServer    $rpcServerFacade,
@@ -69,7 +72,7 @@ class RpcRequestHandler
     {
         foreach ($queue as $key => &$singleRequest) {
             /**
-             * @var RpcRequestObject $singleRequest
+             * @var RpcRequest $singleRequest
              */
             $singleRequest->refreshRawJson($this->serializer);
             $this->asyncProcessor->createProcesses(
@@ -86,8 +89,8 @@ class RpcRequestHandler
     protected function closureSetResponse(): \Closure
     {
         $self = $this;
-         return function (string $output, RpcRequestObject $requestObject) use ($self) {
-             $batchRequestObject = $self->batchRequestObject;
+         return function (string $output, RpcRequest $request) use ($self) {
+             $batchRequest = $self->batchRequest;
 
              try {
                  if (empty($output)) {
@@ -96,57 +99,57 @@ class RpcRequestHandler
                      );
                  }
                  /**
-                  * @var RpcResponseObject $response
+                  * @var RpcResponse $response
                   */
-                 $response = $self->serializer->deserialize($output, RpcResponseObject::class, 'json');
+                 $response = $self->serializer->deserialize($output, RpcResponse::class, 'json');
              } catch (\Throwable $e) {
                  if ($e instanceof AbstractRpcErrorException) {
-                     $error = new RpcErrorObject($e->getCode(), $e->getMessage(), $e);
+                     $error = new RpcError($e->getCode(), $e->getMessage(), $e);
                  } else {
-                     $error = new RpcErrorObject(
+                     $error = new RpcError(
                          AbstractRpcErrorException::DEFAULT_CODE,
                          'Uncatch async error',
                          $e
                      );
                  }
-                 $response = new RpcResponseObject(
-                     id: $requestObject->getId(),
+                 $response = new RpcResponse(
+                     id: $request->getId(),
                      error: $error,
-                     version: $requestObject->getVersion(),
-                     requestObject: $requestObject
+                     version: $request->getVersion(),
+                     requestObject: $request
                  );
              }
              $result = $self->serializer->normalize($response, context: [AbstractNormalizer::GROUPS => [$response->getResponseSignature()]]);
-             $batchRequestObject->addResult($result);
+             $batchRequest->addResult($result);
 
-            if ($batchRequestObject->getReadyToHandle()) {
-                $self->processQueue($batchRequestObject->getReadyToHandle(), $self->closureSetResponse());
+            if ($batchRequest->getReadyToHandle()) {
+                $self->processQueue($batchRequest->getReadyToHandle(), $self->closureSetResponse());
             }
         };
 }
     protected function smartHandle(): array
     {
         if ($this->isBatchRequest) {
-            $batchRequestObject = $this->batchRequestObject;
+            $batchRequest = $this->batchRequest;
             $this->processQueue(
-                $batchRequestObject->getReadyToHandle(),
+                $batchRequest->getReadyToHandle(),
                 $this->closureSetResponse()
             );
 
-            foreach ($batchRequestObject->provideUnprocessedRequests() as $key => $unprocessedRequest) {
-                $batchRequestObject->addResult($this->provideSingleRequest($unprocessedRequest));
+            foreach ($batchRequest->provideUnprocessedRequests() as $key => $unprocessedRequest) {
+                $batchRequest->addResult($this->provideSingleRequest($unprocessedRequest));
             }
 
-            $result = $batchRequestObject->getResults(false);
+            $result = $batchRequest->getResults(false);
         } else {
             $result = $this->provideSingleRequest($this->requestObject);
         }
         return $result;
     }
 
-    public function provideSingleRequest(RpcRequestObject $singleRequest): array
+    public function provideSingleRequest(RpcRequest $singleRequest): array
     {
-        $result = $this->provideSingleRequestObjectResponse($singleRequest);
+        $result = $this->provideSingleRequestToResponse($singleRequest);
         $context = [
             AbstractNormalizer::GROUPS => [$result->getResponseSignature()],
             RpcErrorNormalizer::RPC_CONTEXT => true,
@@ -154,7 +157,7 @@ class RpcRequestHandler
         return $this->serializer->normalize($result, context: $context);
     }
 
-    public function provideSingleRequestObjectResponse(RpcRequestObject $singleRequest): RpcResponseObject
+    public function provideSingleRequestToResponse(RpcRequest $singleRequest): RpcResponse
     {
         $result = $this->rpcServerFacade->handle($singleRequest);
         if (!$singleRequest->hasError() && $singleRequest->isAsync()) {
@@ -166,7 +169,7 @@ class RpcRequestHandler
                 $status = false;
                 $data = $e;
             }
-            $result = new RpcResponseObject(
+            $result = new RpcResponse(
                 $singleRequest->getId(),
                 [
                     'callback' => [
@@ -194,14 +197,13 @@ class RpcRequestHandler
     /**
      * @return $this
      * @throws RpcJsonParseException
-     * @throws RpcBadRequestException
      */
     protected function createRequestObject(): static
     {
         if ($this->isBatchRequest) {
-            $this->batchRequestObject = RpcBatchRequestObject::fromJson($this->request->getContent());
+            $this->batchRequest = RpcBatchRequest::fromJson($this->request->getContent());
         } else {
-            $this->requestObject = RpcRequestObject::fromJson($this->request->getContent());
+            $this->requestObject = RpcRequest::fromJson($this->request->getContent());
         }
         return $this;
     }

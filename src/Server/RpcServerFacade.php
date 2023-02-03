@@ -12,6 +12,8 @@ use Ufo\RpcError\WrongWayException;
 use Ufo\JsonRpcBundle\Interfaces\IFacadeRpcServer;
 use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
 use \Laminas\Json\Server\Smd;
+use Ufo\RpcObject\RpcRequest;
+use Ufo\RpcObject\RpcResponse;
 
 class RpcServerFacade implements IFacadeRpcServer
 {
@@ -20,7 +22,7 @@ class RpcServerFacade implements IFacadeRpcServer
      */
     protected RpcServer $rpcServer;
     
-    protected RpcRequestObject $requestObject;
+    protected RpcRequest $requestObject;
 
     /**
      * @var array
@@ -96,7 +98,7 @@ class RpcServerFacade implements IFacadeRpcServer
     /**
      * @return mixed
      */
-    public function handle(RpcRequestObject $singleRequest): RpcResponseObject
+    public function handle(RpcRequest $singleRequest): RpcResponse
     {
         $this->rpcServer->clearRequestAndResponse();
         $this->rpcServer->newRequest($singleRequest);
@@ -119,7 +121,7 @@ class RpcServerFacade implements IFacadeRpcServer
         return $response;
     }
 
-    protected function handleError(\Throwable $e): RpcResponseObject
+    protected function handleError(\Throwable $e): RpcResponse
     {
         $code = ($e instanceof AbstractRpcErrorException) ? $e->getCode() : AbstractRpcErrorException::DEFAULT_CODE;
         return $this->getServer()->handleError($e->getMessage(), $code, $e);

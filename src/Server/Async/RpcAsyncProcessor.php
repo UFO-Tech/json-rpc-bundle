@@ -5,7 +5,7 @@ namespace Ufo\JsonRpcBundle\Server\Async;
 use Symfony\Component\Process\Process;
 use Ufo\JsonRpcBundle\CliCommand\UfoRpcProcessCommand;
 use Ufo\RpcError\RpcAsyncRequestException;
-use Ufo\JsonRpcBundle\Server\RpcRequestObject;
+use Ufo\RpcObject\RpcRequest;
 
 class RpcAsyncProcessor
 {
@@ -18,7 +18,7 @@ class RpcAsyncProcessor
     protected array $counter = [];
 
     /**
-     * @var RpcRequestObject[]
+     * @var RpcRequest[]
      */
     protected array $requestObjects = [];
 
@@ -31,13 +31,13 @@ class RpcAsyncProcessor
     }
 
     public function createProcesses(
-        RpcRequestObject $requestObject,
-        string           $token = null,
-        array            $additionParams = [],
-        string           $cwd = null,
-        array            $env = null,
-        mixed            $input = null,
-        ?float           $timeout = 60
+        RpcRequest $request,
+        string     $token = null,
+        array      $additionParams = [],
+        string     $cwd = null,
+        array      $env = null,
+        mixed      $input = null,
+        ?float     $timeout = 60
     ): Process
     {
         if (empty($this->processes)) {
@@ -49,7 +49,7 @@ class RpcAsyncProcessor
             '../bin/console',
             UfoRpcProcessCommand::COMMAND_NAME,
             // todo regenerate raw json
-            $requestObject->getRawJson(),
+            $request->getRawJson(),
         ];
         if (!is_null($token)) {
             $start[] = '-t' . $token;
@@ -63,9 +63,9 @@ class RpcAsyncProcessor
             $timeout
         );
         $process->start();
-        $this->processes[$requestObject->getId()] = $process;
-        $this->counter[$requestObject->getId()] = 0;
-        $this->requestObjects[$requestObject->getId()] = $requestObject;
+        $this->processes[$request->getId()] = $process;
+        $this->counter[$request->getId()] = 0;
+        $this->requestObjects[$request->getId()] = $request;
         return $process;
     }
 

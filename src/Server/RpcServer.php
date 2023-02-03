@@ -5,28 +5,30 @@ namespace Ufo\JsonRpcBundle\Server;
 
 use Laminas\Server\Method\Definition;
 use Psr\Log\LoggerInterface;
-use Laminas\Json\Server\Error;
 use Laminas\Json\Server\Server;
 use Symfony\Component\Serializer\SerializerInterface;
 use Ufo\RpcError\AbstractRpcErrorException;
 use Ufo\RpcError\RpcBadParamException;
 use Ufo\RpcError\RpcMethodNotFoundExceptionRpc;
 use Ufo\RpcError\RpcRuntimeException;
+use Ufo\RpcObject\RpcError;
+use Ufo\RpcObject\RpcRequest;
+use Ufo\RpcObject\RpcResponse;
 
 class RpcServer extends Server
 {
 
-    protected RpcRequestObject $requestObject;
+    protected RpcRequest $requestObject;
 
     public function __construct(
         protected SerializerInterface $serializer,         
         protected ?LoggerInterface $logger = null
- )
+    )
     {
         parent::__construct();
     }
 
-    public function newRequest(RpcRequestObject $requestObject)
+    public function newRequest(RpcRequest $requestObject)
     {
         $this->requestObject = $requestObject;
     }
@@ -35,15 +37,15 @@ class RpcServer extends Server
      * @param string|null $message
      * @param int|string $code
      * @param mixed|null $data
-     * @return RpcErrorObject
+     * @return RpcError
      */
     public function handleError(
         ?string $message = null,
         int|string $code = AbstractRpcErrorException::DEFAULT_CODE, 
         mixed $data = null
-    ): RpcResponseObject
+    ): RpcResponse
     {
-        $error = new RpcErrorObject($code, $message, $data);
+        $error = new RpcError($code, $message, $data);
         if ($this->logger instanceof LoggerInterface) {
             $this->logger->error(
                 (string)$error->getData(),
@@ -54,7 +56,7 @@ class RpcServer extends Server
                 ]
             );
         }
-        return new RpcResponseObject(
+        return new RpcResponse(
             id: $this->requestObject->getId(),
             error: $error,
             version: $this->requestObject->getVersion(),
@@ -62,7 +64,7 @@ class RpcServer extends Server
         );
     }
 
-    public function handleRpcRequest(RpcRequestObject $request): RpcResponseObject
+    public function handleRpcRequest(RpcRequest $request): RpcResponse
     {
         $method = $request->getMethod();
 
@@ -81,7 +83,7 @@ class RpcServer extends Server
             throw RpcRuntimeException::fromThrowable($e);
         }
 
-        return new RpcResponseObject(
+        return new RpcResponse(
             id: $request->getId(),
             result: $result,
             version: $request->getVersion(),
@@ -100,19 +102,22 @@ class RpcServer extends Server
     }
 
     /**
-     * Ensures named parameters are passed in the correct order.
-     *
+     * Array of parameters to use when calling the requested
+     * method on success, Error if any named request parameters do not match
+     * those of the method requested.
      * @param array $requestedParams
      * @param array $serviceParams
-     * @return array|Error Array of parameters to use when calling the requested
-     *     method on success, Error if any named request parameters do not match
-     *     those of the method requested.
+     * @param Definition $invokable
+     * @return array
+     * @throws RpcBadParamException
+     * @throws \ReflectionException
      */
     private function validateAndPrepareNamedParams(
         array $requestedParams,
         array $serviceParams,
         Definition $invokable
-    ) {
+    ): array
+    {
         if (count($requestedParams) < count($serviceParams)) {
             $requestedParams = $this->getDefaultParams($requestedParams, $serviceParams);
         }
@@ -146,13 +151,15 @@ class RpcServer extends Server
     }
 
     /**
+     * Array of parameters to use when calling the requested
+     * method on success, Error if the number of request parameters does not
+     * match the number of parameters required by the requested method.
      * @param array $requestedParams
      * @param array $serviceParams
-     * @return array|Error Array of parameters to use when calling the requested
-     *     method on success, Error if the number of request parameters does not
-     *     match the number of parameters required by the requested method.
+     * @return array
+     * @throws RpcBadParamException
      */
-    private function validateAndPrepareOrderedParams(array $requestedParams, array $serviceParams)
+    private function validateAndPrepareOrderedParams(array $requestedParams, array $serviceParams): array
     {
         $requiredParamsCount = array_reduce($serviceParams, static function ($count, $param) {
             $count += $param['optional'] ? 0 : 1;

@@ -15,7 +15,6 @@ final class RpcErrorNormalizer implements NormalizerInterface
     {
     }
 
-
     /**
      * @param \Throwable $object
      * @param ?string $format

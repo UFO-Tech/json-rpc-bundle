@@ -11,9 +11,9 @@ namespace Ufo\JsonRpcBundle\Interfaces;
 
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
-use Ufo\JsonRpcBundle\Server\RpcRequestObject;
-use Ufo\JsonRpcBundle\Server\RpcResponseObject;
 use Ufo\JsonRpcBundle\Server\RpcServer;
+use Ufo\RpcObject\RpcRequest;
+use Ufo\RpcObject\RpcResponse;
 
 interface IFacadeRpcServer
 {
@@ -38,7 +38,7 @@ interface IFacadeRpcServer
     /**
      * @return mixed
      */
-    public function handle(RpcRequestObject $singleRequest): RpcResponseObject;
+    public function handle(RpcRequest $singleRequest): RpcResponse;
 
     /**
      * @return mixed

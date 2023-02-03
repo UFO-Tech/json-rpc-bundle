@@ -5,8 +5,8 @@ namespace Ufo\JsonRpcBundle\Server\Async;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
 use Ufo\RpcError\RpcAsyncRequestException;
-use Ufo\JsonRpcBundle\Server\RpcRequestObject;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Ufo\RpcObject\RpcRequest;
 
 class RpcCallbackProcessor
 {
@@ -18,22 +18,22 @@ class RpcCallbackProcessor
     {
     }
 
-    public function process(RpcRequestObject $requestObject)
+    public function process(RpcRequest $request)
     {
         try {
             $error = false;
 
             $response = $this->client->request(
                 'POST',
-                $requestObject->getRpcParams()->getCallbackObject()->getTarget(),
+                $request->getRpcParams()->getCallbackObject()->getTarget(),
                 [
                     'headers' => [
                         'Accept' => 'application/json',
                     ],
                     'body' => $this->serializer->normalize(
-                        $requestObject->getResponseObject(),
+                        $request->getResponseObject(),
                         context: [
-                            AbstractNormalizer::GROUPS => $requestObject->getResponseObject()->getResponseSignature()
+                            AbstractNormalizer::GROUPS => $request->getResponseObject()->getResponseSignature()
                         ]
                     )
                 ]

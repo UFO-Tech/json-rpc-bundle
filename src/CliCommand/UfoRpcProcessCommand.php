@@ -11,11 +11,10 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
-use Ufo\JsonRpcBundle\Interfaces\IFacadeRpcServer;
 use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
 use Ufo\JsonRpcBundle\Serializer\RpcErrorNormalizer;
 use Ufo\JsonRpcBundle\Server\RpcRequestHandler;
-use Ufo\JsonRpcBundle\Server\RpcRequestObject;
+use Ufo\RpcObject\RpcRequest;
 
 #[AsCommand(
     name: UfoRpcProcessCommand::COMMAND_NAME,
@@ -49,8 +48,8 @@ class UfoRpcProcessCommand extends Command
         try {
 
             $json = trim($input->getArgument('json'), '"');
-            $requestObject = RpcRequestObject::fromJson($json);
-            $result = $this->requestHandler->provideSingleRequestObjectResponse($requestObject);
+            $request = RpcRequest::fromJson($json);
+            $result = $this->requestHandler->provideSingleRequestToResponse($request);
             $context = [
                 AbstractNormalizer::GROUPS => [$result->getResponseSignature()],
                 RpcErrorNormalizer::RPC_CONTEXT => true,
