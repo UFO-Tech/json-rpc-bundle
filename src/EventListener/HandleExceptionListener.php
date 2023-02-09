@@ -20,7 +20,7 @@ class HandleExceptionListener implements EventSubscriberInterface
     public function onKernelException(ExceptionEvent $event)
     {
         $apiRoute = $event->getRequest()->attributes->get('_route');
-        if (!$apiRoute === ApiController::API_ROUTE) {
+        if ($apiRoute !== ApiController::API_ROUTE) {
             return;
         }
         $exceptionToArray = new ExceptionToArrayTransformer($event->getThrowable(), $this->environment);
