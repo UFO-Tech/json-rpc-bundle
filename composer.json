@@ -32,7 +32,9 @@
         "symfony/http-client": "6.*",
         "symfony/process": "6.*",
         "ext-dom": "*",
-        "ufo-tech/rpc-objects": "1.*"
+        "ufo-tech/rpc-objects": "1.*",
+        "doctrine/persistence": ">=3.1",
+        "symfony/security-bundle": "6.*"
     },
     "autoload" : {
         "psr-4" : {
