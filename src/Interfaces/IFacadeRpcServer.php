@@ -25,10 +25,9 @@ interface IFacadeRpcServer
     /**
      * @param IRpcService $procedure
      * @param string $namespace
-     * @param mixed|null $argv
      * @return $this
      */
-    public function addProcedure(IRpcService $procedure, string $namespace = '', mixed $argv = null): static;
+    public function addProcedure(IRpcService $procedure, string $namespace = ''): static;
 
     /**
      * @param IRpcService[] $procedures
@@ -43,7 +42,7 @@ interface IFacadeRpcServer
     /**
      * @return mixed
      */
-    public function getServiceMap();
+    public function getServiceMap(): mixed;
 
     public function getSecurity(): IRpcSecurity;
         

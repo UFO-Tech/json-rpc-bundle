@@ -1,12 +1,4 @@
 <?php
-/**
- * @author Doctor <ashterix69@gmail.com>
- *
- *
- * Date: 21.04.2017
- * Time: 9:21
- */
-
 namespace Ufo\JsonRpcBundle\Security;
 
 

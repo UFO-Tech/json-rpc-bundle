@@ -1,11 +1,4 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: ashterix
- * Date: 30.04.17
- * Time: 9:04
- */
-
 namespace Ufo\JsonRpcBundle\Security;
 
 

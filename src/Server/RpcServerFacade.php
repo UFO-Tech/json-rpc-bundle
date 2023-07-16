@@ -7,11 +7,13 @@ use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\Serializer\SerializerInterface;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 use Ufo\JsonRpcBundle\Controller\ApiController;
+use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceLocator;
 use Ufo\RpcError\AbstractRpcErrorException;
+use Ufo\RpcError\RpcInvalidTokenException;
+use Ufo\RpcError\RpcTokenNotFoundInHeaderException;
 use Ufo\RpcError\WrongWayException;
 use Ufo\JsonRpcBundle\Interfaces\IFacadeRpcServer;
 use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
-use \Laminas\Json\Server\Smd;
 use Ufo\RpcObject\RpcRequest;
 use Ufo\RpcObject\RpcResponse;
 
@@ -22,8 +24,6 @@ class RpcServerFacade implements IFacadeRpcServer
      */
     protected RpcServer $rpcServer;
     
-    protected RpcRequest $requestObject;
-
     /**
      * @var array
      */
@@ -34,8 +34,9 @@ class RpcServerFacade implements IFacadeRpcServer
      * @param IRpcSecurity $rpcSecurity
      * @param string $environment
      * @param SerializerInterface $serializer
-     * @param IRpcService[] $procedures
+     * @param iterable $procedures
      * @param LoggerInterface|null $logger
+     * @throws \ReflectionException
      */
     public function __construct(
         protected RouterInterface $router,
@@ -51,6 +52,10 @@ class RpcServerFacade implements IFacadeRpcServer
         $this->setProcedures($procedures);
     }
 
+    /**
+     * @throws RpcTokenNotFoundInHeaderException
+     * @throws RpcInvalidTokenException
+     */
     protected function init(): void
     {
         $this->rpcSecurity->isValidRequest();
@@ -67,26 +72,26 @@ class RpcServerFacade implements IFacadeRpcServer
     /**
      * @param IRpcService $procedure
      * @param string $namespace
-     * @param mixed $argv
      * @return $this
      */
-    public function addProcedure(IRpcService $procedure, string $namespace = '', mixed $argv = null): static
+    public function addProcedure(IRpcService $procedure, string $namespace = ''): static
     {
-        if (empty($namespace) && is_object($procedure)) {
-            $className = explode('\\', get_class($procedure));
+        $className = explode('\\', get_class($procedure));
+        if (empty($namespace)) {
             $namespace = array_pop($className);
             if ($namespace == 'PingProcedure') {
                 $namespace = '';
             }
             $this->setNamespaceAliasesForProxyAccess($procedure, $namespace);
         }
-        $this->rpcServer->setClass($procedure, $namespace, $argv);
+        $this->rpcServer->addProcedure($procedure);
         return $this;
     }
 
     /**
      * @param IRpcService[] $procedures
      * @return void
+     * @throws \ReflectionException
      */
     public function setProcedures(iterable $procedures): void
     {
@@ -100,7 +105,6 @@ class RpcServerFacade implements IFacadeRpcServer
      */
     public function handle(RpcRequest $singleRequest): RpcResponse
     {
-        $this->rpcServer->clearRequestAndResponse();
         $this->rpcServer->newRequest($singleRequest);
 
         try {
@@ -132,27 +136,23 @@ class RpcServerFacade implements IFacadeRpcServer
      * @param $namespace
      * @return void
      */
-    protected function setNamespaceAliasesForProxyAccess($procedure, $namespace)
+    protected function setNamespaceAliasesForProxyAccess($procedure, $namespace): void
     {
         foreach (class_implements($procedure) as $interface) {
             $this->addNsAlias($namespace, $interface);
         }
     }
 
-    /**
-     * @return mixed
-     */
-    public function getServiceMap(): mixed
+    public function getServiceMap(): RpcResponse|ServiceLocator
     {
         try {
             $this->rpcSecurity->isValidRequest();
-            $this->rpcServer->setTarget($this->router->generate(ApiController::API_ROUTE))
-                ->setEnvelope(Smd::ENV_JSONRPC_2);
-            $response = $this->rpcServer->getServiceMap();
+            $serviceLocator = $this->rpcServer->getServiceLocator();
+            $serviceLocator->setTarget($this->router->generate(ApiController::API_ROUTE));
+            $response = $serviceLocator;
         } catch (\Exception $e) {
             $response = $this->handleError($e);
         }
-
         return $response;
     }
 
@@ -181,7 +181,7 @@ class RpcServerFacade implements IFacadeRpcServer
      */
     public function checkNsAlias(string $alias): string
     {
-        return isset($this->nsAliases[$alias]) ? $this->nsAliases[$alias] : $alias;
+        return $this->nsAliases[$alias] ?? $alias;
     }
 
     /**

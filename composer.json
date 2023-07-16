@@ -6,10 +6,6 @@
         {
             "name": "Alex Maystrenko",
             "email": "ashterix69@gmail.com"
-        },
-        {
-            "name": "Nicholas Semenda",
-            "email": "semnickolas@gmail.com"
         }
     ],
     "type" : "symfony-bundle",
@@ -19,10 +15,6 @@
         "php": ">=8.1",
         "symfony/framework-bundle": "6.*",
         "symfony/serializer": "6.*",
-        "laminas/laminas-server": ">=2.8",
-        "laminas/laminas-json": ">=3.1",
-        "laminas/laminas-http": ">=2.11",
-        "laminas/laminas-json-server": ">=3.2",
         "psr/http-client": "*",
         "nyholm/psr7": "*",
         "ufo-tech/rpc-exceptions": "1.*",
@@ -34,7 +26,8 @@
         "ext-dom": "*",
         "ufo-tech/rpc-objects": "1.*",
         "doctrine/persistence": ">=3.1",
-        "symfony/security-bundle": "6.*"
+        "symfony/security-bundle": "6.*",
+        "phpdocumentor/reflection-docblock": "^5.3"
     },
     "autoload" : {
         "psr-4" : {
