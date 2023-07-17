@@ -157,7 +157,7 @@ class RpcServer
     {
         $requestedParams = $request->getParams();
         if (count($request->getParams()) < count($service->getParams())) {
-            $requestedParams = $service->getDefaultParams($service->getParams());
+            $requestedParams = $service->getDefaultParams($request->getParams());
         }
 
         $orderedParams = [];
