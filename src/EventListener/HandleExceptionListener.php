@@ -32,7 +32,7 @@ class HandleExceptionListener implements EventSubscriberInterface
                 'message' => $event->getThrowable()->getMessage(),
                 'data' => $exceptionToArray->infoByEnvironment(),
             ],
-            'jsorpc' => RpcServer::VERSION_2
+            'jsonrpc' => RpcServer::VERSION_2
         ];
 
         $event->setResponse(new JsonResponse($responseData, 200));
