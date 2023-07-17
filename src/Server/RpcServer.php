@@ -20,6 +20,9 @@ use Ufo\RpcObject\RpcResponse;
 
 class RpcServer
 {
+    const VERSION_1 = '1.0';
+    const VERSION_2 = '2.0';
+    
     protected RpcRequest $requestObject;
 
     public function __construct(

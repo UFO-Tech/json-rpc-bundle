@@ -1,15 +1,8 @@
 # config/packages/ufo_json_rpc.yaml
 ufo_json_rpc:
     security:
-        providers:
-            app_user_provider:
-                entity:
-                    class: App\Entity\User
-                    property: email
-
         protected_methods: ['GET', 'POST']      # protection of GET and POST requests
         token_key_in_header: 'Ufo-RPC-Token'    # Name of the key in the header
-        clients_tokens_provider:
         clients_tokens:
             - 'ClientTokenExample'              # hardcoded token example. Importantly!!! Replace or delete it!
             - '%env(resolve:UFO_API_TOKEN)%'   # token example from .env.local

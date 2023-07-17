@@ -25,7 +25,7 @@ class ServiceLocator implements ContainerInterface
      *
      * @var string
      */
-    protected string $description;
+    protected string $description = '';
 
     /**
      * Current envelope.
@@ -39,7 +39,7 @@ class ServiceLocator implements ContainerInterface
      *
      * @var string
      */
-    protected string $id;
+    protected string $id = '';
 
     /**
      * Services offered.
@@ -225,7 +225,6 @@ class ServiceLocator implements ContainerInterface
 
         $service['services'] = [];
         foreach ($services as $name => $svc) {
-            $svc->setEnvelope($envelope);
             $service['services'][$name] = $svc->toArray();
         }
         $service['methods'] = $service['services'];

@@ -39,6 +39,7 @@ class RpcServerFacade implements IFacadeRpcServer
      * @throws \ReflectionException
      */
     public function __construct(
+        protected ServiceLocator $serviceLocator,
         protected RouterInterface $router,
         protected IRpcSecurity $rpcSecurity,
         protected string $environment,
@@ -47,7 +48,7 @@ class RpcServerFacade implements IFacadeRpcServer
         LoggerInterface $logger = null
     )
     {
-        $this->rpcServer = new RpcServer($this->serializer, $logger);
+        $this->rpcServer = new RpcServer($this->serializer, $this->serviceLocator, $logger);
         $this->init();
         $this->setProcedures($procedures);
     }

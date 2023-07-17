@@ -22,6 +22,7 @@ services:
 
     Ufo\JsonRpcBundle\Server\RpcServerFacadeCli:
         arguments:
+            $serviceLocator: '@Ufo\JsonRpcBundle\Server\ServiceMap\ServiceLocator'
             $logger: null
             $rpcSecurity: '@Ufo\JsonRpcBundle\Security\TokenRpcCliSecurity'
             $environment: '%kernel.environment%'
