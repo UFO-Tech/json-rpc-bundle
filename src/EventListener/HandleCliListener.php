@@ -23,7 +23,7 @@ class HandleCliListener implements EventSubscriberInterface
     {
     }
 
-    public function onConsoleCommand(ConsoleCommandEvent $event)
+    public function onConsoleCommand(ConsoleCommandEvent $event): void
     {
         $io = new SymfonyStyle($event->getInput(), $event->getOutput());
 
@@ -52,11 +52,11 @@ class HandleCliListener implements EventSubscriberInterface
         }
     }
 
-    public function onConsoleError(ConsoleErrorEvent $event)
+    public function onConsoleError(ConsoleErrorEvent $event): void
     {
         $io = new SymfonyStyle($event->getInput(), $event->getOutput());
-
-        if ($event->getCommand()->getName() === UfoRpcProcessCommand::COMMAND_NAME) {
+        $command = $event->getCommand();
+        if ($command && $command->getName() === UfoRpcProcessCommand::COMMAND_NAME) {
             try {
                 if (in_array('POST', $this->protectedMethods)) {
                     if (!($token = $event->getInput()->getOption('token'))) {
@@ -76,7 +76,7 @@ class HandleCliListener implements EventSubscriberInterface
         }
     }
 
-    public static function getSubscribedEvents()
+    public static function getSubscribedEvents(): array
     {
         return [
             ConsoleEvents::COMMAND => 'onConsoleCommand',
