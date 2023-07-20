@@ -27,7 +27,8 @@
         "ufo-tech/rpc-objects": "1.*",
         "doctrine/persistence": ">=3.1",
         "symfony/security-bundle": "6.*",
-        "phpdocumentor/reflection-docblock": "^5.3"
+        "phpdocumentor/reflection-docblock": "^5.3",
+        "symfony/expression-language": "^6.3"
     },
     "autoload" : {
         "psr-4" : {
