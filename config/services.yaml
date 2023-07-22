@@ -32,13 +32,15 @@ services:
         arguments:
             $rpcServerFacade: '@Ufo\JsonRpcBundle\Server\RpcServerFacadeCli'
 
+    Ufo\JsonRpcBundle\Security\TokenRpcCliSecurity:
+        $protectedMethods: "@=container.hasParameter('ufo_json_rpc.security.protected_methods') ? parameter('ufo_json_rpc.security.protected_methods') : []"
+
     Ufo\JsonRpcBundle\Security\TokenRpcSecurity:
         $tokenHeaderKey: "@=container.hasParameter('ufo_json_rpc.security.token_key_in_header') ? parameter('ufo_json_rpc.security.token_key_in_header') : 'Ufo-RPC-Token'"
         $protectedMethods: "@=container.hasParameter('ufo_json_rpc.security.protected_methods') ? parameter('ufo_json_rpc.security.protected_methods') : []"
 
     Ufo\JsonRpcBundle\Security\SimpleTokenValidator:
         $clientsTokens: "@=container.hasParameter('ufo_json_rpc.security.clients_tokens') ? parameter('ufo_json_rpc.security.clients_tokens') : []"
-        $protectedMethods: "@=container.hasParameter('ufo_json_rpc.security.protected_methods') ? parameter('ufo_json_rpc.security.protected_methods') : []"
 
     Ufo\JsonRpcBundle\EventListener\HandleExceptionListener:
         arguments:
