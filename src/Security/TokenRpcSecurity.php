@@ -19,7 +19,7 @@ class TokenRpcSecurity implements IRpcSecurity
     /**
      * @var string
      */
-    protected string $tokenHeader;
+    protected string $tokenHeader = '';
 
     /**
      * @var Request

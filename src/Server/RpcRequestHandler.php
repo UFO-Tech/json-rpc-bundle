@@ -187,7 +187,7 @@ class RpcRequestHandler
 
     protected function checkBatchRequest(): static
     {
-        $firstChar = substr($this->request->getContent(), 0, 1);
+        $firstChar = substr(trim($this->request->getContent()), 0, 1);
         if ($firstChar === '[') {
             $this->isBatchRequest = true;
         }

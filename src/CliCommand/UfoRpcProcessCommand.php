@@ -38,7 +38,7 @@ class UfoRpcProcessCommand extends Command
     {
         $this
             ->addArgument('json', InputArgument::REQUIRED, 'Json request object for provide')
-            ->addOption('token', 't', InputOption::VALUE_REQUIRED, 'Security token')
+            ->addOption('token', 't', InputOption::VALUE_OPTIONAL, 'Security token')
         ;
     }
 

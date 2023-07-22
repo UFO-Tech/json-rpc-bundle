@@ -14,9 +14,12 @@ class TokenRpcCliSecurity implements IRpcSecurity
     /**
      * @var ?string
      */
-    protected ?string $token = null;
+    protected ?string $token = '';
 
-    public function __construct(protected ITokenValidator $tokenValidator)
+    public function __construct(
+        protected ITokenValidator $tokenValidator,
+        protected array $protectedMethods = [],
+    )
     {
     }
 
@@ -48,7 +51,11 @@ class TokenRpcCliSecurity implements IRpcSecurity
      */
     public function isValidRequest(): bool
     {
-        return $this->isValidToken($this->token);
+        $result = true;
+        if (in_array('POST', $this->protectedMethods)) {
+            $result = $this->isValidToken($this->token);
+        }
+        return $result;
     }
 
     public function getTokenHeaderKey(): string
