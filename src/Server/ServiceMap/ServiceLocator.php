@@ -10,6 +10,7 @@ use Ufo\RpcError\RpcMethodNotFoundExceptionRpc;
 class ServiceLocator implements ContainerInterface
 {
     const ENV_JSONRPC_2 = 'JSON-RPC-2.0';
+    const ENV_UFO_5 = 'JSON-RPC-2.0/UFO-RPC-5';
     const JSON = 'application/json';
     const POST = 'POST';
 
@@ -32,7 +33,7 @@ class ServiceLocator implements ContainerInterface
      *
      * @var string
      */
-    protected string $envelope = self::ENV_JSONRPC_2;
+    protected string $envelope = self::ENV_UFO_5;
 
     /**
      * Service id.

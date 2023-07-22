@@ -3,15 +3,13 @@
 namespace Ufo\JsonRpcBundle\Server\ServiceMap\Reflections;
 
 
-use Doctrine\Common\Annotations\AnnotationReader;
-use Doctrine\Common\Annotations\DocParser;
-use Doctrine\Common\Annotations\PhpParser;
 use phpDocumentor\Reflection\DocBlockFactory;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionMethod;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
+use Ufo\RpcObject\RpcInfo;
 
 /**
  * Class/Object reflection
@@ -78,6 +76,15 @@ class UfoReflectionProcedure
         }
     }
 
+    protected function findRpcInfo(ReflectionMethod $method, Service $service): void
+    {
+        $rpcInfo = new RpcInfo();
+        if ($method->getAttributes(RpcInfo::class)) {
+            $rpcInfo = $method->getAttributes(RpcInfo::class)[0]->newInstance();
+        }
+        $service->setRpcInfo($rpcInfo);
+    }
+
     protected function typeFrom(\ReflectionNamedType|string $type): string
     {
         return ($type instanceof \ReflectionNamedType) ? $type->getName() : $type;
@@ -134,6 +141,7 @@ class UfoReflectionProcedure
         $service = new Service($this->name . '.' . $method->getName(), $this->procedure);
         $this->buildParams($method, $service);
         $this->buildReturns($method, $service);
+        $this->findRpcInfo($method, $service);
         return $service;
     }
 

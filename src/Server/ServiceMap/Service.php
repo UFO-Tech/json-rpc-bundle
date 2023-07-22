@@ -5,12 +5,31 @@ namespace Ufo\JsonRpcBundle\Server\ServiceMap;
 
 use InvalidArgumentException;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
+use Ufo\RpcObject\RpcInfo;
 
 class Service
 {
-    protected string $envelope = ServiceLocator::ENV_JSONRPC_2;
+    protected string $envelope = ServiceLocator::ENV_UFO_5;
 
     protected array $return;
+
+    protected ?RpcInfo $rpcInfo = null;
+
+    /**
+     * @return RpcInfo|null
+     */
+    public function getRpcInfo(): ?RpcInfo
+    {
+        return $this->rpcInfo;
+    }
+
+    /**
+     * @param RpcInfo|null $rpcInfo
+     */
+    public function setRpcInfo(?RpcInfo $rpcInfo): void
+    {
+        $this->rpcInfo = $rpcInfo;
+    }
 
     /** @var string */
     protected string $transport = ServiceLocator::POST;
@@ -191,6 +210,7 @@ class Service
             'name' => $this->getName(),
             'parameters' => $this->getParams(),
             'returns' => $return,
+            'responseFormat' => $this->rpcInfo->getResponseFormat()
         ];
     }
 
