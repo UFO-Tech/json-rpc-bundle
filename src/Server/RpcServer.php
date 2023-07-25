@@ -22,7 +22,7 @@ class RpcServer
 {
     const VERSION_1 = '1.0';
     const VERSION_2 = '2.0';
-    
+
     protected RpcRequest $requestObject;
 
     public function __construct(
@@ -53,9 +53,9 @@ class RpcServer
      * @return RpcResponse
      */
     public function handleError(
-        ?string $message = null,
+        ?string    $message = null,
         int|string $code = AbstractRpcErrorException::DEFAULT_CODE,
-        mixed $data = null
+        mixed      $data = null
     ): RpcResponse
     {
         $error = new RpcError($code, $message, $data);
@@ -99,6 +99,11 @@ class RpcServer
 
         try {
             $result = $this->dispatch($service, $this->serializer->normalize($params));
+        } catch (\TypeError $e) {
+            $message = preg_replace('/.*\\\\/', '', $e->getMessage());
+            $message = preg_replace('/Argument #\d+ \(\$([a-zA-Z0-9_]+)\)/', 'Parameter "$1"', $message);
+
+            throw new RpcBadParamException($message);
         } catch (\Throwable $e) {
             throw RpcRuntimeException::fromThrowable($e);
         }
@@ -135,7 +140,7 @@ class RpcServer
      */
     private function validateAndPrepareParams(
         RpcRequest $request,
-        Service $service
+        Service    $service
     ): array
     {
         return is_string(key($request->getParams()))
@@ -152,7 +157,7 @@ class RpcServer
      */
     private function validateAndPrepareNamedParams(
         RpcRequest $request,
-        Service $service
+        Service    $service
     ): array
     {
         $requestedParams = $request->getParams();
@@ -194,7 +199,7 @@ class RpcServer
      */
     private function validateAndPrepareOrderedParams(
         RpcRequest $request,
-        Service $service
+        Service    $service
     ): array
     {
         $requiredParamsCount = array_reduce($service->getParams(), static function ($count, $param) {

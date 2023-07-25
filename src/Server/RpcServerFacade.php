@@ -116,7 +116,7 @@ class RpcServerFacade implements IFacadeRpcServer
             }
 
             $response = $this->rpcServer->handleRpcRequest($singleRequest);
-        } catch (WrongWayException) {
+        } catch (WrongWayException $e) {
             // error in request
             $response = $this->handleError($singleRequest->getError());
         } catch (\Exception $e) {
