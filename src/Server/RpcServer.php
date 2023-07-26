@@ -176,7 +176,7 @@ class RpcServer
             }
 
             if ($refParam->isOptional()) {
-                $orderedParams[$refParam->getName()] = null;
+                $orderedParams[$refParam->getName()] = $refParam->getDefaultValue();
                 continue;
             }
 
