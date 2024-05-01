@@ -14,6 +14,7 @@ use Ufo\RpcError\AbstractRpcErrorException;
 use Ufo\RpcError\RpcBadParamException;
 use Ufo\RpcError\RpcMethodNotFoundExceptionRpc;
 use Ufo\RpcError\RpcRuntimeException;
+use Ufo\RpcObject\RPC\Info;
 use Ufo\RpcObject\RpcError;
 use Ufo\RpcObject\RpcRequest;
 use Ufo\RpcObject\RpcResponse;

@@ -5,30 +5,32 @@ namespace Ufo\JsonRpcBundle\Server\ServiceMap;
 
 use InvalidArgumentException;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
-use Ufo\RpcObject\RpcInfo;
+use Ufo\RpcObject\RPC\Response;
 
 class Service
 {
     protected string $envelope = ServiceLocator::ENV_UFO_5;
 
+    protected string $description;
+
     protected array $return;
 
-    protected ?RpcInfo $rpcInfo = null;
+    protected ?Response $responseInfo = null;
 
     /**
-     * @return RpcInfo|null
+     * @return Response|null
      */
-    public function getRpcInfo(): ?RpcInfo
+    public function getResponseInfo(): ?Response
     {
-        return $this->rpcInfo;
+        return $this->responseInfo;
     }
 
     /**
-     * @param RpcInfo|null $rpcInfo
+     * @param Response|null $responseInfo
      */
-    public function setRpcInfo(?RpcInfo $rpcInfo): void
+    public function setResponseInfo(?Response $responseInfo): void
     {
-        $this->rpcInfo = $rpcInfo;
+        $this->responseInfo = $responseInfo;
     }
 
     /** @var string */
@@ -44,6 +46,7 @@ class Service
         'optional' => 'is_bool',
         'default' => null,
         'description' => 'is_string',
+        'schema'=>'is_array'
     ];
 
     protected array $params = [];
@@ -81,6 +84,11 @@ class Service
     public function getEnvelope(): string
     {
         return $this->envelope;
+    }
+
+    public function getDescription(): string
+    {
+        return $this->description;
     }
 
     /**
@@ -189,6 +197,16 @@ class Service
     }
 
     /**
+     * @param string $desc
+     * @return $this
+     */
+    public function setDescription(string $desc): static
+    {
+        $this->description = $desc;
+        return $this;
+    }
+
+    /**
      * Get return type.
      *
      * @return array
@@ -208,9 +226,10 @@ class Service
             'envelope' => $this->getEnvelope(),
             'transport' => $this->getTransport(),
             'name' => $this->getName(),
+            'decription' => $this->getDescription(),
             'parameters' => $this->getParams(),
             'returns' => $return,
-            'responseFormat' => $this->rpcInfo->getResponseFormat()
+            'responseFormat' => $this->responseInfo->getResponseFormat()
         ];
     }
 

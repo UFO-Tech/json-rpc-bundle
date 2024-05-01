@@ -16,6 +16,7 @@ use Ufo\JsonRpcBundle\Interfaces\IFacadeRpcServer;
 use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
 use Ufo\RpcObject\RpcRequest;
 use Ufo\RpcObject\RpcResponse;
+use function get_class;
 
 class RpcServerFacade implements IFacadeRpcServer
 {
@@ -139,9 +140,7 @@ class RpcServerFacade implements IFacadeRpcServer
      */
     protected function setNamespaceAliasesForProxyAccess($procedure, $namespace): void
     {
-        foreach (class_implements($procedure) as $interface) {
-            $this->addNsAlias($namespace, $interface);
-        }
+        $this->addNsAlias($namespace, get_class($procedure));
     }
 
     public function getServiceMap(): RpcResponse|ServiceLocator

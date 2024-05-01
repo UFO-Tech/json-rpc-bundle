@@ -3,19 +3,23 @@
 namespace Ufo\JsonRpcBundle\Server\ServiceMap\Reflections;
 
 
+use phpDocumentor\Reflection\DocBlock;
 use phpDocumentor\Reflection\DocBlockFactory;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionMethod;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
-use Ufo\RpcObject\RpcInfo;
+use Ufo\RpcObject\RPC\Info;
+use Ufo\RpcObject\RPC\Response;
+use function get_class;
 
 /**
  * Class/Object reflection
  */
 class UfoReflectionProcedure
 {
+    const EMPTY_DOC = '/**' . PHP_EOL . ' *' . PHP_EOL . ' */';
     /**
      * @var ReflectionMethod[]
      */
@@ -31,18 +35,21 @@ class UfoReflectionProcedure
     protected ReflectionClass $reflection;
 
     protected string $name;
+    
+    protected DocBlock $methodDoc;
 
+    protected string $concat = Info::DEFAULT_CONCAT;
+    
     /**
      * @param IRpcService $procedure
      */
     public function __construct(protected IRpcService $procedure)
     {
-        $reflection = new ReflectionClass(get_class($procedure));
-        $this->reflection = $reflection;
-        $this->name = $reflection->getShortName();
-        $this->namespace = $reflection->getNamespaceName();
-
-        foreach ($reflection->getMethods() as $method) {
+        $this->reflection = new ReflectionClass(get_class($procedure));
+        
+        $this->provideNameAndNamespace();
+        
+        foreach ($this->reflection->getMethods() as $method) {
             if (str_starts_with($method->getName(), '__')) {
                 continue;
             }
@@ -53,14 +60,31 @@ class UfoReflectionProcedure
         }
     }
 
+    protected function provideNameAndNamespace()
+    {
+        $procedureClassName = $this->reflection->getShortName();
+        try {
+            $infoAttribut = $this->reflection->getAttributes(Info::class)[0];
+            /**
+             * @var Info $info
+             */
+            $info = $infoAttribut->newInstance();
+            $procedureClassName = $info->getAlias() ?? $procedureClassName;
+            $this->concat = $info->getConcat();
+
+        } catch (\Throwable) {
+        } finally {
+            $this->name = $procedureClassName;
+            $this->namespace = $this->reflection->getNamespaceName();
+        }
+    }
+
     protected function buildReturns(ReflectionMethod $method, Service $service): void
     {
         $returnReflection = $method->getReturnType();
         $returns = [];
-
         if (is_null($returnReflection) && is_string($method->getDocComment())) {
-            $parser = DocBlockFactory::createInstance()->create($method->getDocComment());
-            foreach ($parser->getTagsByName('return') as $return) {
+            foreach ($this->methodDoc->getTagsByName('return') as $return) {
                 $returns[] = (string)$return->getType();
             }
         } else {
@@ -76,13 +100,13 @@ class UfoReflectionProcedure
         }
     }
 
-    protected function findRpcInfo(ReflectionMethod $method, Service $service): void
+    protected function findResponseInfo(ReflectionMethod $method, Service $service): void
     {
-        $rpcInfo = new RpcInfo();
-        if ($method->getAttributes(RpcInfo::class)) {
-            $rpcInfo = $method->getAttributes(RpcInfo::class)[0]->newInstance();
+        $responseInfo = new Response();
+        if ($method->getAttributes(Response::class)) {
+            $responseInfo = $method->getAttributes(Response::class)[0]->newInstance();
         }
-        $service->setRpcInfo($rpcInfo);
+        $service->setResponseInfo($responseInfo);
     }
 
     protected function typeFrom(\ReflectionNamedType|string $type): string
@@ -113,12 +137,15 @@ class UfoReflectionProcedure
         $params = [];
         $paramsReflection = $method->getParameters();
         if (!empty($paramsReflection)) {
+            $docBlock = $this->methodDoc;
             foreach ($paramsReflection as $i => $paramRef) {
                 $params[$i] = [
                     'type' => $this->getTypes($paramRef->getType()),
                     'additional' => [
                         'name' => $paramRef->getName(),
+                        'description' => $this->getParamDescription($docBlock, $paramRef->getName()),
                         'optional' => false,
+                        'schema'=>[]
                     ]
                 ];
                 try {
@@ -132,17 +159,43 @@ class UfoReflectionProcedure
         }
     }
 
+    protected function getParamDescription(DocBlock $docBlock, string $paramName)
+    {
+        /**
+         * @var DocBlock\Tags\Param $param
+         */
+        foreach ($docBlock->getTagsByName('param') as $param) {
+            if (!$param->getName() === $paramName) {
+                continue;
+            }
+            return $param->getDescription()->getBodyTemplate();
+        }
+    }
+    
     /**
      * @param ReflectionMethod $method
      * @return Service
      */
     protected function buildSignature(ReflectionMethod $method): Service
     {
-        $service = new Service($this->name . '.' . $method->getName(), $this->procedure);
+        if (!$docBlock = $method->getDocComment()) {
+            $docBlock = static::EMPTY_DOC;
+        }
+
+        $this->methodDoc = DocBlockFactory::createInstance()->create($docBlock);
+
+        $className = (empty($this->name)) ? '' : $this->name . $this->concat;
+        $service = new Service($className . $method->getName(), $this->procedure);
         $this->buildParams($method, $service);
         $this->buildReturns($method, $service);
-        $this->findRpcInfo($method, $service);
+        $this->findResponseInfo($method, $service);
+        $this->buildDescription($method, $service);
         return $service;
+    }
+
+    protected function buildDescription(ReflectionMethod $method, Service $service): void
+    {
+        $service->setDescription($this->methodDoc->getSummary());
     }
 
     /**
