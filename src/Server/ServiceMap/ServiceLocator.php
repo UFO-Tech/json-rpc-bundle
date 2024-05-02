@@ -1,11 +1,13 @@
 <?php
+
 namespace Ufo\JsonRpcBundle\Server\ServiceMap;
+
 
 use Psr\Container\ContainerInterface;
 use RuntimeException;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Ufo\JsonRpcBundle\Exceptions\ServiceNotFoundException;
 use Ufo\RpcError\RpcMethodNotFoundExceptionRpc;
-
 
 class ServiceLocator implements ContainerInterface
 {
@@ -13,49 +15,42 @@ class ServiceLocator implements ContainerInterface
     const ENV_UFO_5 = 'JSON-RPC-2.0/UFO-RPC-5';
     const JSON = 'application/json';
     const POST = 'POST';
-
     /**
      * Content type.
      *
      * @var string
      */
     protected string $contentType = self::JSON;
-
     /**
      * Service description.
      *
      * @var string
      */
     protected string $description = '';
-
     /**
      * Current envelope.
      *
      * @var string
      */
     protected string $envelope = self::ENV_UFO_5;
-
     /**
      * Service id.
      *
      * @var string
      */
     protected string $id = '';
-
     /**
      * Services offered.
      *
      * @var array
      */
     protected array $services = [];
-
     /**
      * Service target.
      *
      * @var string
      */
     protected string $target;
-
     /**
      * Global transport.
      *
@@ -135,17 +130,15 @@ class ServiceLocator implements ContainerInterface
     public function addService(Service $service): static
     {
         $name = $service->getName();
-
         if (array_key_exists($name, $this->services)) {
             throw new RuntimeException('Attempt to register a service already registered detected');
         }
-
         $this->services[$name] = $service;
         return $this;
     }
 
     /**
-     * @param  Service[] $services
+     * @param Service[] $services
      * @return $this
      */
     public function addServices(array $services): static
@@ -153,7 +146,6 @@ class ServiceLocator implements ContainerInterface
         foreach ($services as $service) {
             $this->addService($service);
         }
-
         return $this;
     }
 
@@ -167,7 +159,6 @@ class ServiceLocator implements ContainerInterface
         if (!$this->has($id)) {
             throw new ServiceNotFoundException('Service "' . $id . '" is not found on RPC Service Locator');
         }
-
         return $this->services[$id];
     }
 
@@ -179,17 +170,30 @@ class ServiceLocator implements ContainerInterface
         return true;
     }
 
+    /**
+     * @return Service[]
+     */
     public function getServices(): array
     {
         return $this->services;
     }
 
+    /**
+     * @throws RpcMethodNotFoundExceptionRpc
+     */
+    public function getService(string $name): Service
+    {
+        if (isset($this->services[$name])) {
+            return $this->services[$name];
+        }
+        throw new RpcMethodNotFoundExceptionRpc("Method '$name' is not found");
+    }
+
     public function removeService(string $name): bool
     {
-        if (! array_key_exists($name, $this->services)) {
+        if (!array_key_exists($name, $this->services)) {
             return false;
         }
-
         unset($this->services[$name]);
         return true;
     }
@@ -202,8 +206,8 @@ class ServiceLocator implements ContainerInterface
     public function toArray(): array
     {
         $description = $this->getDescription();
-        $transport   = $this->getTransport();
-        $envelope    = $this->getEnvelope();
+        $transport = $this->getTransport();
+        $envelope = $this->getEnvelope();
         $contentType = $this->getContentType();
         $service = [
             'transport'   => $transport,
@@ -211,27 +215,21 @@ class ServiceLocator implements ContainerInterface
             'contentType' => $contentType,
             'description' => $description,
         ];
-
         if (null !== ($target = $this->getTarget())) {
             $service['target'] = $target;
         }
         if (null !== ($id = $this->getId())) {
             $service['id'] = $id;
         }
-
         $services = $this->getServices();
         if (empty($services)) {
             return $service;
         }
-
         $service['services'] = [];
         foreach ($services as $name => $svc) {
             $service['services'][$name] = $svc->toArray();
         }
         $service['methods'] = $service['services'];
-
         return $service;
     }
-
-
 }

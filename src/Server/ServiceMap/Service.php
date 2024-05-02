@@ -6,6 +6,7 @@ namespace Ufo\JsonRpcBundle\Server\ServiceMap;
 use InvalidArgumentException;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 use Ufo\RpcObject\RPC\Response;
+use function sha1;
 
 class Service
 {
@@ -16,6 +17,8 @@ class Service
     protected array $return;
 
     protected ?Response $responseInfo = null;
+
+    protected array $schema = [];
 
     /**
      * @return Response|null
@@ -46,7 +49,7 @@ class Service
         'optional' => 'is_bool',
         'default' => null,
         'description' => 'is_string',
-        'schema'=>'is_array'
+//        'schema'=>'is_array'
     ];
 
     protected array $params = [];
@@ -121,11 +124,16 @@ class Service
             }
         }
 
-        $this->params[] = $paramOptions;
+        $this->params[$options['name']] = $paramOptions;
 
         return $this;
     }
 
+    public function setSchema(array $schema)
+    {
+        $this->schema = $schema;
+        return $this;
+    }
     /**
      * Add params.
      *
@@ -165,7 +173,7 @@ class Service
         return $this->params;
     }
 
-    public function getDefaultParams(array $params): array
+    public function getDefaultParams(array $params = []): array
     {
         foreach ($this->defaultParams as $key => $value) {
             if (!isset($params[$key])) {
@@ -228,6 +236,7 @@ class Service
             'name' => $this->getName(),
             'decription' => $this->getDescription(),
             'parameters' => $this->getParams(),
+            'json_schema' => $this->schema,
             'returns' => $return,
             'responseFormat' => $this->responseInfo->getResponseFormat()
         ];
@@ -256,7 +265,7 @@ class Service
      */
     protected function validateParamType(string $type): string
     {
-        return TypeHintResolver::normalizeType($type);
+        return TypeHintResolver::normalize($type);
     }
 
     /**

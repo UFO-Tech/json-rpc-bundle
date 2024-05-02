@@ -7,6 +7,7 @@ use Psr\Log\LoggerInterface;
 use Symfony\Component\Serializer\SerializerInterface;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 use Ufo\JsonRpcBundle\Exceptions\ServiceNotFoundException;
+use Ufo\JsonRpcBundle\Interfaces\IRpcValidator;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\UfoReflectionProcedure;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceLocator;
@@ -14,25 +15,26 @@ use Ufo\RpcError\AbstractRpcErrorException;
 use Ufo\RpcError\RpcBadParamException;
 use Ufo\RpcError\RpcMethodNotFoundExceptionRpc;
 use Ufo\RpcError\RpcRuntimeException;
+use Ufo\RpcError\WrongWayException;
 use Ufo\RpcObject\RPC\Info;
 use Ufo\RpcObject\RpcError;
 use Ufo\RpcObject\RpcRequest;
 use Ufo\RpcObject\RpcResponse;
+use function implode;
+use function is_array;
 
 class RpcServer
 {
     const VERSION_1 = '1.0';
     const VERSION_2 = '2.0';
-
-    protected RpcRequest $requestObject;
+    protected ?RpcRequest $requestObject = null;
 
     public function __construct(
         protected SerializerInterface $serializer,
-        protected ServiceLocator      $serviceLocator,
-        protected ?LoggerInterface    $logger = null
-    )
-    {
-    }
+        protected ServiceLocator $serviceLocator,
+        protected IRpcValidator $rpcValidator,
+        protected ?LoggerInterface $logger = null
+    ) {}
 
     /**
      * @return ServiceLocator
@@ -54,26 +56,28 @@ class RpcServer
      * @return RpcResponse
      */
     public function handleError(
-        ?string    $message = null,
+        ?string $message = null,
         int|string $code = AbstractRpcErrorException::DEFAULT_CODE,
-        mixed      $data = null
-    ): RpcResponse
-    {
+        mixed $data = null
+    ): RpcResponse {
         $error = new RpcError($code, $message, $data);
         if ($this->logger instanceof LoggerInterface) {
+            $isData = $error->getData();
+            if (is_array($isData)) {
+                $isData = $this->serializer->serialize($isData, 'yaml');
+            }
             $this->logger->error(
-                (string)$error->getData(),
-                [
-                    'error' => $message,
-                    'method' => $this->requestObject->getMethod(),
-                    'params' => $this->requestObject->getParams(),
+                (string)$isData, [
+                    'error'  => $message,
+                    'method' => $this->requestObject?->getMethod(),
+                    'params' => $this->requestObject?->getParams(),
                 ]
             );
         }
         return new RpcResponse(
-            id: $this->requestObject->getId(),
-            error: $error,
-            version: $this->requestObject->getVersion(),
+            id           : $this->requestObject?->getId() ?? 'not_processed',
+            error        : $error,
+            version      : $this->requestObject?->getVersion() ?? 'not_processed',
             requestObject: $this->requestObject
         );
     }
@@ -89,31 +93,23 @@ class RpcServer
     public function handleRpcRequest(RpcRequest $request): RpcResponse
     {
         $method = $request->getMethod();
-
         try {
             $service = $this->serviceLocator->get($method);
         } catch (ServiceNotFoundException $e) {
             throw new RpcMethodNotFoundExceptionRpc($e->getMessage());
         }
-
         $params = $this->validateAndPrepareParams($request, $service);
-
         try {
             $result = $this->dispatch($service, $this->serializer->normalize($params));
         } catch (\TypeError $e) {
             $message = preg_replace('/.*\\\\/', '', $e->getMessage());
             $message = preg_replace('/Argument #\d+ \(\$([a-zA-Z0-9_]+)\)/', 'Parameter "$1"', $message);
-
             throw new RpcBadParamException($message);
         } catch (\Throwable $e) {
             throw RpcRuntimeException::fromThrowable($e);
         }
-
         return new RpcResponse(
-            id: $request->getId(),
-            result: $result,
-            version: $request->getVersion(),
-            requestObject: $request
+            id: $request->getId(), result: $result, version: $request->getVersion(), requestObject: $request
         );
     }
 
@@ -123,12 +119,12 @@ class RpcServer
      */
     public function addProcedure(IRpcService $procedure): static
     {
-        $reflection = new UfoReflectionProcedure($procedure);
-
+        $reflection = new UfoReflectionProcedure($procedure, $this->serializer);
         foreach ($reflection->getMethods() as $service) {
-            $this->getServiceLocator()->addService($service);
+            $this->getServiceLocator()
+                 ->addService($service)
+            ;
         }
-
         return $this;
     }
 
@@ -141,12 +137,12 @@ class RpcServer
      */
     private function validateAndPrepareParams(
         RpcRequest $request,
-        Service    $service
-    ): array
-    {
-        return is_string(key($request->getParams()))
-            ? $this->validateAndPrepareNamedParams($request, $service)
-            : $this->validateAndPrepareOrderedParams($request, $service);
+        Service $service
+    ): array {
+        return is_string(key($request->getParams())) ? $this->validateAndPrepareNamedParams(
+            $request,
+            $service
+        ) : $this->validateAndPrepareOrderedParams($request, $service);
     }
 
     /**
@@ -158,14 +154,12 @@ class RpcServer
      */
     private function validateAndPrepareNamedParams(
         RpcRequest $request,
-        Service    $service
-    ): array
-    {
+        Service $service
+    ): array {
         $requestedParams = $request->getParams();
         if (count($request->getParams()) < count($service->getParams())) {
             $requestedParams = $service->getDefaultParams($request->getParams());
         }
-
         $orderedParams = [];
         $methodNameArray = explode('.', $request->getMethod());
         $method = end($methodNameArray);
@@ -175,12 +169,10 @@ class RpcServer
                 $orderedParams[$refParam->getName()] = $requestedParams[$refParam->getName()];
                 continue;
             }
-
             if ($refParam->isOptional()) {
                 $orderedParams[$refParam->getName()] = $refParam->getDefaultValue();
                 continue;
             }
-
             throw new RpcBadParamException(
                 sprintf(
                     'Required parameter "%s" not passed',
@@ -188,7 +180,6 @@ class RpcServer
                 )
             );
         }
-
         return $orderedParams;
     }
 
@@ -200,29 +191,32 @@ class RpcServer
      */
     private function validateAndPrepareOrderedParams(
         RpcRequest $request,
-        Service    $service
-    ): array
-    {
+        Service $service
+    ): array {
         $requiredParamsCount = array_reduce($service->getParams(), static function ($count, $param) {
             $count += $param['optional'] ? 0 : 1;
             return $count;
         }, 0);
-
         if (count($request->getParams()) < $requiredParamsCount) {
             throw new RpcBadParamException(
                 sprintf(
                     'Passed (%s) parameters and expected (%s)',
-                    count($request->getParams()), $requiredParamsCount
+                    count($request->getParams()),
+                    $requiredParamsCount
                 )
             );
         }
-
         return $request->getParams();
     }
 
     private function dispatch(ServiceMap\Service $service, $params)
     {
         $object = $service->getProcedure();
+        try {
+            $this->rpcValidator->validateMethodParams($object, $service->getMethodName(), $params);
+        } catch (AbstractRpcErrorException $e) {
+            $this->requestObject->setError($e);
+        }
         return call_user_func_array([
             $object,
             $service->getMethodName(),

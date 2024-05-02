@@ -60,3 +60,4 @@ services:
     Ufo\JsonRpcBundle\EventListener\HandleCliListener:
         $rpcSecurity: '@Ufo\JsonRpcBundle\Security\TokenRpcCliSecurity'
         $protectedMethods: "@=container.hasParameter('ufo_json_rpc.security.protected_methods') ? parameter('ufo_json_rpc.security.protected_methods') : []"
+    

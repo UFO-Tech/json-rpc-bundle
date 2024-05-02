@@ -8,11 +8,13 @@ use phpDocumentor\Reflection\DocBlockFactory;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionMethod;
+use Symfony\Component\Serializer\SerializerInterface;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
+use Ufo\RpcObject\RPC\Assertions;
+use Ufo\RpcObject\RPC\AssertionsCollection;
 use Ufo\RpcObject\RPC\Info;
 use Ufo\RpcObject\RPC\Response;
-use function get_class;
 
 /**
  * Class/Object reflection
@@ -39,14 +41,19 @@ class UfoReflectionProcedure
     protected DocBlock $methodDoc;
 
     protected string $concat = Info::DEFAULT_CONCAT;
-    
+
+    protected AssertionsCollection $assertions;
+
     /**
      * @param IRpcService $procedure
      */
-    public function __construct(protected IRpcService $procedure)
+    public function __construct(
+        protected IRpcService $procedure,
+        protected SerializerInterface $serializer,
+    )
     {
         $this->reflection = new ReflectionClass(get_class($procedure));
-        
+
         $this->provideNameAndNamespace();
         
         foreach ($this->reflection->getMethods() as $method) {
@@ -136,6 +143,7 @@ class UfoReflectionProcedure
     {
         $params = [];
         $paramsReflection = $method->getParameters();
+        $this->assertions = new AssertionsCollection();
         if (!empty($paramsReflection)) {
             $docBlock = $this->methodDoc;
             foreach ($paramsReflection as $i => $paramRef) {
@@ -151,7 +159,14 @@ class UfoReflectionProcedure
                 try {
                     $params[$i]['additional']['default'] = $paramRef->getDefaultValue();
                     $params[$i]['additional']['optional'] = true;
+
                 } catch (ReflectionException) {}
+                try {
+                    $this->assertions->addAssertions(
+                        $paramRef->getName(),
+                        $paramRef->getAttributes(Assertions::class)[0]->newInstance()
+                    );
+                } catch (\Throwable) {}
             }
         }
         foreach ($params as $param) {
@@ -190,12 +205,27 @@ class UfoReflectionProcedure
         $this->buildReturns($method, $service);
         $this->findResponseInfo($method, $service);
         $this->buildDescription($method, $service);
+        $this->buildJsonSchema($method, $service);
         return $service;
     }
 
     protected function buildDescription(ReflectionMethod $method, Service $service): void
     {
         $service->setDescription($this->methodDoc->getSummary());
+    }
+
+    protected function buildJsonSchema(ReflectionMethod $method, Service $service): void
+    {
+        try {
+            $service->setSchema(
+                $this->serializer->normalize(
+                    $this->assertions, 
+                    context: [
+                        'service' => $service
+                    ]
+                )
+            );
+        } catch (\Throwable $e){$a=1;}
     }
 
     /**

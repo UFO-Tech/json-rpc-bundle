@@ -1,5 +1,7 @@
 <?php
+
 namespace Ufo\JsonRpcBundle\Server;
+
 
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\TaggedIterator;
@@ -7,6 +9,8 @@ use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\Serializer\SerializerInterface;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 use Ufo\JsonRpcBundle\Controller\ApiController;
+use Ufo\JsonRpcBundle\Exceptions\ConstraintsImposedException;
+use Ufo\JsonRpcBundle\Interfaces\IRpcValidator;
 use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceLocator;
 use Ufo\RpcError\AbstractRpcErrorException;
 use Ufo\RpcError\RpcInvalidTokenException;
@@ -24,7 +28,6 @@ class RpcServerFacade implements IFacadeRpcServer
      * @var RpcServer
      */
     protected RpcServer $rpcServer;
-    
     /**
      * @var array
      */
@@ -45,11 +48,12 @@ class RpcServerFacade implements IFacadeRpcServer
         protected IRpcSecurity $rpcSecurity,
         protected string $environment,
         protected SerializerInterface $serializer,
-        #[TaggedIterator('ufo.rpc.service')] iterable $procedures,
+        protected IRpcValidator $validator,
+        #[TaggedIterator('ufo.rpc.service')]
+        iterable $procedures,
         LoggerInterface $logger = null
-    )
-    {
-        $this->rpcServer = new RpcServer($this->serializer, $this->serviceLocator, $logger);
+    ) {
+        $this->rpcServer = new RpcServer($this->serializer, $this->serviceLocator, $this->validator, $logger);
         $this->init();
         $this->setProcedures($procedures);
     }
@@ -60,7 +64,7 @@ class RpcServerFacade implements IFacadeRpcServer
      */
     protected function init(): void
     {
-        $this->rpcSecurity->isValidRequest();
+        //        $this->rpcSecurity->isValidRequest();
     }
 
     /**
@@ -108,15 +112,11 @@ class RpcServerFacade implements IFacadeRpcServer
     public function handle(RpcRequest $singleRequest): RpcResponse
     {
         $this->rpcServer->newRequest($singleRequest);
-
         try {
             $this->rpcSecurity->isValidRequest();
-
-            if ($singleRequest->hasError()) {
-                throw new WrongWayException();
-            }
-
+            $this->checkError($singleRequest); // security
             $response = $this->rpcServer->handleRpcRequest($singleRequest);
+            $this->checkError($singleRequest); // validation
         } catch (WrongWayException $e) {
             // error in request
             $response = $this->handleError($singleRequest->getError());
@@ -127,12 +127,32 @@ class RpcServerFacade implements IFacadeRpcServer
         return $response;
     }
 
+    /**
+     * @throws RpcTokenNotFoundInHeaderException
+     * @throws RpcInvalidTokenException
+     */
+    public function handleSmRequest(): ServiceLocator
+    {
+        $this->rpcSecurity->isValidRequest();
+        return $this->getServiceMap();
+    }
+
+    protected function checkError(RpcRequest $singleRequest): void
+    {
+        if ($singleRequest->hasError()) {
+            throw new WrongWayException();
+        }
+    }
+
     protected function handleError(\Throwable $e): RpcResponse
     {
         $code = ($e instanceof AbstractRpcErrorException) ? $e->getCode() : AbstractRpcErrorException::DEFAULT_CODE;
-        return $this->getServer()->handleError($e->getMessage(), $code, $e);
+        $data = ($e instanceof ConstraintsImposedException) ? $e->getConstraintsImposed() : $e;
+        return $this->getServer()
+                    ->handleError($e->getMessage(), $code, $data)
+        ;
     }
-    
+
     /**
      * @param $procedure
      * @param $namespace
@@ -146,7 +166,6 @@ class RpcServerFacade implements IFacadeRpcServer
     public function getServiceMap(): RpcResponse|ServiceLocator
     {
         try {
-            $this->rpcSecurity->isValidRequest();
             $serviceLocator = $this->rpcServer->getServiceLocator();
             $serviceLocator->setTarget($this->router->generate(ApiController::API_ROUTE));
             $response = $serviceLocator;
@@ -195,13 +214,11 @@ class RpcServerFacade implements IFacadeRpcServer
             return $this->checkNsAlias($methodName);
         }
         $n[0] = $this->checkNsAlias($n[0]);
-
-        return  implode('.', array_diff($n, ['']));
+        return implode('.', array_diff($n, ['']));
     }
 
     public function getSecurity(): IRpcSecurity
     {
         return $this->rpcSecurity;
     }
-
 }

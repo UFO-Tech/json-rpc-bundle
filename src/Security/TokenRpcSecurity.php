@@ -1,35 +1,37 @@
 <?php
-namespace Ufo\JsonRpcBundle\Security;
-
 
 namespace Ufo\JsonRpcBundle\Security;
 
+namespace Ufo\JsonRpcBundle\Security;
 
+
+use AllowDynamicProperties;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\Routing\Exception\ResourceNotFoundException;
+use Symfony\Component\Routing\Matcher\UrlMatcher;
+use Symfony\Component\Routing\RequestContext;
+use Symfony\Component\Routing\RouteCollection;
 use Symfony\Component\Routing\RouterInterface;
 use Ufo\JsonRpcBundle\Controller\ApiController;
 use Ufo\RpcError\RpcInvalidTokenException;
 use Ufo\RpcError\RpcTokenNotFoundInHeaderException;
 use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
 use Ufo\JsonRpcBundle\Security\Interfaces\ITokenValidator;
+use function in_array;
 
+#[AllowDynamicProperties]
 class TokenRpcSecurity implements IRpcSecurity
 {
     /**
      * @var string
      */
     protected string $tokenHeader = '';
-
     /**
      * @var Request
      */
     protected Request $request;
-
-    /**
-     * @var ?string
-     */
-    protected ?string $protectedPath = null;
+    protected RouteCollection $protectedPath;
 
     /**
      * @param RequestStack $requestStack
@@ -44,11 +46,20 @@ class TokenRpcSecurity implements IRpcSecurity
         protected ITokenValidator $tokenValidator,
         protected array $protectedMethods = [],
         ?RouterInterface $router = null
-    )
-    {
+    ) {
         $this->request = $requestStack->getCurrentRequest();
         if (!is_null($router)) {
-            $this->protectedPath = $router->getRouteCollection()->get(ApiController::API_ROUTE)->getPath();
+            $this->protectedPath = new RouteCollection();
+            $this->protectedPath->add(
+                ApiController::API_ROUTE,
+                $router->getRouteCollection()
+                       ->get(ApiController::API_ROUTE)
+            );
+            $this->protectedPath->add(
+                ApiController::COLLECTION_ROUTE,
+                $router->getRouteCollection()
+                       ->get(ApiController::COLLECTION_ROUTE)
+            );
         }
     }
 
@@ -83,7 +94,15 @@ class TokenRpcSecurity implements IRpcSecurity
      */
     protected function routeMustBeProtected(): bool
     {
-        return $this->protectedPath && $this->request->getRequestUri() == $this->protectedPath;
+        $isProtected = true;
+        $context = new RequestContext('/');
+        $matcher = new UrlMatcher($this->protectedPath, $context);
+        try {
+            $matcher->match($this->request->getPathInfo());
+        } catch (ResourceNotFoundException $e) {
+            $isProtected = false;
+        }
+        return $isProtected;
     }
 
     /**
@@ -115,5 +134,4 @@ class TokenRpcSecurity implements IRpcSecurity
         }
         return true;
     }
-
 }

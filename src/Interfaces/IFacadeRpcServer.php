@@ -12,6 +12,7 @@ namespace Ufo\JsonRpcBundle\Interfaces;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
 use Ufo\JsonRpcBundle\Server\RpcServer;
+use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceLocator;
 use Ufo\RpcObject\RpcRequest;
 use Ufo\RpcObject\RpcResponse;
 
@@ -39,11 +40,12 @@ interface IFacadeRpcServer
      */
     public function handle(RpcRequest $singleRequest): RpcResponse;
 
+    public function handleSmRequest(): RpcResponse|ServiceLocator;
+
     /**
      * @return mixed
      */
-    public function getServiceMap(): mixed;
+    public function getServiceMap(): RpcResponse|ServiceLocator;
 
     public function getSecurity(): IRpcSecurity;
-        
 }
