@@ -26,22 +26,16 @@ class UfoReflectionProcedure
      * @var ReflectionMethod[]
      */
     protected array $methods = [];
-
     protected string $namespace;
-
     /**
      * ReflectionClass object
      *
      * @var ReflectionClass
      */
     protected ReflectionClass $reflection;
-
     protected string $name;
-    
     protected DocBlock $methodDoc;
-
     protected string $concat = Info::DEFAULT_CONCAT;
-
     protected AssertionsCollection $assertions;
 
     /**
@@ -50,17 +44,13 @@ class UfoReflectionProcedure
     public function __construct(
         protected IRpcService $procedure,
         protected SerializerInterface $serializer,
-    )
-    {
+    ) {
         $this->reflection = new ReflectionClass(get_class($procedure));
-
         $this->provideNameAndNamespace();
-        
         foreach ($this->reflection->getMethods() as $method) {
             if (str_starts_with($method->getName(), '__')) {
                 continue;
             }
-
             if ($method->isPublic()) {
                 $this->methods[] = $this->buildSignature($method);
             }
@@ -97,7 +87,6 @@ class UfoReflectionProcedure
         } else {
             $returns = $this->getTypes($returnReflection);
         }
-
         if (is_array($returns)) {
             foreach ($returns as $type) {
                 $service->addReturn($this->typeFrom($type));
@@ -148,25 +137,27 @@ class UfoReflectionProcedure
             $docBlock = $this->methodDoc;
             foreach ($paramsReflection as $i => $paramRef) {
                 $params[$i] = [
-                    'type' => $this->getTypes($paramRef->getType()),
+                    'type'       => $this->getTypes($paramRef->getType()),
                     'additional' => [
-                        'name' => $paramRef->getName(),
+                        'name'        => $paramRef->getName(),
                         'description' => $this->getParamDescription($docBlock, $paramRef->getName()),
-                        'optional' => false,
-                        'schema'=>[]
-                    ]
+                        'optional'    => false,
+                        'schema'      => [],
+                    ],
                 ];
                 try {
                     $params[$i]['additional']['default'] = $paramRef->getDefaultValue();
                     $params[$i]['additional']['optional'] = true;
 
-                } catch (ReflectionException) {}
+                } catch (ReflectionException) {
+                }
                 try {
                     $this->assertions->addAssertions(
                         $paramRef->getName(),
                         $paramRef->getAttributes(Assertions::class)[0]->newInstance()
                     );
-                } catch (\Throwable) {}
+                } catch (\Throwable) {
+                }
             }
         }
         foreach ($params as $param) {
@@ -176,17 +167,24 @@ class UfoReflectionProcedure
 
     protected function getParamDescription(DocBlock $docBlock, string $paramName)
     {
+        $desc = '';
         /**
          * @var DocBlock\Tags\Param $param
          */
         foreach ($docBlock->getTagsByName('param') as $param) {
-            if (!$param->getName() === $paramName) {
+            if (!($param->getVariableName() === $paramName)) {
                 continue;
             }
-            return $param->getDescription()->getBodyTemplate();
+            if ($param->getDescription()) {
+                $desc = $param->getDescription()
+                              ->getBodyTemplate()
+                ;
+            }
+            break;
         }
+        return $desc;
     }
-    
+
     /**
      * @param ReflectionMethod $method
      * @return Service
@@ -196,9 +194,9 @@ class UfoReflectionProcedure
         if (!$docBlock = $method->getDocComment()) {
             $docBlock = static::EMPTY_DOC;
         }
-
-        $this->methodDoc = DocBlockFactory::createInstance()->create($docBlock);
-
+        $this->methodDoc = DocBlockFactory::createInstance()
+                                          ->create($docBlock)
+        ;
         $className = (empty($this->name)) ? '' : $this->name . $this->concat;
         $service = new Service($className . $method->getName(), $this->procedure);
         $this->buildParams($method, $service);
@@ -219,13 +217,14 @@ class UfoReflectionProcedure
         try {
             $service->setSchema(
                 $this->serializer->normalize(
-                    $this->assertions, 
-                    context: [
-                        'service' => $service
-                    ]
+                    $this->assertions, context: [
+                    'service' => $service,
+                ]
                 )
             );
-        } catch (\Throwable $e){$a=1;}
+        } catch (\Throwable $e) {
+            $a = 1;
+        }
     }
 
     /**

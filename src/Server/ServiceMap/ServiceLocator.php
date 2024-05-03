@@ -5,7 +5,6 @@ namespace Ufo\JsonRpcBundle\Server\ServiceMap;
 
 use Psr\Container\ContainerInterface;
 use RuntimeException;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Ufo\JsonRpcBundle\Exceptions\ServiceNotFoundException;
 use Ufo\RpcError\RpcMethodNotFoundExceptionRpc;
 
@@ -160,6 +159,16 @@ class ServiceLocator implements ContainerInterface
             throw new ServiceNotFoundException('Service "' . $id . '" is not found on RPC Service Locator');
         }
         return $this->services[$id];
+    }
+
+    public function count(): int
+    {
+        return count($this->services);
+    }
+
+    public function empty(): bool
+    {
+        return empty($this->services);
     }
 
     public function has(string $id): bool

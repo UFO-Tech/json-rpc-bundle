@@ -19,7 +19,6 @@ use function json_encode;
 
 class RpcValidator implements IRpcValidator
 {
-
     protected int $violationCount = 0;
     /**
      * @var ConstraintViolationListInterface[]
@@ -29,17 +28,15 @@ class RpcValidator implements IRpcValidator
     public function __construct(protected ValidatorInterface $validator) {}
 
     /**
-     * @throws \ReflectionException
+     * @throws \ReflectionException|ConstraintsImposedException
      */
     public function validateMethodParams(
         object $procedureObject,
         string $procedureMethod,
         array $params
-    ): void
-    {
+    ): void {
         $refMethod = new ReflectionMethod($procedureObject, $procedureMethod);
         $paramRefs = $refMethod->getParameters();
-
         foreach ($paramRefs as $paramRef) {
             $this->validateParam($paramRef, $params[$paramRef->getName()] ?? null);
         }
@@ -47,29 +44,25 @@ class RpcValidator implements IRpcValidator
             $errors = [];
             foreach ($this->violations as $paramName => $violations) {
                 array_map(function (ConstraintViolationInterface $v) use (&$errors, $paramName) {
-                        $errors[$paramName][] = $v->getMessage();
-                    },
-                    (array)$violations->getIterator()
-                );
+                    $errors[$paramName][] = $v->getMessage();
+                },
+                    (array)$violations->getIterator());
             }
             throw new ConstraintsImposedException("Invalid Data for call method: {$procedureMethod}", $errors);
         }
     }
 
-    protected function validateParam(ReflectionParameter $paramRef, mixed $value)
+    protected function validateParam(ReflectionParameter $paramRef, mixed $value): void
     {
         try {
             $attribute = $paramRef->getAttributes(Assertions::class)[0];
-
             $assertions = $attribute->newInstance()->assertions;
-            
             $violations = $this->validator->validate($value, $assertions);
             if (count($violations) > 0) {
                 $this->violations[$paramRef->getName()] = $violations;
                 $this->violationCount += count($violations);
             }
         } catch (\Throwable) {
-            
         }
     }
 }

@@ -1,63 +1,63 @@
 services:
-    # default configuration for services in *this* file
-    _defaults:
-        autowire: true      # Automatically injects dependencies in your services.
-        autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+  # default configuration for services in *this* file
+  _defaults:
+    autowire: true      # Automatically injects dependencies in your services.
+    autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
 
-    Ufo\JsonRpcBundle\:
-        resource: '../src/'
-        exclude:
-            - '../src/DependencyInjection/'
-            - '../src/UfoJsonRpcBundle.php'
+  Ufo\JsonRpcBundle\:
+    resource: '../src/'
+    exclude:
+      - '../src/DependencyInjection/'
+      - '../src/UfoJsonRpcBundle.php'
 
-    Ufo\JsonRpcBundle\Controller\ApiController:
-        $rpcServerFacade: '@Ufo\JsonRpcBundle\Server\RpcServerFacade'
+  Ufo\JsonRpcBundle\Controller\ApiController:
+    $rpcServerFacade: '@Ufo\JsonRpcBundle\Server\RpcServerFacade'
 
-    Ufo\JsonRpcBundle\Server\RpcRequestHandler:
-        $rpcServerFacade: '@Ufo\JsonRpcBundle\Server\RpcServerFacade'
+  Ufo\JsonRpcBundle\Server\RpcRequestHandler:
+    $rpcServerFacade: '@Ufo\JsonRpcBundle\Server\RpcServerFacade'
 
-    Ufo\JsonRpcBundle\Server\RpcServerFacade:
-        $environment: '%kernel.environment%'
-        $rpcSecurity: '@Ufo\JsonRpcBundle\Security\TokenRpcSecurity'
+  Ufo\JsonRpcBundle\Server\RpcServerFacade:
+    $environment: '%kernel.environment%'
+    $rpcSecurity: '@Ufo\JsonRpcBundle\Security\TokenRpcSecurity'
 
-    Ufo\JsonRpcBundle\Server\RpcServerFacadeCli:
-        arguments:
-            $serviceLocator: '@Ufo\JsonRpcBundle\Server\ServiceMap\ServiceLocator'
-            $logger: null
-            $rpcSecurity: '@Ufo\JsonRpcBundle\Security\TokenRpcCliSecurity'
-            $environment: '%kernel.environment%'
+  Ufo\JsonRpcBundle\Server\RpcServerFacadeCli:
+    arguments:
+      $serviceLocator: '@Ufo\JsonRpcBundle\Server\ServiceMap\ServiceLocator'
+      $logger: null
+      $rpcSecurity: '@Ufo\JsonRpcBundle\Security\TokenRpcCliSecurity'
+      $environment: '%kernel.environment%'
 
-    Ufo\JsonRpcBundle\Server\RpcRequestHandlerCli:
-        class:  'Ufo\JsonRpcBundle\Server\RpcRequestHandler'
-        arguments:
-            $rpcServerFacade: '@Ufo\JsonRpcBundle\Server\RpcServerFacadeCli'
+  Ufo\JsonRpcBundle\Server\RpcRequestHandlerCli:
+    class: 'Ufo\JsonRpcBundle\Server\RpcRequestHandler'
+    arguments:
+      $rpcServerFacade: '@Ufo\JsonRpcBundle\Server\RpcServerFacadeCli'
 
-    Ufo\JsonRpcBundle\Security\TokenRpcCliSecurity:
-        $protectedMethods: "@=container.hasParameter('ufo_json_rpc.security.protected_methods') ? parameter('ufo_json_rpc.security.protected_methods') : []"
+  Ufo\JsonRpcBundle\Security\TokenRpcCliSecurity:
+    $protectedMethods: "@=container.hasParameter('ufo_json_rpc.security.protected_methods') ? parameter('ufo_json_rpc.security.protected_methods') : []"
 
-    Ufo\JsonRpcBundle\Security\TokenRpcSecurity:
-        $tokenHeaderKey: "@=container.hasParameter('ufo_json_rpc.security.token_key_in_header') ? parameter('ufo_json_rpc.security.token_key_in_header') : 'Ufo-RPC-Token'"
-        $protectedMethods: "@=container.hasParameter('ufo_json_rpc.security.protected_methods') ? parameter('ufo_json_rpc.security.protected_methods') : []"
+  Ufo\JsonRpcBundle\Security\TokenRpcSecurity:
+    $tokenHeaderKey: "@=container.hasParameter('ufo_json_rpc.security.token_key_in_header') ? parameter('ufo_json_rpc.security.token_key_in_header') : 'Ufo-RPC-Token'"
+    $protectedMethods: "@=container.hasParameter('ufo_json_rpc.security.protected_methods') ? parameter('ufo_json_rpc.security.protected_methods') : []"
 
-    Ufo\JsonRpcBundle\Security\SimpleTokenValidator:
-        $clientsTokens: "@=container.hasParameter('ufo_json_rpc.security.clients_tokens') ? parameter('ufo_json_rpc.security.clients_tokens') : []"
+  Ufo\JsonRpcBundle\Security\SimpleTokenValidator:
+    $clientsTokens: "@=container.hasParameter('ufo_json_rpc.security.clients_tokens') ? parameter('ufo_json_rpc.security.clients_tokens') : []"
 
-    Ufo\JsonRpcBundle\EventListener\HandleExceptionListener:
-        arguments:
-            $environment: '%kernel.environment%'
-        tags:
-            - { name: kernel.event_listener, event: kernel.exception, priority: 10 }
+  Ufo\JsonRpcBundle\EventListener\HandleExceptionListener:
+    arguments:
+      $environment: '%kernel.environment%'
+    tags:
+      - { name: kernel.event_listener, event: kernel.exception, priority: 10 }
 
-    Ufo\JsonRpcBundle\Serializer\RpcErrorNormalizer:
-        arguments:
-            $environment: '%kernel.environment%'
+  Ufo\JsonRpcBundle\Serializer\RpcErrorNormalizer:
+    arguments:
+      $environment: '%kernel.environment%'
 
-    Ufo\JsonRpcBundle\CliCommand\UfoRpcProcessCommand:
-        arguments:
-            $rpcSecurity: '@Ufo\JsonRpcBundle\Security\TokenRpcCliSecurity'
-            $requestHandler: '@Ufo\JsonRpcBundle\Server\RpcRequestHandlerCli'
+  Ufo\JsonRpcBundle\CliCommand\UfoRpcProcessCommand:
+    arguments:
+      $rpcSecurity: '@Ufo\JsonRpcBundle\Security\TokenRpcCliSecurity'
+      $requestHandler: '@Ufo\JsonRpcBundle\Server\RpcRequestHandlerCli'
 
-    Ufo\JsonRpcBundle\EventListener\HandleCliListener:
-        $rpcSecurity: '@Ufo\JsonRpcBundle\Security\TokenRpcCliSecurity'
-        $protectedMethods: "@=container.hasParameter('ufo_json_rpc.security.protected_methods') ? parameter('ufo_json_rpc.security.protected_methods') : []"
+  Ufo\JsonRpcBundle\EventListener\HandleCliListener:
+    $rpcSecurity: '@Ufo\JsonRpcBundle\Security\TokenRpcCliSecurity'
+    $protectedMethods: "@=container.hasParameter('ufo_json_rpc.security.protected_methods') ? parameter('ufo_json_rpc.security.protected_methods') : []"
     

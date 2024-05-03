@@ -3,14 +3,20 @@
 namespace Ufo\JsonRpcBundle\Server;
 
 
+use Psr\Cache\InvalidArgumentException;
 use Psr\Log\LoggerInterface;
+use ReflectionException;
 use Symfony\Component\DependencyInjection\Attribute\TaggedIterator;
 use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Contracts\Cache\CacheInterface;
+use Symfony\Contracts\Cache\ItemInterface;
+use TypeError;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 use Ufo\JsonRpcBundle\Controller\ApiController;
 use Ufo\JsonRpcBundle\Exceptions\ConstraintsImposedException;
 use Ufo\JsonRpcBundle\Interfaces\IRpcValidator;
+use Ufo\JsonRpcBundle\Server\ServiceMap\CachedServiceLocator;
 use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceLocator;
 use Ufo\RpcError\AbstractRpcErrorException;
 use Ufo\RpcError\RpcInvalidTokenException;
@@ -24,6 +30,7 @@ use function get_class;
 
 class RpcServerFacade implements IFacadeRpcServer
 {
+    const CACHE_SL = 'rps.service_locator';
     /**
      * @var RpcServer
      */
@@ -34,13 +41,9 @@ class RpcServerFacade implements IFacadeRpcServer
     protected array $nsAliases = [];
 
     /**
-     * @param RouterInterface $router
-     * @param IRpcSecurity $rpcSecurity
-     * @param string $environment
-     * @param SerializerInterface $serializer
-     * @param iterable $procedures
-     * @param LoggerInterface|null $logger
-     * @throws \ReflectionException
+     * @throws RpcTokenNotFoundInHeaderException
+     * @throws ReflectionException
+     * @throws RpcInvalidTokenException
      */
     public function __construct(
         protected ServiceLocator $serviceLocator,
@@ -49,13 +52,31 @@ class RpcServerFacade implements IFacadeRpcServer
         protected string $environment,
         protected SerializerInterface $serializer,
         protected IRpcValidator $validator,
+        protected CacheInterface $cache,
         #[TaggedIterator('ufo.rpc.service')]
-        iterable $procedures,
+        protected iterable $procedures,
         LoggerInterface $logger = null
     ) {
-        $this->rpcServer = new RpcServer($this->serializer, $this->serviceLocator, $this->validator, $logger);
+        $this->rewriteServiceLocator();
+        $this->rpcServer = new RpcServer(
+            $this->serializer, $this->serviceLocator, $this->validator, $logger
+        );
         $this->init();
-        $this->setProcedures($procedures);
+
+    }
+
+    protected function rewriteServiceLocator(): void
+    {
+        if ($this->environment === 'prod') {
+            try {
+                $this->serviceLocator = $this->cache->get(static::CACHE_SL, function (ItemInterface $item) {
+                    return new ServiceLocator();
+                });
+            } catch (TypeError) {
+                $this->cache->delete(static::CACHE_SL);
+                $this->rewriteServiceLocator();
+            }
+        }
     }
 
     /**
@@ -64,7 +85,9 @@ class RpcServerFacade implements IFacadeRpcServer
      */
     protected function init(): void
     {
-        //        $this->rpcSecurity->isValidRequest();
+        if ($this->serviceLocator->empty()) {
+            $this->setProcedures($this->procedures);
+        }
     }
 
     /**
@@ -220,5 +243,15 @@ class RpcServerFacade implements IFacadeRpcServer
     public function getSecurity(): IRpcSecurity
     {
         return $this->rpcSecurity;
+    }
+
+    public function __destruct()
+    {
+        if ($this->environment === 'prod') {
+            $this->cache->delete(static::CACHE_SL);
+            $this->cache->get(static::CACHE_SL, function (ItemInterface $item) {
+                return $this->serviceLocator;
+            });
+        }
     }
 }
