@@ -66,7 +66,7 @@ class UfoReflectionProcedure
         }
     }
 
-    protected function provideNameAndNamespace()
+    protected function provideNameAndNamespace(): void
     {
         $procedureClassName = $this->reflection->getShortName();
         try {
