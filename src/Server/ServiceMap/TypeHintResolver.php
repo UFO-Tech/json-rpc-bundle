@@ -24,7 +24,6 @@ enum TypeHintResolver: string
     case FALSE = 'false';
     case DBL = 'dbl';
     case DOUBLE = 'double';
-    
     const TYPE = 'type';
 
     public static function normalize(string $type): string
@@ -33,7 +32,7 @@ enum TypeHintResolver: string
             self::ANY->value, self::MIXED->value => self::ANY->value,
             self::ARR->name, self::ARRAY->value => self::ARRAY->value,
             self::BOOL->value, self::TRUE->value, self::BOOLEAN->value, self::FALSE->value => self::BOOLEAN->value,
-            self::DBL->value, self::DOUBLE->value, self::FLOAT->value =>  self::FLOAT->value,
+            self::DBL->value, self::DOUBLE->value, self::FLOAT->value => self::FLOAT->value,
             self::INTEGER->value, self::INT->value => self::INTEGER->value,
             self::NIL->value, self::NULL->value, self::VOID->value => self::NULL->value,
             self::STRING->value, self::STR->value => self::STRING->value,
@@ -44,9 +43,9 @@ enum TypeHintResolver: string
     public static function jsonSchemaToPhp(string $type): string
     {
         return match ($type) {
-            self::NUMBER => self::FLOAT->value,
+            self::NUMBER->value => self::FLOAT->value,
             self::INTEGER->value => self::INT->value,
-            self::BOOLEAN => self::BOOL->value,
+            self::BOOLEAN->value => self::BOOL->value,
             default => $type
         };
     }
@@ -62,7 +61,7 @@ enum TypeHintResolver: string
         };
     }
 
-    public static function mixedFroJsonSchema()
+    public static function mixedForJsonSchema(): array
     {
         return [
             [self::TYPE => self::STRING->value],
@@ -70,7 +69,8 @@ enum TypeHintResolver: string
             [self::TYPE => self::NUMBER->value],
             [self::TYPE => self::BOOLEAN->value],
             [self::TYPE => self::ARRAY->value],
-            [self::TYPE => self::NULL->value]
+            [self::TYPE => self::NULL->value],
         ];
     }
+
 }

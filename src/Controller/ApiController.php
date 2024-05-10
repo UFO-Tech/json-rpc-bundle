@@ -2,7 +2,6 @@
 
 namespace Ufo\JsonRpcBundle\Controller;
 
-
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -10,10 +9,6 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Ufo\JsonRpcBundle\Interfaces\IFacadeRpcServer;
 use Ufo\JsonRpcBundle\Server\RpcRequestHandler;
-use Ufo\JsonRpcBundle\SoupUi\ProjectGenerator;
-use Ufo\RpcError\AbstractRpcErrorException;
-use Ufo\RpcError\RpcMethodNotFoundExceptionRpc;
-use Ufo\RpcObject\Transformer\Transformer;
 
 /**
  * Class ApiController
@@ -42,12 +37,9 @@ class ApiController extends AbstractController
     #[Route('/method/{method}', name: self::COLLECTION_ROUTE, methods: ["GET"], format: 'json')]
     public function docsAction(string $method): Response
     {
-        $smd = $this->rpcServerFacade->handleSmRequest()
-                                     ->getService($method)
-        ;
-        return new JsonResponse(
-            $smd->toArray()
-        );
+        $smd = $this->rpcServerFacade->handleSmRequest()->getService($method);
 
+        return new JsonResponse($smd->toArray());
     }
+
 }

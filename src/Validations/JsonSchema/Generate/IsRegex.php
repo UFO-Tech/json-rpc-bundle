@@ -2,11 +2,10 @@
 
 namespace Ufo\JsonRpcBundle\Validations\JsonSchema\Generate;
 
-
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\Constraints\Regex;
-use Ufo\JsonRpcBundle\Validations\JsonSchema\Generators\Interfaces\IConstraintGenerator;
+use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Interfaces\IConstraintGenerator;
 
 #[AutoconfigureTag('rpc.constraint')]
 class IsRegex implements IConstraintGenerator

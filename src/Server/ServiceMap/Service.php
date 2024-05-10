@@ -2,16 +2,17 @@
 
 namespace Ufo\JsonRpcBundle\Server\ServiceMap;
 
-
 use InvalidArgumentException;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
+use Ufo\RpcError\WrongWayException;
+use Ufo\RpcObject\RPC\Assertions;
+use Ufo\RpcObject\RPC\AssertionsCollection;
+use Ufo\RpcObject\RPC\Cache;
+use Ufo\RpcObject\RPC\Info;
 use Ufo\RpcObject\RPC\Response;
-use function sha1;
 
 class Service
 {
-    protected string $envelope = ServiceLocator::ENV_UFO_5;
-
     protected string $description;
 
     protected array $return;
@@ -19,6 +20,12 @@ class Service
     protected ?Response $responseInfo = null;
 
     protected array $schema = [];
+
+    protected array $throws = [];
+
+    protected ?AssertionsCollection $assertions = null;
+
+    protected ?Cache $cacheInfo = null;
 
     /**
      * @return Response|null
@@ -36,34 +43,47 @@ class Service
         $this->responseInfo = $responseInfo;
     }
 
-    /** @var string */
-    protected string $transport = ServiceLocator::POST;
-
     /**
      * Parameter option types.
      *
      * @var array
      */
     protected array $paramOptionTypes = [
-        'name' => 'is_string',
-        'optional' => 'is_bool',
-        'default' => null,
+        'name'        => 'is_string',
+        'optional'    => 'is_bool',
+        'default'     => null,
         'description' => 'is_string',
-//        'schema'=>'is_array'
     ];
 
     protected array $params = [];
+
     protected array $defaultParams = [];
 
     protected string $methodName;
 
-    /**
-     * @param string $name
-     */
-    public function __construct(protected string $name, protected IRpcService $procedure)
-    {
-        $t = explode('.', $this->name);
+    public function __construct(
+        protected string $name,
+        protected IRpcService $procedure,
+        public readonly string $concat = Info::DEFAULT_CONCAT
+    ) {
+        $t = explode($this->concat, $this->name);
         $this->methodName = end($t);
+    }
+
+    /**
+     * @param Cache $cacheInfo
+     * @return static
+     */
+    public function setCacheInfo(Cache $cacheInfo): static
+    {
+        $this->cacheInfo = $cacheInfo;
+
+        return $this;
+    }
+
+    public function getCacheInfo(): ?Cache
+    {
+        return $this->cacheInfo;
     }
 
     /**
@@ -79,19 +99,14 @@ class Service
         return $this->name;
     }
 
-    public function getTransport(): string
-    {
-        return $this->transport;
-    }
-
-    public function getEnvelope(): string
-    {
-        return $this->envelope;
-    }
-
     public function getDescription(): string
     {
         return $this->description;
+    }
+
+    public function getThrows(): array
+    {
+        return $this->throws;
     }
 
     /**
@@ -107,13 +122,11 @@ class Service
         if (is_string($type)) {
             $type = $this->validateParamType($type);
         }
-
         if (is_array($type)) {
             foreach ($type as $key => $paramType) {
                 $type[$key] = $this->validateParamType($paramType);
             }
         }
-
         $paramOptions = ['type' => $type];
         foreach ($options as $key => $value) {
             if (in_array($key, array_keys($this->paramOptionTypes))) {
@@ -123,17 +136,18 @@ class Service
                 }
             }
         }
-
         $this->params[$options['name']] = $paramOptions;
 
         return $this;
     }
 
-    public function setSchema(array $schema)
+    public function setSchema(array $schema): static
     {
         $this->schema = $schema;
+
         return $this;
     }
+
     /**
      * Add params.
      *
@@ -142,24 +156,21 @@ class Service
      * @param array $params
      * @return self
      */
-    public function addParams(array $params)
+    public function addParams(array $params): static
     {
         foreach ($params as $options) {
             if (!is_array($options)) {
                 continue;
             }
-
             if (!array_key_exists('type', $options)) {
                 continue;
             }
-
             $type = $options['type'];
             $this->addParam($type, $options);
         }
 
         return $this;
     }
-
 
     /**
      * Get all parameters.
@@ -180,6 +191,7 @@ class Service
                 $params[$key] = $value;
             }
         }
+
         return $params;
     }
 
@@ -190,8 +202,10 @@ class Service
     public function addReturn(string $type): static
     {
         $this->return[] = $this->validateParamType($type);
+
         return $this;
     }
+
     /**
      * @param array $types
      * @return $this
@@ -201,6 +215,7 @@ class Service
         foreach ($types as $key => $returnType) {
             $this->return[$key] = $this->addReturn($returnType);
         }
+
         return $this;
     }
 
@@ -211,6 +226,29 @@ class Service
     public function setDescription(string $desc): static
     {
         $this->description = $desc;
+
+        return $this;
+    }
+
+    /**
+     * @param array $throws
+     * @return static
+     */
+    public function setThrows(array $throws): static
+    {
+        $this->throws = $throws;
+
+        return $this;
+    }
+
+    /**
+     * @param mixed $throw
+     * @return static
+     */
+    public function addThrow(mixed $throw): static
+    {
+        $this->throws[] = $throw;
+
         return $this;
     }
 
@@ -230,16 +268,31 @@ class Service
         if (count($this->getReturn()) > 1) {
             $return = $this->getReturn();
         }
-        return [
-            'envelope' => $this->getEnvelope(),
-            'transport' => $this->getTransport(),
-            'name' => $this->getName(),
-            'decription' => $this->getDescription(),
-            'parameters' => $this->getParams(),
-            'json_schema' => $this->schema,
-            'returns' => $return,
-            'responseFormat' => $this->responseInfo->getResponseFormat()
+        $array = [
+            'name'           => $this->getName(),
+            'description'    => $this->getDescription(),
+            'parameters'     => $this->getParams(),
+            'returns'        => $return,
+            'responseFormat' => $this->responseInfo->getResponseFormat() ?? $return,
         ];
+        if (!empty($this->throws)) {
+            $array['throws'] = $this->throws;
+        }
+        if (!empty($this->schema)) {
+            $array['json_schema'] = $this->schema;
+        }
+        if (!empty($this->assertions)) {
+            $array['symfony_assertions'] = $this->assertions->toArray();
+        }
+
+        return $array;
+    }
+
+    public function setAssertions(AssertionsCollection $assertions): static
+    {
+        $this->assertions = $assertions;
+
+        return $this;
     }
 
     public function toJson(): string
@@ -275,4 +328,5 @@ class Service
     {
         return $this->procedure;
     }
+
 }

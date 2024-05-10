@@ -2,7 +2,6 @@
 
 namespace Ufo\JsonRpcBundle\Server\ServiceMap\Reflections;
 
-
 use phpDocumentor\Reflection\DocBlock;
 use phpDocumentor\Reflection\DocBlockFactory;
 use ReflectionClass;
@@ -10,40 +9,50 @@ use ReflectionException;
 use ReflectionMethod;
 use Symfony\Component\Serializer\SerializerInterface;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
+use Ufo\JsonRpcBundle\ConfigService\RpcDocsConfig;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\RpcObject\RPC\Assertions;
 use Ufo\RpcObject\RPC\AssertionsCollection;
+use Ufo\RpcObject\RPC\Cache;
 use Ufo\RpcObject\RPC\Info;
 use Ufo\RpcObject\RPC\Response;
+
+use function count;
+use function current;
 
 /**
  * Class/Object reflection
  */
 class UfoReflectionProcedure
 {
-    const EMPTY_DOC = '/**' . PHP_EOL . ' *' . PHP_EOL . ' */';
+    const EMPTY_DOC = '/**'.PHP_EOL.' *'.PHP_EOL.' */';
+
     /**
      * @var ReflectionMethod[]
      */
     protected array $methods = [];
+
     protected string $namespace;
+
     /**
      * ReflectionClass object
      *
      * @var ReflectionClass
      */
     protected ReflectionClass $reflection;
+
     protected string $name;
+
     protected DocBlock $methodDoc;
+
     protected string $concat = Info::DEFAULT_CONCAT;
+
     protected AssertionsCollection $assertions;
 
-    /**
-     * @param IRpcService $procedure
-     */
     public function __construct(
         protected IRpcService $procedure,
         protected SerializerInterface $serializer,
+        protected RpcDocsConfig $rpcDocsConfig
     ) {
         $this->reflection = new ReflectionClass(get_class($procedure));
         $this->provideNameAndNamespace();
@@ -66,9 +75,8 @@ class UfoReflectionProcedure
              * @var Info $info
              */
             $info = $infoAttribut->newInstance();
-            $procedureClassName = $info->getAlias() ?? $procedureClassName;
-            $this->concat = $info->getConcat();
-
+            $procedureClassName = $info->alias ?? $procedureClassName;
+            $this->concat = $info->concat;
         } catch (\Throwable) {
         } finally {
             $this->name = $procedureClassName;
@@ -93,6 +101,10 @@ class UfoReflectionProcedure
             }
         } else {
             $service->addReturn($this->typeFrom($returns));
+        }
+        $cache = $method->getAttributes(Cache::class);
+        if (count($cache) > 0) {
+            $service->setCacheInfo(current($cache)->newInstance());
         }
     }
 
@@ -125,6 +137,7 @@ class UfoReflectionProcedure
                 $returns[] = $this->getTypes($type);
             }
         }
+
         return !empty($returns) ? $returns : $return;
     }
 
@@ -148,14 +161,11 @@ class UfoReflectionProcedure
                 try {
                     $params[$i]['additional']['default'] = $paramRef->getDefaultValue();
                     $params[$i]['additional']['optional'] = true;
-
                 } catch (ReflectionException) {
                 }
                 try {
-                    $this->assertions->addAssertions(
-                        $paramRef->getName(),
-                        $paramRef->getAttributes(Assertions::class)[0]->newInstance()
-                    );
+                    $this->assertions->addAssertions($paramRef->getName(),
+                        $paramRef->getAttributes(Assertions::class)[0]->newInstance());
                 } catch (\Throwable) {
                 }
             }
@@ -176,12 +186,11 @@ class UfoReflectionProcedure
                 continue;
             }
             if ($param->getDescription()) {
-                $desc = $param->getDescription()
-                              ->getBodyTemplate()
-                ;
+                $desc = $param->getDescription()->getBodyTemplate();
             }
             break;
         }
+
         return $desc;
     }
 
@@ -194,16 +203,21 @@ class UfoReflectionProcedure
         if (!$docBlock = $method->getDocComment()) {
             $docBlock = static::EMPTY_DOC;
         }
-        $this->methodDoc = DocBlockFactory::createInstance()
-                                          ->create($docBlock)
-        ;
-        $className = (empty($this->name)) ? '' : $this->name . $this->concat;
-        $service = new Service($className . $method->getName(), $this->procedure);
+        $this->methodDoc = DocBlockFactory::createInstance()->create($docBlock);
+        $className = (empty($this->name)) ? '' : $this->name.$this->concat;
+        $service = new Service($className.$method->getName(), $this->procedure, $this->concat);
         $this->buildParams($method, $service);
         $this->buildReturns($method, $service);
         $this->findResponseInfo($method, $service);
         $this->buildDescription($method, $service);
-        $this->buildJsonSchema($method, $service);
+        $this->buildThrows($method, $service);
+        if ($this->rpcDocsConfig->needJsonSchema) {
+            $this->buildJsonSchema($method, $service);
+        }
+        if ($this->rpcDocsConfig->needSymfonyAsserts) {
+            $this->buildAssets($method, $service);
+        }
+
         return $service;
     }
 
@@ -212,19 +226,26 @@ class UfoReflectionProcedure
         $service->setDescription($this->methodDoc->getSummary());
     }
 
+    protected function buildThrows(ReflectionMethod $method, Service $service): void
+    {
+        //        foreach ($this->methodDoc->getTagsByName('throws') as $throw) {
+        //            $service->addThrow((string)$throw);
+        //        }
+    }
+
     protected function buildJsonSchema(ReflectionMethod $method, Service $service): void
     {
         try {
-            $service->setSchema(
-                $this->serializer->normalize(
-                    $this->assertions, context: [
-                    'service' => $service,
-                ]
-                )
-            );
-        } catch (\Throwable $e) {
-            $a = 1;
+            $service->setSchema($this->serializer->normalize($this->assertions, context: [
+                'service' => $service,
+            ]));
+        } catch (\Throwable) {
         }
+    }
+
+    protected function buildAssets(ReflectionMethod $method, Service $service): void
+    {
+        $service->setAssertions($this->assertions);
     }
 
     /**
@@ -234,4 +255,5 @@ class UfoReflectionProcedure
     {
         return $this->methods;
     }
+
 }

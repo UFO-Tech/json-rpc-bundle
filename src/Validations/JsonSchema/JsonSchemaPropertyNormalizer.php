@@ -2,7 +2,6 @@
 
 namespace Ufo\JsonRpcBundle\Validations\JsonSchema;
 
-
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
@@ -21,8 +20,6 @@ class JsonSchemaPropertyNormalizer implements NormalizerInterface
     protected array $schema = [];
 
     public function __construct(
-        #[Autowire(service: 'serializer.normalizer.object')]
-        private readonly NormalizerInterface $normalizer,
         private readonly Genearator $genearator
     ) {}
 
@@ -34,7 +31,6 @@ class JsonSchemaPropertyNormalizer implements NormalizerInterface
      */
     public function normalize($assertions, ?string $format = null, array $context = []): array
     {
-        $this->schema = [];
         $this->checkTheType($context);
         foreach ($assertions as $assertion) {
             foreach ($assertion as $rule) {
@@ -43,6 +39,7 @@ class JsonSchemaPropertyNormalizer implements NormalizerInterface
         }
         $schema = $this->schema;
         $this->schema = [];
+
         return $schema;
     }
 
@@ -50,7 +47,7 @@ class JsonSchemaPropertyNormalizer implements NormalizerInterface
     {
         $result = TypeHintResolver::phpToJsonSchema($context['type'] ?? '');
         if (empty($result)) {
-            $this->schema['oneOf'] = TypeHintResolver::mixedFroJsonSchema();
+            $this->schema['oneOf'] = TypeHintResolver::mixedForJsonSchema();
         } else {
             $this->schema[TypeHintResolver::TYPE] = $result;
         }

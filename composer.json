@@ -1,7 +1,7 @@
 {
   "name": "ufo-tech/json-rpc-bundle",
   "description": "The bundle for easy using json-rpc api on your project",
-  "version": "5.2",
+  "version": "6",
   "license": "MIT",
   "authors": [
     {
@@ -19,7 +19,7 @@
     "json-rpc"
   ],
   "require": {
-    "php": ">=8.1",
+    "php": ">=8.2",
     "symfony/framework-bundle": "^6.4",
     "symfony/serializer": "^6.4",
     "psr/http-client": "*",

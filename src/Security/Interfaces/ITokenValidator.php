@@ -12,5 +12,5 @@ interface ITokenValidator
      * @return bool
      * @throws RpcInvalidTokenException
      */
-    public function isValid(string $token): bool;
+    public function isValid(string $token): true;
 }

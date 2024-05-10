@@ -4,7 +4,6 @@ namespace Ufo\JsonRpcBundle\Security;
 
 namespace Ufo\JsonRpcBundle\Security;
 
-
 use AllowDynamicProperties;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -13,11 +12,13 @@ use Symfony\Component\Routing\Matcher\UrlMatcher;
 use Symfony\Component\Routing\RequestContext;
 use Symfony\Component\Routing\RouteCollection;
 use Symfony\Component\Routing\RouterInterface;
+use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\Controller\ApiController;
 use Ufo\RpcError\RpcInvalidTokenException;
 use Ufo\RpcError\RpcTokenNotFoundInHeaderException;
 use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
 use Ufo\JsonRpcBundle\Security\Interfaces\ITokenValidator;
+
 use function in_array;
 
 #[AllowDynamicProperties]
@@ -35,31 +36,23 @@ class TokenRpcSecurity implements IRpcSecurity
 
     /**
      * @param RequestStack $requestStack
-     * @param string $tokenHeaderKey
+     * @param RpcMainConfig $rpcConfig
      * @param ITokenValidator $tokenValidator
-     * @param array $protectedMethods
      * @param RouterInterface|null $router
      */
     public function __construct(
         RequestStack $requestStack,
-        protected string $tokenHeaderKey,
+        protected RpcMainConfig $rpcConfig,
         protected ITokenValidator $tokenValidator,
-        protected array $protectedMethods = [],
         ?RouterInterface $router = null
     ) {
         $this->request = $requestStack->getCurrentRequest();
         if (!is_null($router)) {
             $this->protectedPath = new RouteCollection();
-            $this->protectedPath->add(
-                ApiController::API_ROUTE,
-                $router->getRouteCollection()
-                       ->get(ApiController::API_ROUTE)
-            );
-            $this->protectedPath->add(
-                ApiController::COLLECTION_ROUTE,
-                $router->getRouteCollection()
-                       ->get(ApiController::COLLECTION_ROUTE)
-            );
+            $this->protectedPath->add(ApiController::API_ROUTE,
+                $router->getRouteCollection()->get(ApiController::API_ROUTE));
+            $this->protectedPath->add(ApiController::COLLECTION_ROUTE,
+                $router->getRouteCollection()->get(ApiController::COLLECTION_ROUTE));
         }
     }
 
@@ -86,6 +79,7 @@ class TokenRpcSecurity implements IRpcSecurity
             $res = $this->isValidToken($token);
             $this->tokenHeader = $token;
         }
+
         return $res;
     }
 
@@ -102,6 +96,7 @@ class TokenRpcSecurity implements IRpcSecurity
         } catch (ResourceNotFoundException $e) {
             $isProtected = false;
         }
+
         return $isProtected;
     }
 
@@ -110,7 +105,7 @@ class TokenRpcSecurity implements IRpcSecurity
      */
     public function getTokenHeaderKey(): string
     {
-        return $this->tokenHeaderKey;
+        return $this->rpcConfig->securityConfig->tokenKeyInHeader;
     }
 
     /**
@@ -129,9 +124,10 @@ class TokenRpcSecurity implements IRpcSecurity
     public function isValidRequest(): bool
     {
         $requestMethod = $this->request->getMethod();
-        if (in_array($requestMethod, $this->protectedMethods)) {
+        if (in_array($requestMethod, $this->rpcConfig->securityConfig->tokens)) {
             $this->validateRequest();
         }
+
         return true;
     }
 }

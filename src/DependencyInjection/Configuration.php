@@ -4,6 +4,9 @@ namespace Ufo\JsonRpcBundle\DependencyInjection;
 
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
+use Ufo\JsonRpcBundle\ConfigService\RpcDocsConfig;
+use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
+use Ufo\JsonRpcBundle\ConfigService\RpcSecurityConfig;
 
 /**
  * This is the class that validates and merges configuration from your app/config files.
@@ -19,29 +22,51 @@ class Configuration implements ConfigurationInterface
 
     /**
      * {@inheritdoc}
+     * @formatter:off
      */
     public function getConfigTreeBuilder(): TreeBuilder
     {
-        $treeBuilder = new TreeBuilder(self::TREE_BUILDER_NAME);
+        $treeBuilder = new TreeBuilder(RpcMainConfig::NAME);
         $rootNode = $treeBuilder->getRootNode();
 
         $rootNode
             ->children()
-                ->arrayNode('security')
+                ->arrayNode(RpcSecurityConfig::NAME)
                     ->children()
-                        ->arrayNode('protected_methods')
+                        ->arrayNode(RpcSecurityConfig::PROTECTED_METHODS)
                             ->scalarPrototype()->end()
                         ->end()
-                        ->scalarNode('token_key_in_header')
-                            ->defaultValue('Ufo-RPC-Token')
+                        ->scalarNode(RpcSecurityConfig::TOKEN_KEY)
+                            ->defaultValue(RpcSecurityConfig::DEFAULT_TOKEN_KEY)
                         ->end()
-                        ->arrayNode('clients_tokens')
+                        ->arrayNode(RpcSecurityConfig::TOKENS)
                             ->scalarPrototype()->end()
+                        ->end()
+                    ->end()
+                ->end()
+                ->arrayNode(RpcDocsConfig::NAME)
+                    ->children()
+                        ->arrayNode(RpcDocsConfig::RESPONSE)
+                            ->children()
+                                ->scalarNode(RpcDocsConfig::KEY_FOR_METHODS)
+                                    ->defaultValue(RpcDocsConfig::DEFAULT_KEY_FOR_METHODS)
+                                ->end()
+                                ->arrayNode(RpcDocsConfig::VALIDATIONS)
+                                    ->children()
+                                        ->booleanNode(RpcDocsConfig::JSON_SCHEMA)
+                                            ->defaultFalse()
+                                        ->end()
+                                        ->booleanNode(RpcDocsConfig::SYMFONY_ASSERTS)
+                                            ->defaultFalse()
+                                        ->end()
+                                    ->end()
+                                ->end()
+                            ->end()
                         ->end()
                     ->end()
                 ->end()
             ->end()
         ;
+
         return $treeBuilder;
-    }
-}
+    }}

@@ -204,7 +204,7 @@ class RpcServer
         return $request->getParams();
     }
 
-    private function dispatch(Service $service, $params): mixed
+    private function dispatch(Service $service, array $params): mixed
     {
         $object = $service->getProcedure();
         try {

@@ -2,7 +2,6 @@
 
 namespace Ufo\JsonRpcBundle\Validations;
 
-
 use ReflectionMethod;
 use ReflectionParameter;
 use Symfony\Component\HttpFoundation\Response;
@@ -13,6 +12,7 @@ use Symfony\Component\Validator\ConstraintViolationListInterface;
 use Ufo\RpcError\RpcBadParamException;
 use Ufo\RpcObject\RPC\Assertions;
 use Ufo\JsonRpcBundle\Exceptions\ConstraintsImposedException;
+
 use function array_map;
 use function count;
 use function json_encode;
@@ -20,6 +20,7 @@ use function json_encode;
 class RpcValidator implements IRpcValidator
 {
     protected int $violationCount = 0;
+
     /**
      * @var ConstraintViolationListInterface[]
      */
@@ -28,7 +29,7 @@ class RpcValidator implements IRpcValidator
     public function __construct(protected ValidatorInterface $validator) {}
 
     /**
-     * @throws \ReflectionException|ConstraintsImposedException
+     * @throws ConstraintsImposedException
      */
     public function validateMethodParams(
         object $procedureObject,
@@ -45,8 +46,7 @@ class RpcValidator implements IRpcValidator
             foreach ($this->violations as $paramName => $violations) {
                 array_map(function (ConstraintViolationInterface $v) use (&$errors, $paramName) {
                     $errors[$paramName][] = $v->getMessage();
-                },
-                    (array)$violations->getIterator());
+                }, (array)$violations->getIterator());
             }
             throw new ConstraintsImposedException("Invalid Data for call method: {$procedureMethod}", $errors);
         }
@@ -65,4 +65,5 @@ class RpcValidator implements IRpcValidator
         } catch (\Throwable) {
         }
     }
+
 }

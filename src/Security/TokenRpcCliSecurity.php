@@ -1,10 +1,10 @@
 <?php
-namespace Ufo\JsonRpcBundle\Security;
-
 
 namespace Ufo\JsonRpcBundle\Security;
 
+namespace Ufo\JsonRpcBundle\Security;
 
+use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\RpcError\RpcInvalidTokenException;
 use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
 use Ufo\JsonRpcBundle\Security\Interfaces\ITokenValidator;
@@ -18,10 +18,8 @@ class TokenRpcCliSecurity implements IRpcSecurity
 
     public function __construct(
         protected ITokenValidator $tokenValidator,
-        protected array $protectedMethods = [],
-    )
-    {
-    }
+        protected RpcMainConfig $rpcConfig,
+    ) {}
 
     /**
      * @param string $token
@@ -42,6 +40,7 @@ class TokenRpcCliSecurity implements IRpcSecurity
         if ($result) {
             $this->token = $token;
         }
+
         return $result;
     }
 
@@ -52,9 +51,10 @@ class TokenRpcCliSecurity implements IRpcSecurity
     public function isValidRequest(): bool
     {
         $result = true;
-        if (in_array('POST', $this->protectedMethods)) {
+        if (in_array('POST', $this->rpcConfig->securityConfig->protectedMethods)) {
             $result = $this->isValidToken($this->token);
         }
+
         return $result;
     }
 

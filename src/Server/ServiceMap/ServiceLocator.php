@@ -2,60 +2,65 @@
 
 namespace Ufo\JsonRpcBundle\Server\ServiceMap;
 
-
 use Psr\Container\ContainerInterface;
 use RuntimeException;
+use Ufo\JsonRpcBundle\ConfigService\RpcDocsConfig;
 use Ufo\JsonRpcBundle\Exceptions\ServiceNotFoundException;
+use Ufo\JsonRpcBundle\Package;
 use Ufo\RpcError\RpcMethodNotFoundExceptionRpc;
 
 class ServiceLocator implements ContainerInterface
 {
-    const ENV_JSONRPC_2 = 'JSON-RPC-2.0';
-    const ENV_UFO_5 = 'JSON-RPC-2.0/UFO-RPC-5';
+    const ENV_JSON_RPC_2 = 'JSON-RPC-2.0';
+    const ENV_UFO_RPC = self::ENV_JSON_RPC_2.'/UFO-RPC-'.Package::VERSION;
     const JSON = 'application/json';
     const POST = 'POST';
+
     /**
      * Content type.
      *
      * @var string
      */
     protected string $contentType = self::JSON;
+
     /**
      * Service description.
      *
      * @var string
      */
     protected string $description = '';
+
     /**
      * Current envelope.
      *
      * @var string
      */
-    protected string $envelope = self::ENV_UFO_5;
-    /**
-     * Service id.
-     *
-     * @var string
-     */
-    protected string $id = '';
+    protected string $envelope = self::ENV_UFO_RPC;
+
     /**
      * Services offered.
      *
      * @var array
      */
     protected array $services = [];
+
     /**
      * Service target.
      *
      * @var string
      */
     protected string $target;
+
     /**
      * Global transport.
      *
      * @var string
      */
     protected string $transport = self::POST;
+
+    public function __construct(
+        protected string $methodsKey = RpcDocsConfig::DEFAULT_KEY_FOR_METHODS
+    ) {}
 
     /**
      * Get transport.
@@ -92,6 +97,7 @@ class ServiceLocator implements ContainerInterface
     public function setTarget(string $target): static
     {
         $this->target = $target;
+
         return $this;
     }
 
@@ -100,20 +106,10 @@ class ServiceLocator implements ContainerInterface
         return $this->target;
     }
 
-    public function setId(string $id): static
-    {
-        $this->id = $id;
-        return $this;
-    }
-
-    public function getId(): string
-    {
-        return $this->id;
-    }
-
     public function setDescription(string $description): static
     {
         $this->description = $description;
+
         return $this;
     }
 
@@ -133,6 +129,7 @@ class ServiceLocator implements ContainerInterface
             throw new RuntimeException('Attempt to register a service already registered detected');
         }
         $this->services[$name] = $service;
+
         return $this;
     }
 
@@ -145,6 +142,7 @@ class ServiceLocator implements ContainerInterface
         foreach ($services as $service) {
             $this->addService($service);
         }
+
         return $this;
     }
 
@@ -156,8 +154,9 @@ class ServiceLocator implements ContainerInterface
     public function get(string $id): Service
     {
         if (!$this->has($id)) {
-            throw new ServiceNotFoundException('Service "' . $id . '" is not found on RPC Service Locator');
+            throw new ServiceNotFoundException('Service "'.$id.'" is not found on RPC Service Locator');
         }
+
         return $this->services[$id];
     }
 
@@ -176,6 +175,7 @@ class ServiceLocator implements ContainerInterface
         if (!array_key_exists($id, $this->services)) {
             return false;
         }
+
         return true;
     }
 
@@ -204,6 +204,7 @@ class ServiceLocator implements ContainerInterface
             return false;
         }
         unset($this->services[$name]);
+
         return true;
     }
 
@@ -218,27 +219,24 @@ class ServiceLocator implements ContainerInterface
         $transport = $this->getTransport();
         $envelope = $this->getEnvelope();
         $contentType = $this->getContentType();
+        $target = $this->getTarget();
         $service = [
-            'transport'   => $transport,
             'envelope'    => $envelope,
+            'transport'   => $transport,
+            'target'    => $target,
             'contentType' => $contentType,
             'description' => $description,
         ];
-        if (null !== ($target = $this->getTarget())) {
-            $service['target'] = $target;
-        }
-        if (null !== ($id = $this->getId())) {
-            $service['id'] = $id;
-        }
         $services = $this->getServices();
         if (empty($services)) {
             return $service;
         }
-        $service['services'] = [];
+        $service[$this->methodsKey] = [];
         foreach ($services as $name => $svc) {
-            $service['services'][$name] = $svc->toArray();
+            $service[$this->methodsKey][$name] = $svc->toArray();
         }
-        $service['methods'] = $service['services'];
+
         return $service;
     }
+
 }

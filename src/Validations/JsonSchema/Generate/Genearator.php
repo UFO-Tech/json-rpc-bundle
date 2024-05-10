@@ -2,10 +2,9 @@
 
 namespace Ufo\JsonRpcBundle\Validations\JsonSchema\Generate;
 
-
 use Symfony\Component\DependencyInjection\Attribute\TaggedIterator;
 use Symfony\Component\Validator\Constraint;
-use Ufo\JsonRpcBundle\Validations\JsonSchema\Generators\Interfaces\IConstraintGenerator;
+use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Interfaces\IConstraintGenerator;
 
 class Genearator
 {

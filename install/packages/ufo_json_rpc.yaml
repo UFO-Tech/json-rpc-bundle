@@ -1,8 +1,18 @@
 # config/packages/ufo_json_rpc.yaml
 ufo_json_rpc:
     security:
-        protected_methods: ['GET', 'POST']      # protection of GET and POST requests
-        token_key_in_header: 'Ufo-RPC-Token'    # Name of the key in the header
+        protected_methods: ['POST']               # Protection of GET and POST requests
+        token_key_in_header: 'Ufo-RPC-Token'      # Name of the key in the header
         clients_tokens:
-            - 'ClientTokenExample'              # hardcoded token example. Importantly!!! Replace or delete it!
-            - '%env(resolve:UFO_API_TOKEN)%'   # token example from .env.local
+            - 'ClientTokenExample'                # Hardcoded token example. Importantly!!! Replace or delete it!
+            - '%env(resolve:UFO_API_TOKEN)%'      # Token example from .env.local
+    
+    # Configuration for API documentation
+    docs:
+        # Optional response details
+        response:
+            key_for_methods: methods        # Key used to map services for API methods
+            # Information about validations
+            validations:
+                json_schema:     false      # Indicates if JSON-schema is used for method validation
+                symfony_asserts: false      # Indicates if an array of Symfony validation constraints is used
