@@ -20,6 +20,9 @@ services:
     Ufo\JsonRpcBundle\Server\RpcRequestHandler:
         $rpcServerFacade: '@Ufo\JsonRpcBundle\Server\RpcServerFacade'
     
+    Ufo\RpcObject\Rules\Validator\RpcValidator:
+        class: Ufo\RpcObject\Rules\Validator\RpcValidator
+    
     Ufo\JsonRpcBundle\Server\RpcServerFacade:
         $rpcSecurity: '@Ufo\JsonRpcBundle\Security\TokenRpcSecurity'
     
