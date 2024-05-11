@@ -12,8 +12,8 @@ use TypeError;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\Controller\ApiController;
-use Ufo\JsonRpcBundle\Exceptions\ConstraintsImposedException;
-use Ufo\JsonRpcBundle\Interfaces\IRpcValidator;
+use Ufo\RpcObject\Rules\Validator\ConstraintsImposedException;
+use Ufo\RpcObject\Rules\Validator\RpcValidator;
 use Ufo\JsonRpcBundle\Server\RpcCache\RpcCacheService;
 use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceLocator;
 use Ufo\RpcError\AbstractRpcErrorException;
@@ -47,7 +47,7 @@ class RpcServerFacade implements IFacadeRpcServer
         protected RouterInterface $router,
         protected IRpcSecurity $rpcSecurity,
         protected SerializerInterface $serializer,
-        protected IRpcValidator $validator,
+        protected RpcValidator $validator,
         protected RpcCacheService $cache,
         #[TaggedIterator('ufo.rpc.service')]
         protected iterable $procedures,

@@ -8,7 +8,7 @@ use Symfony\Component\Serializer\SerializerInterface;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\Exceptions\ServiceNotFoundException;
-use Ufo\JsonRpcBundle\Interfaces\IRpcValidator;
+use Ufo\RpcObject\Rules\Validator\RpcValidator;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\UfoReflectionProcedure;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceLocator;
@@ -36,7 +36,7 @@ class RpcServer
     public function __construct(
         protected SerializerInterface $serializer,
         protected ServiceLocator $serviceLocator,
-        protected IRpcValidator $rpcValidator,
+        protected RpcValidator $rpcValidator,
         protected RpcMainConfig $rpcConfig,
         protected ?LoggerInterface $logger = null
     ) {}
