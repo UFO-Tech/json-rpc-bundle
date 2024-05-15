@@ -12,6 +12,7 @@ ufo_json_rpc:
         # Optional response details
         response:
             key_for_methods: methods        # Key used to map services for API methods
+            async_dsn_info:  false          # Provide information about methods that work asynchronously
             # Information about validations
             validations:
                 json_schema:     false      # Indicates if JSON-schema is used for method validation

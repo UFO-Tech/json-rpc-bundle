@@ -6,9 +6,6 @@ use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\TaggedIterator;
 use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\Serializer\SerializerInterface;
-use Symfony\Contracts\Cache\CacheInterface;
-use Symfony\Contracts\Cache\ItemInterface;
-use TypeError;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\Controller\ApiController;
@@ -26,7 +23,6 @@ use Ufo\RpcObject\RpcRequest;
 use Ufo\RpcObject\RpcResponse;
 
 use function get_class;
-use function in_array;
 
 class RpcServerFacade implements IFacadeRpcServer
 {
@@ -131,6 +127,7 @@ class RpcServerFacade implements IFacadeRpcServer
             // error in request
             $response = $this->handleError($singleRequest->getError());
         } catch (\Exception $e) {
+            $singleRequest->setError($e);
             $response = $this->handleError($e);
         }
         $singleRequest->setResponse($response);

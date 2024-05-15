@@ -1,7 +1,7 @@
 {
   "name": "ufo-tech/json-rpc-bundle",
   "description": "The bundle for easy using json-rpc api on your project",
-  "version": "6.0.0",
+  "version": "6.1.0",
   "license": "MIT",
   "authors": [
     {
@@ -10,30 +10,32 @@
     }
   ],
   "type": "symfony-bundle",
-  "homepage": "https://github.com/ufo-tech/json-rpc-bundle",
+  "homepage": "https://docs.ufo-tech.space/bin/view/docs/JsonRpcBundle/?language=en",
   "keywords": [
     "ufo",
     "symfony",
     "api",
     "bundle",
-    "json-rpc"
+    "json-rpc",
+    "async"
   ],
   "require": {
-    "php": ">=8.2",
-    "symfony/framework-bundle": ">=6.4",
-    "symfony/serializer": ">=6.4",
+    "php": ">=8.3",
+    "symfony/framework-bundle": "^7.0",
+    "symfony/serializer": "^7.0",
     "psr/http-client": "*",
     "nyholm/psr7": "*",
     "ufo-tech/rpc-exceptions": ">=1.0.3",
-    "symfony/console": ">=6.4",
-    "symfony/http-kernel": ">=6.4",
-    "symfony/validator": ">=6.4",
-    "symfony/http-client": ">=6.4",
-    "symfony/process": ">=6.4",
+    "symfony/console": "^7.0",
+    "symfony/http-kernel": "^7.0",
+    "symfony/validator": "^7.0",
+    "symfony/http-client": "^7.0",
+    "symfony/process": "^7.0",
     "ext-dom": "*",
-    "ufo-tech/rpc-objects": ">=2.0",
+    "ext-amqp": "*",
+    "ufo-tech/rpc-objects": ">=2.1",
     "doctrine/persistence": ">=3.1",
-    "symfony/security-bundle": ">=6.4",
+    "symfony/security-bundle": "^7.0",
     "phpdocumentor/reflection-docblock": ">=5.3",
     "symfony/expression-language": ">=6.3"
   },

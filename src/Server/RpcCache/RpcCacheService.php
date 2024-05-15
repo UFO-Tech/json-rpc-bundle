@@ -68,7 +68,7 @@ class RpcCacheService implements CacheInterface
 
     protected function defaultSL(): ServiceLocator
     {
-        return new ServiceLocator($this->rpcConfig->docsConfig->keyForMethods);
+        return new ServiceLocator($this->rpcConfig);
     }
 
     public function __destruct()

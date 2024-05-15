@@ -5,9 +5,15 @@ namespace Ufo\JsonRpcBundle\Server\ServiceMap;
 use Psr\Container\ContainerInterface;
 use RuntimeException;
 use Ufo\JsonRpcBundle\ConfigService\RpcDocsConfig;
+use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\Exceptions\ServiceNotFoundException;
 use Ufo\JsonRpcBundle\Package;
 use Ufo\RpcError\RpcMethodNotFoundExceptionRpc;
+use Ufo\RpcObject\RpcTransport;
+
+use function current;
+use function explode;
+use function is_null;
 
 class ServiceLocator implements ContainerInterface
 {
@@ -16,60 +22,44 @@ class ServiceLocator implements ContainerInterface
     const JSON = 'application/json';
     const POST = 'POST';
 
-    /**
-     * Content type.
-     *
-     * @var string
-     */
     protected string $contentType = self::JSON;
 
-    /**
-     * Service description.
-     *
-     * @var string
-     */
     protected string $description = '';
 
-    /**
-     * Current envelope.
-     *
-     * @var string
-     */
     protected string $envelope = self::ENV_UFO_RPC;
 
-    /**
-     * Services offered.
-     *
-     * @var array
-     */
     protected array $services = [];
 
-    /**
-     * Service target.
-     *
-     * @var string
-     */
     protected string $target;
 
-    /**
-     * Global transport.
-     *
-     * @var string
-     */
-    protected string $transport = self::POST;
+    protected string $methodsKey = RpcDocsConfig::DEFAULT_KEY_FOR_METHODS;
 
     public function __construct(
-        protected string $methodsKey = RpcDocsConfig::DEFAULT_KEY_FOR_METHODS
-    ) {}
+        protected RpcMainConfig $mainConfig
+    ) {
+        $this->methodsKey = $this->mainConfig->docsConfig->keyForMethods;
+    }
 
     /**
      * Get transport.
      *
-     * @return string
+     * @return array[]
      */
-    public function getTransport(): string
+    public function getTransport(): array
     {
-        return $this->transport;
+        $http = RpcTransport::fromArray($this->mainConfig->url);
+        $transport = [
+            'sync' => $http->toArray(),
+        ];
+        $transport['sync'] += [
+            'method' => self::POST,
+        ];
+        if ($this->mainConfig->docsConfig->asyncDsnInfo && !is_null($this->mainConfig->asyncConfig->rpcAsync)) {
+            $async = RpcTransport::fromDsn($this->mainConfig->asyncConfig->rpcAsync);
+            $transport['async'] = $async->toArray();
+        }
+
+        return $transport;
     }
 
     /**
@@ -218,14 +208,11 @@ class ServiceLocator implements ContainerInterface
         $description = $this->getDescription();
         $transport = $this->getTransport();
         $envelope = $this->getEnvelope();
-        $contentType = $this->getContentType();
-        $target = $this->getTarget();
         $service = [
             'envelope'    => $envelope,
-            'transport'   => $transport,
-            'target'    => $target,
-            'contentType' => $contentType,
+            'contentType' => $this->contentType,
             'description' => $description,
+            'transport'   => $transport,
         ];
         $services = $this->getServices();
         if (empty($services)) {
@@ -240,3 +227,4 @@ class ServiceLocator implements ContainerInterface
     }
 
 }
+

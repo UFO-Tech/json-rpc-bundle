@@ -71,18 +71,23 @@ class RpcServer
             if (is_array($isData)) {
                 $isData = $this->serializer->serialize($isData, 'yaml');
             }
+            try {
+                $method = $this->requestObject?->getMethod();
+                $params = $this->requestObject?->getParams();
+            } catch (\Throwable) {
+                $method = null;
+                $params = null;
+            }
             $this->logger->error((string)$isData, [
                 'error'  => $message,
-                'method' => $this->requestObject?->getMethod(),
-                'params' => $this->requestObject?->getParams(),
+                'method' => $method,
+                'params' => $params,
             ]);
         }
 
-        return new RpcResponse(
-            id: $this->requestObject?->getId() ?? 'not_processed',
-            error: $error,
-            version: $this->requestObject?->getVersion() ?? 'not_processed',
-            requestObject: $this->requestObject);
+        return new RpcResponse(id           : $this->requestObject?->getId() ?? 'not_processed', error: $error,
+                               version      : $this->requestObject?->getVersion() ?? 'not_processed',
+                               requestObject: $this->requestObject);
     }
 
     /**
@@ -111,12 +116,8 @@ class RpcServer
             throw RpcRuntimeException::fromThrowable($e);
         }
 
-        return new RpcResponse(
-            id: $request->getId(),
-            result: $result,
-            version: $request->getVersion(),
-            requestObject: $request, cache: $service->getCacheInfo()
-        );
+        return new RpcResponse(id           : $request->getId(), result: $result, version: $request->getVersion(),
+                               requestObject: $request, cache: $service->getCacheInfo());
     }
 
     /**
@@ -144,9 +145,8 @@ class RpcServer
         RpcRequest $request,
         Service $service
     ): array {
-        return is_string(key($request->getParams()))
-            ? $this->validateAndPrepareNamedParams($request, $service)
-            : $this->validateAndPrepareOrderedParams($request, $service);
+        return is_string(key($request->getParams())) ? $this->validateAndPrepareNamedParams($request,
+            $service) : $this->validateAndPrepareOrderedParams($request, $service);
     }
 
     /**

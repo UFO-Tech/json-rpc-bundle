@@ -6,9 +6,12 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Annotation\Route;
 use Ufo\JsonRpcBundle\Interfaces\IFacadeRpcServer;
 use Ufo\JsonRpcBundle\Server\RpcRequestHandler;
+use Ufo\RpcObject\RpcAsyncRequest;
+use Ufo\RpcObject\RpcRequest;
 
 /**
  * Class ApiController
@@ -40,6 +43,20 @@ class ApiController extends AbstractController
         $smd = $this->rpcServerFacade->handleSmRequest()->getService($method);
 
         return new JsonResponse($smd->toArray());
+    }
+
+    #[Route('/test', name: self::COLLECTION_ROUTE, methods: ["GET", 'OPTIONS'], format: 'json')]
+    public function test(MessageBusInterface $bus)
+    {
+        $token = $_ENV['UFO_API_TOKEN'];
+        $bus->dispatch(new RpcAsyncRequest(new RpcRequest(rand(), 'ping'), $token));
+        $bus->dispatch(new RpcAsyncRequest(new RpcRequest(rand(), 'ExampleApi.getUserInfo', [
+            'id'    => 21,
+            'name'  => "Ivan",
+            'email' => 'dd@qq.sa',
+        ]), $token));
+
+        return new Response('ok');
     }
 
 }

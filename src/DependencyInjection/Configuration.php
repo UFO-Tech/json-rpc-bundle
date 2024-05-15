@@ -4,6 +4,7 @@ namespace Ufo\JsonRpcBundle\DependencyInjection;
 
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
+use Ufo\JsonRpcBundle\ConfigService\RpcAsyncConfig;
 use Ufo\JsonRpcBundle\ConfigService\RpcDocsConfig;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\ConfigService\RpcSecurityConfig;
@@ -18,7 +19,7 @@ class Configuration implements ConfigurationInterface
     /**
      * Default TreeBuilder name
      */
-    const TREE_BUILDER_NAME = 'ufo_json_rpc';
+    const TREE_BUILDER_NAME = RpcMainConfig::NAME;
 
     /**
      * {@inheritdoc}
@@ -51,6 +52,9 @@ class Configuration implements ConfigurationInterface
                                 ->scalarNode(RpcDocsConfig::KEY_FOR_METHODS)
                                     ->defaultValue(RpcDocsConfig::DEFAULT_KEY_FOR_METHODS)
                                 ->end()
+                                ->booleanNode(RpcDocsConfig::ASYNC_DSN_INFO)
+                                    ->defaultFalse()
+                                ->end()
                                 ->arrayNode(RpcDocsConfig::VALIDATIONS)
                                     ->children()
                                         ->booleanNode(RpcDocsConfig::JSON_SCHEMA)
@@ -62,6 +66,17 @@ class Configuration implements ConfigurationInterface
                                     ->end()
                                 ->end()
                             ->end()
+                        ->end()
+                    ->end()
+                ->end()
+                ->arrayNode(RpcAsyncConfig::NAME)
+                    ->addDefaultsIfNotSet()
+                    ->children()
+                        ->scalarNode(RpcAsyncConfig::RPC_ASYNC)
+                            ->defaultNull()
+                        ->end()
+                        ->scalarNode(RpcAsyncConfig::FAILED)
+                            ->defaultNull()
                         ->end()
                     ->end()
                 ->end()

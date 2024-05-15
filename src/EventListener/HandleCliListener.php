@@ -74,4 +74,5 @@ class HandleCliListener implements EventSubscriberInterface
             ConsoleEvents::ERROR   => 'onConsoleError',
         ];
     }
+
 }

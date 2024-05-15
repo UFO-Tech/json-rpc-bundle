@@ -47,6 +47,8 @@ class UfoReflectionProcedure
 
     protected string $concat = Info::DEFAULT_CONCAT;
 
+    protected bool $async = false;
+
     protected AssertionsCollection $assertions;
 
     public function __construct(
@@ -70,13 +72,14 @@ class UfoReflectionProcedure
     {
         $procedureClassName = $this->reflection->getShortName();
         try {
-            $infoAttribut = $this->reflection->getAttributes(Info::class)[0];
+            $infoAttribute = $this->reflection->getAttributes(Info::class)[0];
             /**
              * @var Info $info
              */
-            $info = $infoAttribut->newInstance();
+            $info = $infoAttribute->newInstance();
             $procedureClassName = $info->alias ?? $procedureClassName;
             $this->concat = $info->concat;
+            $this->async = $info->async;
         } catch (\Throwable) {
         } finally {
             $this->name = $procedureClassName;

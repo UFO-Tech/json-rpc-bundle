@@ -28,10 +28,12 @@ class TokenRpcSecurity implements IRpcSecurity
      * @var string
      */
     protected string $tokenHeader = '';
+
     /**
      * @var Request
      */
     protected Request $request;
+
     protected RouteCollection $protectedPath;
 
     /**
@@ -124,10 +126,11 @@ class TokenRpcSecurity implements IRpcSecurity
     public function isValidRequest(): bool
     {
         $requestMethod = $this->request->getMethod();
-        if (in_array($requestMethod, $this->rpcConfig->securityConfig->tokens)) {
+        if (in_array($requestMethod, $this->rpcConfig->securityConfig->protectedMethods)) {
             $this->validateRequest();
         }
 
         return true;
     }
+
 }
