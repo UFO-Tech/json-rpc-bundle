@@ -12,8 +12,12 @@ ufo_json_rpc:
         # Optional response details
         response:
             key_for_methods: methods        # Key used to map services for API methods
-            async_dsn_info:  false          # Provide information about methods that work asynchronously
+            async_dsn_info:  false          # Provide information about API that work asynchronously
+            
             # Information about validations
             validations:
                 json_schema:     false      # Indicates if JSON-schema is used for method validation
                 symfony_asserts: false      # Indicates if an array of Symfony validation constraints is used
+    
+    async:
+#        rpc_async: '%env(resolve:RPC_TRANSPORT_DSN)%'

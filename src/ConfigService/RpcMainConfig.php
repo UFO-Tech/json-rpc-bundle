@@ -36,7 +36,7 @@ final readonly class RpcMainConfig
         $this->securityConfig = new RpcSecurityConfig($configs[RpcSecurityConfig::NAME], $this);
         $this->docsConfig = new RpcDocsConfig($configs[RpcDocsConfig::NAME], $this);
         $this->asyncConfig = new RpcAsyncConfig($configs[RpcAsyncConfig::NAME], $this);
-        $this->url = parse_url($requestStack->getCurrentRequest()->getUri()) ?? [];
+        $this->url = parse_url($requestStack->getCurrentRequest()?->getUri()) ?? [];
     }
 
     protected function recursiveMerge(array $config, array $extraConfig): array
