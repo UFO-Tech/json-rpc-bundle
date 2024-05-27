@@ -45,4 +45,17 @@ class ApiController extends AbstractController
         return new JsonResponse($smd->toArray());
     }
 
+    #[Route('/test', name: self::COLLECTION_ROUTE, methods: ["GET", 'OPTIONS', 'POST'], format: 'json')]
+    public function test(MessageBusInterface $bus)
+    {
+        //        $token = $_ENV['UFO_API_TOKEN'];
+        //        $bus->dispatch(new RpcAsyncRequest(new RpcRequest(rand(), 'ping'), $token));
+        //        $bus->dispatch(new RpcAsyncRequest(new RpcRequest(rand(), 'ExampleApi.getUserInfo', [
+        //            'id'    => 21,
+        //            'name'  => "Ivan",
+        //            'email' => 'dd@qq.sa',
+        //        ]), $token));
+        return new Response('ok');
+    }
+
 }
