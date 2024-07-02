@@ -16,6 +16,7 @@ use Ufo\RpcObject\RPC\AssertionsCollection;
 use Ufo\RpcObject\RPC\Cache;
 use Ufo\RpcObject\RPC\Info;
 use Ufo\RpcObject\RPC\Response;
+use Ufo\RpcObject\Transformer\AttributeHelper;
 
 use function count;
 use function current;
@@ -167,8 +168,12 @@ class UfoReflectionProcedure
                 } catch (ReflectionException) {
                 }
                 try {
-                    $this->assertions->addAssertions($paramRef->getName(),
-                        $paramRef->getAttributes(Assertions::class)[0]->newInstance());
+                    
+                    $this->assertions->fillAssertion(
+                        $service->getProcedure()::class,
+                        $method,
+                        $paramRef
+                    );
                 } catch (\Throwable) {
                 }
             }
