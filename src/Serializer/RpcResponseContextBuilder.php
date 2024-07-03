@@ -7,8 +7,10 @@ use Symfony\Component\Serializer\Context\ContextBuilderTrait;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Ufo\RpcObject\RpcResponse;
 
+use function array_map;
 use function array_merge;
 use function array_merge_recursive;
+use function is_array;
 
 final class RpcResponseContextBuilder implements ContextBuilderInterface
 {
@@ -28,9 +30,29 @@ final class RpcResponseContextBuilder implements ContextBuilderInterface
         return $this;
     }
 
+    /**
+     * @param string|string[] $group
+     * @return $this
+     */
+    public function withGroup(string|array $group): static
+    {
+        if (is_array($group)) {
+            array_map(
+                function ($g) {
+                    $this->withGroup($g);
+                },
+                $group
+            );
+        } else {
+            $this->withContext([AbstractNormalizer::GROUPS => $group]);
+        }
+
+        return $this;
+    }
+
     public function withResponseSignature(RpcResponse $response): static
     {
-        $this->withContext([AbstractNormalizer::GROUPS => $response->getResponseSignature()]);
+        $this->withGroup($response->getResponseSignature());
         return $this;
     }
 }
