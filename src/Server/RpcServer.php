@@ -8,6 +8,7 @@ use Symfony\Component\Serializer\SerializerInterface;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\Exceptions\ServiceNotFoundException;
+use Ufo\JsonRpcBundle\Serializer\RpcResponseContextBuilder;
 use Ufo\RpcObject\Rules\Validator\RpcValidator;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\UfoReflectionProcedure;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
@@ -38,7 +39,8 @@ class RpcServer
         protected ServiceLocator $serviceLocator,
         protected RpcValidator $rpcValidator,
         protected RpcMainConfig $rpcConfig,
-        protected ?LoggerInterface $logger = null
+        protected RpcResponseContextBuilder $contextBuilder,
+        protected ?LoggerInterface $logger = null,
     ) {}
 
     /**
@@ -85,9 +87,13 @@ class RpcServer
             ]);
         }
 
-        return new RpcResponse(id           : $this->requestObject?->getId() ?? 'not_processed', error: $error,
-                               version      : $this->requestObject?->getVersion() ?? 'not_processed',
-                               requestObject: $this->requestObject);
+        return new RpcResponse(
+            id: $this->requestObject?->getId() ?? 'not_processed',
+            error: $error,
+            version: $this->requestObject?->getVersion() ?? 'not_processed',
+            requestObject: $this->requestObject,
+            contextBuilder: $this->contextBuilder
+        );
     }
 
     /**
@@ -116,8 +122,14 @@ class RpcServer
             throw RpcRuntimeException::fromThrowable($e);
         }
 
-        return new RpcResponse(id           : $request->getId(), result: $result, version: $request->getVersion(),
-                               requestObject: $request, cache: $service->getCacheInfo());
+        return new RpcResponse(
+            id: $request->getId(),
+            result: $result,
+            version: $request->getVersion(),
+            requestObject: $request,
+            cache: $service->getCacheInfo(),
+            contextBuilder: $this->contextBuilder
+        );
     }
 
     /**

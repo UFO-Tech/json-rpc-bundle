@@ -9,6 +9,7 @@ use Symfony\Component\Serializer\SerializerInterface;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\Controller\ApiController;
+use Ufo\JsonRpcBundle\Serializer\RpcResponseContextBuilder;
 use Ufo\RpcObject\Rules\Validator\ConstraintsImposedException;
 use Ufo\RpcObject\Rules\Validator\RpcValidator;
 use Ufo\JsonRpcBundle\Server\RpcCache\RpcCacheService;
@@ -48,11 +49,18 @@ class RpcServerFacade implements IFacadeRpcServer
         #[TaggedIterator('ufo.rpc.service')]
         protected iterable $procedures,
         protected RpcMainConfig $rpcConfig,
+        protected RpcResponseContextBuilder $contextBuilder,
         LoggerInterface $logger = null
     ) {
         $this->initServiceLocator();
-        $this->rpcServer = new RpcServer($this->serializer, $this->serviceLocator, $this->validator, $this->rpcConfig,
-            $logger);
+        $this->rpcServer = new RpcServer(
+            $this->serializer,
+            $this->serviceLocator,
+            $this->validator,
+            $this->rpcConfig,
+            $this->contextBuilder,
+            $logger
+        );
         $this->init();
     }
 

@@ -3,8 +3,11 @@
 namespace Ufo\JsonRpcBundle\Server;
 
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Serializer\Context\ContextBuilderInterface;
+use Symfony\Component\Serializer\Context\Normalizer\ObjectNormalizerContextBuilder;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
+use Ufo\JsonRpcBundle\Serializer\RpcResponseContextBuilder;
 use Ufo\RpcError\AbstractRpcErrorException;
 use Ufo\RpcError\RpcAsyncRequestException;
 use Ufo\RpcError\RpcJsonParseException;
@@ -33,6 +36,7 @@ class RpcRequestHandler
         protected SerializerInterface $serializer,
         protected RpcAsyncProcessor $asyncProcessor,
         protected RpcCallbackProcessor $callbackProcessor,
+        protected RpcResponseContextBuilder $contextBuilder
     ) {}
 
     public function handle(Request $request, bool $json = false): array|string
@@ -101,8 +105,13 @@ class RpcRequestHandler
                 } else {
                     $error = new RpcError(AbstractRpcErrorException::DEFAULT_CODE, 'Uncatched async error', $e);
                 }
-                $response = new RpcResponse(id           : $request->getId(), error: $error,
-                                            version      : $request->getVersion(), requestObject: $request);
+                $response = new RpcResponse(
+                    id: $request->getId(),
+                    error: $error,
+                    version: $request->getVersion(),
+                    requestObject: $request,
+                    contextBuilder: $this->contextBuilder
+                );
             }
             $result = $this->serializer->normalize($response,
                 context: [AbstractNormalizer::GROUPS => [$response->getResponseSignature()]]);
@@ -132,12 +141,8 @@ class RpcRequestHandler
     public function provideSingleRequest(RpcRequest $singleRequest): array
     {
         $result = $this->provideSingleRequestToResponse($singleRequest);
-        $context = [
-            AbstractNormalizer::GROUPS      => [$result->getResponseSignature()],
-            RpcErrorNormalizer::RPC_CONTEXT => true,
-        ];
-
-        return $this->serializer->normalize($result, context: $context);
+        $context = $this->contextBuilder->withResponseSignature($result);
+        return $this->serializer->normalize($result, context: $context->toArray());
     }
 
     public function provideSingleRequestToResponse(RpcRequest $singleRequest): RpcResponse
@@ -152,13 +157,19 @@ class RpcRequestHandler
                 $status = false;
                 $data = $e;
             }
-            $result = new RpcResponse($singleRequest->getId(), [
-                'callback' => [
-                    'url'    => (string)$singleRequest->getRpcParams()->getCallbackObject(),
-                    'status' => $status,
-                    'data'   => $data,
+            $result = new RpcResponse(
+                $singleRequest->getId(),
+                [
+                    'callback' => [
+                        'url'    => (string)$singleRequest->getRpcParams()->getCallbackObject(),
+                        'status' => $status,
+                        'data'   => $data,
+                    ],
                 ],
-            ], version: $singleRequest->getVersion(), requestObject: $singleRequest);
+                version: $singleRequest->getVersion(),
+                requestObject: $singleRequest,
+                contextBuilder: $this->contextBuilder
+            );
         }
 
         return $result;
