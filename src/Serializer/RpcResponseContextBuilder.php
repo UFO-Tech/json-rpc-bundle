@@ -31,5 +31,6 @@ final class RpcResponseContextBuilder implements ContextBuilderInterface
     public function withResponseSignature(RpcResponse $response): static
     {
         $this->withContext([AbstractNormalizer::GROUPS => $response->getResponseSignature()]);
+        return $this;
     }
 }
