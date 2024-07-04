@@ -10,11 +10,14 @@ use Ufo\RpcObject\RpcResponse;
 use function array_map;
 use function array_merge;
 use function array_merge_recursive;
+use function in_array;
 use function is_array;
 
 final class RpcResponseContextBuilder implements ContextBuilderInterface
 {
     use ContextBuilderTrait;
+
+    protected string $parent = '';
 
     public function __construct() 
     {
@@ -44,7 +47,7 @@ final class RpcResponseContextBuilder implements ContextBuilderInterface
                 $group
             );
         } else {
-            $this->withContext([AbstractNormalizer::GROUPS => $group]);
+            $this->withContext([AbstractNormalizer::GROUPS => [$group]]);
         }
 
         return $this;
@@ -52,7 +55,20 @@ final class RpcResponseContextBuilder implements ContextBuilderInterface
 
     public function withResponseSignature(RpcResponse $response): static
     {
-        $this->withGroup($response->getResponseSignature());
+        $this->withGroup($this->parent = $response->getResponseSignature());
+        return $this;
+    }
+
+    public function removeParent(): static
+    {
+        if (isset($this->context[AbstractNormalizer::GROUPS])) {
+            $this->context[AbstractNormalizer::GROUPS] = array_filter(
+                $this->context[AbstractNormalizer::GROUPS],
+                function ($item)  {
+                    return $item !== $this->parent;
+                }
+            );
+        }
         return $this;
     }
 }
