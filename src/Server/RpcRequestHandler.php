@@ -24,12 +24,7 @@ use Ufo\RpcObject\RpcResponse;
 class RpcRequestHandler
 {
     protected Request $request;
-
-    protected bool $isBatchRequest = false;
-
-    protected RpcBatchRequest $batchRequest;
-
-    protected RpcRequest $requestObject;
+    protected RpcRequestHelper $requestHelper;
 
     public function __construct(
         protected IFacadeRpcServer $rpcServerFacade,
@@ -42,6 +37,7 @@ class RpcRequestHandler
     public function handle(Request $request, bool $json = false): array|string
     {
         $this->request = $request;
+        $this->requestHelper = new RpcRequestHelper($request);
         $this->rpcServerFacade->getSecurity()->isValidRequest();
         try {
             $result = $this->handlePost();
@@ -70,7 +66,7 @@ class RpcRequestHandler
             throw new WrongWayException();
         }
 
-        return $this->checkBatchRequest()->createRequestObject()->smartHandle();
+        return $this->smartHandle();
     }
 
     protected function processQueue(array &$queue, ?\Closure $callback): void
@@ -90,7 +86,7 @@ class RpcRequestHandler
     protected function closureSetResponse(): \Closure
     {
         return function (string $output, RpcRequest $request) {
-            $batchRequest = $this->batchRequest;
+            $batchRequest = $this->requestHelper->getRequestObject();
             try {
                 if (empty($output)) {
                     throw new RpcAsyncRequestException('The async process did not return any results. Try increasing the timeout by adding the "$rpc.timeout" parameter on params request');
@@ -124,15 +120,14 @@ class RpcRequestHandler
 
     protected function smartHandle(): array
     {
-        if ($this->isBatchRequest) {
-            $batchRequest = $this->batchRequest;
-            $this->processQueue($batchRequest->getReadyToHandle(), $this->closureSetResponse());
-            foreach ($batchRequest->provideUnprocessedRequests() as $key => $unprocessedRequest) {
-                $batchRequest->addResult($this->provideSingleRequest($unprocessedRequest));
+        if (($requestObj = $this->requestHelper->getRequestObject()) instanceof RpcBatchRequest) {
+            $this->processQueue($requestObj->getReadyToHandle(), $this->closureSetResponse());
+            foreach ($requestObj->provideUnprocessedRequests() as $key => $unprocessedRequest) {
+                $requestObj->addResult($this->provideSingleRequest($unprocessedRequest));
             }
-            $result = $batchRequest->getResults(false);
+            $result = $requestObj->getResults(false);
         } else {
-            $result = $this->provideSingleRequest($this->requestObject);
+            $result = $this->provideSingleRequest($requestObj);
         }
 
         return $result;
@@ -175,44 +170,13 @@ class RpcRequestHandler
         return $result;
     }
 
-    protected function checkBatchRequest(): static
-    {
-        $firstChar = substr(trim($this->request->getContent()), 0, 1);
-        if ($firstChar === '[') {
-            $this->isBatchRequest = true;
-        }
-
-        return $this;
-    }
-
-    /**
-     * @return $this
-     * @throws RpcJsonParseException
-     */
-    protected function createRequestObject(): static
-    {
-        if ($this->isBatchRequest) {
-            $this->batchRequest = RpcBatchRequest::fromJson($this->request->getContent());
-        } else {
-            $this->requestObject = RpcRequest::fromJson($this->request->getContent());
-        }
-
-        return $this;
-    }
-
     public function isGet(): bool
     {
-        return $this->checkMethod(Request::METHOD_GET);
+        return $this->requestHelper->isGet();
     }
 
     public function isPost(): bool
     {
-        return $this->checkMethod(Request::METHOD_POST);
+        return $this->requestHelper->isPost();
     }
-
-    protected function checkMethod(string $method): bool
-    {
-        return $method == $this->request->getMethod();
-    }
-
 }
