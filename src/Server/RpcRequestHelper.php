@@ -36,7 +36,7 @@ class RpcRequestHelper
         protected Request $request
     )
     {
-        $this->createRequestObject();
+        $this->checkBatchRequest()->createRequestObject();
     }
 
     protected function checkBatchRequest(): static

@@ -3,8 +3,6 @@
 namespace Ufo\JsonRpcBundle\Server;
 
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Serializer\Context\ContextBuilderInterface;
-use Symfony\Component\Serializer\Context\Normalizer\ObjectNormalizerContextBuilder;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
 use Ufo\JsonRpcBundle\Serializer\RpcResponseContextBuilder;
@@ -13,7 +11,6 @@ use Ufo\RpcError\RpcAsyncRequestException;
 use Ufo\RpcError\RpcJsonParseException;
 use Ufo\RpcError\WrongWayException;
 use Ufo\JsonRpcBundle\Interfaces\IFacadeRpcServer;
-use Ufo\JsonRpcBundle\Serializer\RpcErrorNormalizer;
 use Ufo\JsonRpcBundle\Server\Async\RpcAsyncProcessor;
 use Ufo\JsonRpcBundle\Server\Async\RpcCallbackProcessor;
 use Ufo\RpcObject\RpcBatchRequest;
