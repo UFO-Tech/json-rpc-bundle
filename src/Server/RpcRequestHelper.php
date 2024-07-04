@@ -55,6 +55,9 @@ class RpcRequestHelper
      */
     protected function createRequestObject(): static
     {
+        if ($this->isGet()) {
+            return $this;
+        }
         if ($this->isBatchRequest) {
             $this->batchRequest = RpcBatchRequest::fromJson($this->request->getContent());
         } else {
