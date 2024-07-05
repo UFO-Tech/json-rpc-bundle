@@ -11,22 +11,19 @@ use Ufo\JsonRpcBundle\Package;
 use Ufo\RpcError\RpcMethodNotFoundExceptionRpc;
 use Ufo\RpcObject\RpcTransport;
 
-use function current;
-use function explode;
 use function is_null;
 
 class ServiceLocator implements ContainerInterface
 {
     const ENV_JSON_RPC_2 = 'JSON-RPC-2.0';
-    const ENV_UFO_RPC = self::ENV_JSON_RPC_2.'/UFO-RPC-'.Package::VERSION;
     const JSON = 'application/json';
     const POST = 'POST';
 
     protected string $contentType = self::JSON;
 
-    protected string $description = '';
+    protected ?string $description = null;
 
-    protected string $envelope = self::ENV_UFO_RPC;
+    protected string $envelope;
 
     protected array $services = [];
 
@@ -69,6 +66,9 @@ class ServiceLocator implements ContainerInterface
      */
     public function getEnvelope(): string
     {
+        if (!isset($this->envelope)) {
+            $this->envelope = self::ENV_JSON_RPC_2.'/UFO-RPC-' . Package::version();
+        }
         return $this->envelope;
     }
 
@@ -105,7 +105,7 @@ class ServiceLocator implements ContainerInterface
 
     public function getDescription(): string
     {
-        return $this->description;
+        return $this->description ?? Package::description();
     }
 
     /**
@@ -205,14 +205,11 @@ class ServiceLocator implements ContainerInterface
      */
     public function toArray(): array
     {
-        $description = $this->getDescription();
-        $transport = $this->getTransport();
-        $envelope = $this->getEnvelope();
         $service = [
-            'envelope'    => $envelope,
+            'envelope'    => $this->getEnvelope(),
             'contentType' => $this->contentType,
-            'description' => $description,
-            'transport'   => $transport,
+            'description' => $this->getDescription(),
+            'transport'   => $this->getTransport(),
         ];
         $services = $this->getServices();
         if (empty($services)) {
@@ -222,7 +219,10 @@ class ServiceLocator implements ContainerInterface
         foreach ($services as $name => $svc) {
             $service[$this->methodsKey][$name] = $svc->toArray();
         }
-
+        $service['readDocs'] = [
+            'json-rpc' => Package::protocolSpecification(),
+            Package::bundleName() => Package::bundleDocumentation(),
+        ];
         return $service;
     }
 
