@@ -4,7 +4,10 @@ namespace Ufo\JsonRpcBundle\Server;
 
 use Psr\Log\LoggerInterface;
 use ReflectionException;
+use ReflectionMethod;
 use Symfony\Component\Serializer\SerializerInterface;
+use Throwable;
+use TypeError;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\Exceptions\ServiceNotFoundException;
@@ -76,7 +79,7 @@ class RpcServer
             try {
                 $method = $this->requestObject?->getMethod();
                 $params = $this->requestObject?->getParams();
-            } catch (\Throwable) {
+            } catch (Throwable) {
                 $method = null;
                 $params = null;
             }
@@ -114,11 +117,11 @@ class RpcServer
         $params = $this->validateAndPrepareParams($request, $service);
         try {
             $result = $this->dispatch($service, $this->serializer->normalize($params));
-        } catch (\TypeError $e) {
+        } catch (TypeError $e) {
             $message = preg_replace('/.*\\\\/', '', $e->getMessage());
             $message = preg_replace('/Argument #\d+ \(\$([a-zA-Z0-9_]+)\)/', 'Parameter "$1"', $message);
             throw new RpcBadParamException($message);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             throw RpcRuntimeException::fromThrowable($e);
         }
 
@@ -151,7 +154,7 @@ class RpcServer
      * @param Service $service
      * @return array
      * @throws RpcBadParamException
-     * @throws \ReflectionException
+     * @throws ReflectionException
      */
     private function validateAndPrepareParams(
         RpcRequest $request,
@@ -166,7 +169,7 @@ class RpcServer
      * @param Service $service
      * @return array
      * @throws RpcBadParamException
-     * @throws \ReflectionException
+     * @throws ReflectionException
      */
     private function validateAndPrepareNamedParams(
         RpcRequest $request,
@@ -177,7 +180,7 @@ class RpcServer
             $requestedParams = $service->getDefaultParams($request->getParams());
         }
         $orderedParams = [];
-        $refMethod = new \ReflectionMethod($service->getProcedure(), $service->getMethodName());
+        $refMethod = new ReflectionMethod($service->getProcedure(), $service->getMethodName());
         foreach ($refMethod->getParameters() as $refParam) {
             if (array_key_exists($refParam->getName(), $requestedParams)) {
                 $orderedParams[$refParam->getName()] = $requestedParams[$refParam->getName()];

@@ -2,9 +2,11 @@
 
 namespace Ufo\JsonRpcBundle\Server;
 
+use Closure;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
+use Throwable;
 use Ufo\JsonRpcBundle\Serializer\RpcResponseContextBuilder;
 use Ufo\RpcError\AbstractRpcErrorException;
 use Ufo\RpcError\RpcAsyncRequestException;
@@ -66,7 +68,7 @@ class RpcRequestHandler
         return $this->smartHandle();
     }
 
-    protected function processQueue(array &$queue, ?\Closure $callback): void
+    protected function processQueue(array &$queue, ?Closure $callback): void
     {
         foreach ($queue as $key => &$singleRequest) {
             /**
@@ -80,7 +82,7 @@ class RpcRequestHandler
         $this->asyncProcessor->process($callback);
     }
 
-    protected function closureSetResponse(): \Closure
+    protected function closureSetResponse(): Closure
     {
         return function (string $output, RpcRequest $request) {
             $batchRequest = $this->requestHelper->getRequestObject();
@@ -92,7 +94,7 @@ class RpcRequestHandler
                  * @var RpcResponse $response
                  */
                 $response = $this->serializer->deserialize($output, RpcResponse::class, 'json');
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 if ($e instanceof AbstractRpcErrorException) {
                     $error = new RpcError($e->getCode(), $e->getMessage(), $e);
                 } else {

@@ -17,6 +17,8 @@ class Service
 
     protected array $return;
 
+    protected string $returnDescription = '';
+
     protected ?Response $responseInfo = null;
 
     protected array $schema = [];
@@ -197,12 +199,13 @@ class Service
 
     /**
      * @param string $type
+     * @param string|null $desc
      * @return $this
      */
-    public function addReturn(string $type): static
+    public function addReturn(string $type, ?string $desc = null): static
     {
         $this->return[] = $this->validateParamType($type);
-
+        $this->returnDescription = $desc ?? '';
         return $this;
     }
 
@@ -332,6 +335,11 @@ class Service
     public function getSchema(): array
     {
         return $this->schema;
+    }
+
+    public function getReturnDescription(): string
+    {
+        return $this->returnDescription;
     }
 
 }

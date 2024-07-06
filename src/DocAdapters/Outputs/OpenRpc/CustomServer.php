@@ -3,6 +3,7 @@
 namespace Ufo\JsonRpcBundle\DocAdapters\Outputs\OpenRpc;
 
 use PSX\OpenAPI\Server;
+use PSX\Record\RecordInterface;
 
 class CustomServer extends Server
 {
@@ -13,7 +14,7 @@ class CustomServer extends Server
         $this->name = $name;
     }
 
-    public function toRecord(): \PSX\Record\RecordInterface
+    public function toRecord(): RecordInterface
     {
         $record = parent::toRecord();
         $record->put('name', $this->name);

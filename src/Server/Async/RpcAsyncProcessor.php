@@ -2,9 +2,11 @@
 
 namespace Ufo\JsonRpcBundle\Server\Async;
 
+use Closure;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Serializer\SerializerInterface;
+use Throwable;
 use Ufo\JsonRpcBundle\CliCommand\UfoRpcProcessCommand;
 use Ufo\JsonRpcBundle\Interfaces\IFacadeRpcServer;
 use Ufo\JsonRpcBundle\Server\RpcServerFacade;
@@ -109,11 +111,11 @@ class RpcAsyncProcessor
     }
 
     /**
-     * @param \Closure|null $callback function(string $output) {}
+     * @param Closure|null $callback function(string $output) {}
      * @return array
      * @throws RpcAsyncRequestException
      */
-    public function process(?\Closure $callback = null): array
+    public function process(?Closure $callback = null): array
     {
         $results = [];
         $queue = &$this->getProcesses();
@@ -152,7 +154,7 @@ class RpcAsyncProcessor
             echo PHP_EOL;
             $group = $message->getRpcRequest()->hasError() ? RpcResponse::IS_ERROR : RpcResponse::IS_RESULT;
             echo '<<< '.$this->serializer->serialize($response, 'json', ['groups' => [$group]]).PHP_EOL.PHP_EOL;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             echo '<<< '.$this->serializer->serialize($response, 'json', ['groups' => [RpcResponse::IS_ERROR]]);
         }
         echo PHP_EOL.PHP_EOL;

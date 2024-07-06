@@ -2,10 +2,12 @@
 
 namespace Ufo\JsonRpcBundle\Server;
 
+use Exception;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\TaggedIterator;
 use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\Serializer\SerializerInterface;
+use Throwable;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\Controller\ApiController;
@@ -134,7 +136,7 @@ class RpcServerFacade implements IFacadeRpcServer
         } catch (WrongWayException $e) {
             // error in request
             $response = $this->handleError($singleRequest->getError());
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $singleRequest->setError($e);
             $response = $this->handleError($e);
         }
@@ -164,7 +166,7 @@ class RpcServerFacade implements IFacadeRpcServer
         }
     }
 
-    protected function handleError(\Throwable $e): RpcResponse
+    protected function handleError(Throwable $e): RpcResponse
     {
         $code = ($e instanceof AbstractRpcErrorException) ? $e->getCode() : AbstractRpcErrorException::DEFAULT_CODE;
         $data = ($e instanceof ConstraintsImposedException) ? $e->getConstraintsImposed() : $e;
@@ -188,7 +190,7 @@ class RpcServerFacade implements IFacadeRpcServer
             $serviceLocator = $this->rpcServer->getServiceLocator();
             $serviceLocator->setTarget($this->router->generate(ApiController::API_ROUTE));
             $response = $serviceLocator;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $response = $this->handleError($e);
         }
 

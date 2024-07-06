@@ -3,6 +3,7 @@
 namespace Ufo\JsonRpcBundle\Serializer;
 
 use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
+use Throwable;
 use Ufo\RpcError\AbstractRpcErrorException;
 use Ufo\RpcError\ExceptionToArrayTransformer;
 
@@ -13,7 +14,7 @@ final class RpcErrorNormalizer implements NormalizerInterface
     public function __construct(protected string $environment = 'dev') {}
 
     /**
-     * @param \Throwable $object
+     * @param Throwable $object
      * @param ?string $format
      * @param array $context
      * @return array

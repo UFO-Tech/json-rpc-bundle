@@ -68,7 +68,7 @@ class OpenRpcAdapter
         $this->rpcSpecBuilder->buildResult(
             $method,
             implode(', ', $service->getReturn()),
-            '',
+            $service->getReturnDescription(),
             ['type' => implode(', ', $service->getReturn())]
         );
         $this->rpcSpecBuilder->buildTag($method, $service->getProcedure()::class);

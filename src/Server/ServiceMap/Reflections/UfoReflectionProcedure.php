@@ -7,7 +7,11 @@ use phpDocumentor\Reflection\DocBlockFactory;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionMethod;
+use ReflectionNamedType;
+use ReflectionType;
+use ReflectionUnionType;
 use Symfony\Component\Serializer\SerializerInterface;
+use Throwable;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 use Ufo\JsonRpcBundle\ConfigService\RpcDocsConfig;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
@@ -81,7 +85,7 @@ class UfoReflectionProcedure
             $procedureClassName = $info->alias ?? $procedureClassName;
             $this->concat = $info->concat;
             $this->async = $info->async;
-        } catch (\Throwable) {
+        } catch (Throwable) {
         } finally {
             $this->name = $procedureClassName;
             $this->namespace = $this->reflection->getNamespaceName();
@@ -99,12 +103,13 @@ class UfoReflectionProcedure
         } else {
             $returns = $this->getTypes($returnReflection);
         }
+        $returnDesc = $this->getReturnDescription($this->methodDoc);
         if (is_array($returns)) {
             foreach ($returns as $type) {
-                $service->addReturn($this->typeFrom($type));
+                $service->addReturn($this->typeFrom($type), $returnDesc);
             }
         } else {
-            $service->addReturn($this->typeFrom($returns));
+            $service->addReturn($this->typeFrom($returns), $returnDesc);
         }
         $cache = $method->getAttributes(Cache::class);
         if (count($cache) > 0) {
@@ -121,22 +126,22 @@ class UfoReflectionProcedure
         $service->setResponseInfo($responseInfo);
     }
 
-    protected function typeFrom(\ReflectionNamedType|string $type): string
+    protected function typeFrom(ReflectionNamedType|string $type): string
     {
-        return ($type instanceof \ReflectionNamedType) ? $type->getName() : $type;
+        return ($type instanceof ReflectionNamedType) ? $type->getName() : $type;
     }
 
-    protected function getTypes(?\ReflectionType $reflection): array|string
+    protected function getTypes(?ReflectionType $reflection): array|string
     {
         $return = 'any';
         $returns = [];
-        if ($reflection instanceof \ReflectionNamedType) {
+        if ($reflection instanceof ReflectionNamedType) {
             $return = $reflection->getName();
             if ($reflection->allowsNull()) {
                 $returns[] = $return;
                 $returns[] = 'null';
             }
-        } elseif ($reflection instanceof \ReflectionUnionType) {
+        } elseif ($reflection instanceof ReflectionUnionType) {
             foreach ($reflection->getTypes() as $type) {
                 $returns[] = $this->getTypes($type);
             }
@@ -174,7 +179,7 @@ class UfoReflectionProcedure
                         $method,
                         $paramRef
                     );
-                } catch (\Throwable) {
+                } catch (Throwable) {
                 }
             }
         }
@@ -183,7 +188,7 @@ class UfoReflectionProcedure
         }
     }
 
-    protected function getParamDescription(DocBlock $docBlock, string $paramName)
+    protected function getParamDescription(DocBlock $docBlock, string $paramName): string
     {
         $desc = '';
         /**
@@ -200,6 +205,19 @@ class UfoReflectionProcedure
         }
 
         return $desc;
+    }
+
+    protected function getReturnDescription(DocBlock $docBlock): string
+    {
+        $desc = '';
+        /**
+         * @var DocBlock\Tags\Return_ $return
+         */
+        foreach ($docBlock->getTagsByName('return') as $return) {
+            $desc = $return->getDescription();
+        }
+        return $desc;
+
     }
 
     /**
@@ -247,7 +265,8 @@ class UfoReflectionProcedure
             $service->setSchema($this->serializer->normalize($this->assertions, context: [
                 'service' => $service,
             ]));
-        } catch (\Throwable) {
+        } catch (Throwable $e) {
+            $a = 1;
         }
     }
 

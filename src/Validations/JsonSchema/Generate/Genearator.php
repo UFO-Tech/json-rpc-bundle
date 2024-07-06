@@ -4,6 +4,7 @@ namespace Ufo\JsonRpcBundle\Validations\JsonSchema\Generate;
 
 use Symfony\Component\DependencyInjection\Attribute\TaggedIterator;
 use Symfony\Component\Validator\Constraint;
+use Throwable;
 use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Interfaces\IConstraintGenerator;
 
 class Genearator
@@ -29,7 +30,7 @@ class Genearator
     {
         try {
             $this->constraints[$constraint::class]->generate($constraint, $rules);
-        } catch (\Throwable) {
+        } catch (Throwable) {
         }
     }
 }

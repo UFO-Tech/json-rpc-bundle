@@ -11,6 +11,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
+use Throwable;
 use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
 use Ufo\JsonRpcBundle\Serializer\RpcErrorNormalizer;
 use Ufo\JsonRpcBundle\Server\RpcRequestHandler;
@@ -57,7 +58,7 @@ class UfoRpcProcessCommand extends Command
             $result = $this->serializer->serialize($result, 'json', $context);
             $io->writeln($result);
             return Command::SUCCESS;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $io->getErrorStyle()->error([
                 $e->getMessage(),
                 $e->getFile() . ': ' . $e->getLine()
