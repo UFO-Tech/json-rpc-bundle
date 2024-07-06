@@ -105,7 +105,7 @@ class ServiceLocator implements ContainerInterface
 
     public function getDescription(): string
     {
-        return $this->description ?? Package::description();
+        return $this->description ?? $this->getMainConfig()->projectDesc;
     }
 
     /**
@@ -206,9 +206,12 @@ class ServiceLocator implements ContainerInterface
     public function toArray(): array
     {
         $service = [
+            'WARNING'    => 'This documentation format is deprecated and will be removed soon. In version 7.0, it will be replaced with a format compliant with the OpenRPC specification (https://spec.open-rpc.org/).',
+            'NEW_FORMAT' => (string)RpcTransport::fromArray($this->mainConfig->url) . '/openrpc.json',
             'envelope'    => $this->getEnvelope(),
-            'contentType' => $this->contentType,
+            'name' => $this->getMainConfig()->projectName,
             'description' => $this->getDescription(),
+            'contentType' => $this->contentType,
             'transport'   => $this->getTransport(),
         ];
         $services = $this->getServices();
@@ -226,5 +229,9 @@ class ServiceLocator implements ContainerInterface
         return $service;
     }
 
+    public function getMainConfig(): RpcMainConfig
+    {
+        return $this->mainConfig;
+    }
 }
 

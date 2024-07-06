@@ -39,6 +39,11 @@ final class Package
         return self::$homepage ?? Package::fromComposer('homepage') ?? '';
     }
 
+    public static function projectLicense(): string
+    {
+        return Package::fromComposer('license', true) ?? 'MIT';
+    }
+
     public static function protocolSpecification(): string
     {
         return self::SPECIFICATION;

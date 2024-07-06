@@ -41,7 +41,7 @@ class JsonSchemaNormalizer implements NormalizerInterface
         $assertionsList = $assertionsCollection->getAssertionsCollection();
         $properties = [];
         foreach ($service->getParams() as $property => $data) {
-            $assertions = $assertionsList[$property] ?? new Assertions();
+            $assertions = $assertionsList[$property] ?? new Assertions([]);
             $properties[$property] = $this->paramNormalizer->normalize(
                 $assertions,
                 context: $data

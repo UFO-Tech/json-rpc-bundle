@@ -11,6 +11,8 @@ use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Genearator;
 use Ufo\RpcObject\RPC\Assertions;
 use Symfony\Component\Validator\Constraints as Assert;
 
+use function is_array;
+
 #[AutoconfigureTag('serializer.normalizer')]
 class JsonSchemaPropertyNormalizer implements NormalizerInterface
 {
@@ -20,7 +22,7 @@ class JsonSchemaPropertyNormalizer implements NormalizerInterface
     protected array $schema = [];
 
     public function __construct(
-        private readonly Genearator $genearator
+        private readonly Genearator $generator
     ) {}
 
     /**
@@ -32,10 +34,8 @@ class JsonSchemaPropertyNormalizer implements NormalizerInterface
     public function normalize($assertions, ?string $format = null, array $context = []): array
     {
         $this->checkTheType($context);
-        foreach ($assertions as $assertion) {
-            foreach ($assertion as $rule) {
-                $this->genearator->dispatch($rule, $this->schema);
-            }
+        foreach ($assertions->assertions as $assertion) {
+            $this->generator->dispatch($assertion, $this->schema);
         }
         $schema = $this->schema;
         $this->schema = [];
@@ -47,7 +47,11 @@ class JsonSchemaPropertyNormalizer implements NormalizerInterface
     {
         $result = TypeHintResolver::phpToJsonSchema($context['type'] ?? '');
         if (empty($result)) {
-            $this->schema['oneOf'] = TypeHintResolver::mixedForJsonSchema();
+            $result = TypeHintResolver::mixedForJsonSchema();
+        }
+
+        if (is_array($result)) {
+            $this->schema['oneOf'] = $result;
         } else {
             $this->schema[TypeHintResolver::TYPE] = $result;
         }

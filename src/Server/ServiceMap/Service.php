@@ -329,4 +329,9 @@ class Service
         return $this->procedure;
     }
 
+    public function getSchema(): array
+    {
+        return $this->schema;
+    }
+
 }

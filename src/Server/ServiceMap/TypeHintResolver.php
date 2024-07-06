@@ -2,6 +2,8 @@
 
 namespace Ufo\JsonRpcBundle\Server\ServiceMap;
 
+use function is_array;
+
 enum TypeHintResolver: string
 {
     case STRING = 'string';
@@ -24,12 +26,12 @@ enum TypeHintResolver: string
     case FALSE = 'false';
     case DBL = 'dbl';
     case DOUBLE = 'double';
-    const TYPE = 'type';
+    const string TYPE = 'type';
 
     public static function normalize(string $type): string
     {
         return match ($type) {
-            self::ANY->value, self::MIXED->value => self::ANY->value,
+            self::ANY->value, self::MIXED->value => '',
             self::ARR->name, self::ARRAY->value => self::ARRAY->value,
             self::BOOL->value, self::TRUE->value, self::BOOLEAN->value, self::FALSE->value => self::BOOLEAN->value,
             self::DBL->value, self::DOUBLE->value, self::FLOAT->value => self::FLOAT->value,
@@ -50,8 +52,15 @@ enum TypeHintResolver: string
         };
     }
 
-    public static function phpToJsonSchema(string $phpType): string
+    public static function phpToJsonSchema(string|array $phpType): string|array
     {
+        if (is_array($phpType)) {
+            $types = [];
+            foreach ($phpType as $type) {
+                $types[] = [self::TYPE => self::phpToJsonSchema($type)];
+            }
+            return $types;
+        }
         return match ($phpType) {
             self::MIXED->value => '',
             self::FLOAT->value => self::NUMBER->value,

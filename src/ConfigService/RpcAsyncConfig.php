@@ -4,9 +4,9 @@ namespace Ufo\JsonRpcBundle\ConfigService;
 
 final readonly class RpcAsyncConfig
 {
-    const NAME = 'async';
-    const RPC_ASYNC = 'rpc_async';
-    const FAILED = 'failed';
+    const string NAME = 'async';
+    const string RPC_ASYNC = 'rpc_async';
+    const string FAILED = 'failed';
 
     public ?string $rpcAsync;
 

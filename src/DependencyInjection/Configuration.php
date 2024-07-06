@@ -32,6 +32,12 @@ class Configuration implements ConfigurationInterface
 
         $rootNode
             ->children()
+                ->scalarNode(RpcMainConfig::P_PROJECT_NAME)
+                    ->defaultValue(RpcMainConfig::P_PROJECT_NAME_DEFAULT)
+                ->end()
+                 ->scalarNode(RpcMainConfig::P_PROJECT_DESC)
+                    ->defaultValue("")
+                ->end()
                 ->arrayNode(RpcSecurityConfig::NAME)
                     ->children()
                         ->arrayNode(RpcSecurityConfig::PROTECTED_METHODS)
@@ -58,7 +64,7 @@ class Configuration implements ConfigurationInterface
                                 ->arrayNode(RpcDocsConfig::VALIDATIONS)
                                     ->children()
                                         ->booleanNode(RpcDocsConfig::JSON_SCHEMA)
-                                            ->defaultFalse()
+                                            ->defaultTrue()
                                         ->end()
                                         ->booleanNode(RpcDocsConfig::SYMFONY_ASSERTS)
                                             ->defaultFalse()

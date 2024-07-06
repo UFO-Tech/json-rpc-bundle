@@ -1,5 +1,7 @@
 # config/packages/ufo_json_rpc.yaml
 ufo_json_rpc:
+    project_name: 'My Project'
+    project_description: ''
     security:
         protected_methods: ['POST']               # Protection of GET and POST requests
         token_key_in_header: 'Ufo-RPC-Token'      # Name of the key in the header
@@ -16,7 +18,7 @@ ufo_json_rpc:
             
             # Information about validations
             validations:
-                json_schema:     false      # Indicates if JSON-schema is used for method validation
+                json_schema:     true      # deprecated (wil be removed on v.7.0)
                 symfony_asserts: false      # Indicates if an array of Symfony validation constraints is used
     
     async:

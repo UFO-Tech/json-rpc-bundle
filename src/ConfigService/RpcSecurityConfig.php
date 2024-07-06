@@ -4,11 +4,11 @@ namespace Ufo\JsonRpcBundle\ConfigService;
 
 final readonly class RpcSecurityConfig
 {
-    const NAME = 'security';
-    const PROTECTED_METHODS = 'protected_methods';
-    const TOKEN_KEY = 'token_key_in_header';
-    const TOKENS = 'clients_tokens';
-    const DEFAULT_TOKEN_KEY = 'Ufo-RPC-Token';
+    const string NAME = 'security';
+    const string PROTECTED_METHODS = 'protected_methods';
+    const string TOKEN_KEY = 'token_key_in_header';
+    const string TOKENS = 'clients_tokens';
+    const string DEFAULT_TOKEN_KEY = 'Ufo-RPC-Token';
 
     public array $protectedMethods;
 
