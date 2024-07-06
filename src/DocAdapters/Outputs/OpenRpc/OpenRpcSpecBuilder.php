@@ -13,7 +13,7 @@ use PSX\OpenRPC\OpenRPC;
 
 class OpenRpcSpecBuilder
 {
-    public const string OPEN_RPC_VER = "1.3.2";
+    public const string OPEN_RPC_VER = "1.2.6";
 
     protected OpenRPC $openRPC;
 
