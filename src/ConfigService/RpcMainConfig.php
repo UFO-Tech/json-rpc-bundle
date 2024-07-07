@@ -16,11 +16,14 @@ final readonly class RpcMainConfig
     const string P_NAME = 'ufo_json_rpc_config';
     const string P_PROJECT_NAME = 'project_name';
     const string P_PROJECT_DESC = 'project_description';
+    const string P_PROJECT_VER = 'project_version';
     const string P_PROJECT_NAME_DEFAULT = 'My Project';
 
     public string $projectName;
 
     public string $projectDesc;
+
+    public ?string $projectVersion;
 
     public RpcSecurityConfig $securityConfig;
 
@@ -42,6 +45,7 @@ final readonly class RpcMainConfig
         $configs = $configuration->getConfigTreeBuilder()->buildTree()->normalize($configs);
         $this->projectName = $configs[self::P_PROJECT_NAME];
         $this->projectDesc = $configs[self::P_PROJECT_DESC];
+        $this->projectVersion = $configs[self::P_PROJECT_VER];
         $this->securityConfig = new RpcSecurityConfig($configs[RpcSecurityConfig::NAME], $this);
         $this->docsConfig = new RpcDocsConfig($configs[RpcDocsConfig::NAME], $this);
         $this->asyncConfig = new RpcAsyncConfig($configs[RpcAsyncConfig::NAME], $this);

@@ -30,7 +30,7 @@ class OpenRpcSpecBuilder
     public static function createBuilder(
         string $title,
         string $description = '',
-        string $apiVersion = '',
+        ?string $apiVersion = null,
         string $openRpcVersion = self::OPEN_RPC_VER,
         ?string $licenseName = null,
         ?string $contactName = null,
@@ -55,11 +55,10 @@ class OpenRpcSpecBuilder
         return $builder;
     }
 
-    public function addServer(string $name, string $url): static
+    public function addServer(string $url, string $envelop, ?string $name = UfoRpcServer::NAME): static
     {
-        $server = new CustomServer();
+        $server = new UfoRpcServer($envelop, $name);
         $server->setUrl($url);
-        $server->setName($name);
         $this->servers[] = $server;
 
         return $this;

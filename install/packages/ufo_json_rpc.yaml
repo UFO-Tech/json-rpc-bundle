@@ -2,6 +2,8 @@
 ufo_json_rpc:
     project_name: 'My Project'
     project_description: ''
+    project_version: null
+   
     security:
         protected_methods: ['POST']               # Protection of GET and POST requests
         token_key_in_header: 'Ufo-RPC-Token'      # Name of the key in the header

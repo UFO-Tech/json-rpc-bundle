@@ -31,7 +31,7 @@ class OpenRpcAdapter
         $this->rpcSpecBuilder = OpenRpcSpecBuilder::createBuilder(
             $this->serviceLocator->getMainConfig()->projectName,
             $this->serviceLocator->getDescription(),
-            $this->serviceLocator->getEnvelope(),
+            $this->serviceLocator->getMainConfig()->projectVersion,
             licenseName: Package::projectLicense(),
             contactName: Package::bundleName(),
             contactLink: Package::bundleDocumentation(),
@@ -42,8 +42,8 @@ class OpenRpcAdapter
     {
         $http = RpcTransport::fromArray($this->serviceLocator->getMainConfig()->url);
         $this->rpcSpecBuilder->addServer(
-            'Sync http transport',
             $http->getDomainUrl() . $this->serviceLocator->getTarget(),
+            $this->serviceLocator->getEnvelope(),
         );
     }
 
