@@ -1,12 +1,13 @@
 <?php
 
-namespace Ufo\JsonRpcBundle\EventListener;
+namespace Ufo\JsonRpcBundle\EventDrivenModel\Listeners;
 
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\ConsoleEvents;
 use Symfony\Component\Console\Event\ConsoleCommandEvent;
 use Symfony\Component\Console\Event\ConsoleErrorEvent;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Ufo\JsonRpcBundle\CliCommand\UfoRpcProcessCommand;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
@@ -14,11 +15,13 @@ use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
 use Ufo\RpcError\AbstractRpcErrorException;
 use Ufo\RpcError\RpcTokenNotFoundInHeaderException;
 
-class HandleCliListener implements EventSubscriberInterface
+#[AsEventListener(ConsoleEvents::COMMAND, method: 'onConsoleCommand', priority: 1000)]
+#[AsEventListener(ConsoleEvents::ERROR, method: 'onConsoleError', priority: 1000)]
+class CliRpcListener
 {
     public function __construct(
         protected IRpcSecurity $rpcSecurity,
-        protected RpcMainConfig $rpcConfig
+        protected RpcMainConfig $rpcConfig,
     ) {}
 
     public function onConsoleCommand(ConsoleCommandEvent $event): void
@@ -65,14 +68,6 @@ class HandleCliListener implements EventSubscriberInterface
                 die;
             }
         }
-    }
-
-    public static function getSubscribedEvents(): array
-    {
-        return [
-            ConsoleEvents::COMMAND => 'onConsoleCommand',
-            ConsoleEvents::ERROR   => 'onConsoleError',
-        ];
     }
 
 }

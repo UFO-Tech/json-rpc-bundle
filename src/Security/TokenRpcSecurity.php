@@ -30,9 +30,9 @@ class TokenRpcSecurity implements IRpcSecurity
     protected string $tokenHeader = '';
 
     /**
-     * @var Request
+     * @var ?Request
      */
-    protected Request $request;
+    protected ?Request $request;
 
     protected RouteCollection $protectedPath;
 

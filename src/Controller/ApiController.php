@@ -6,13 +6,10 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Annotation\Route;
 use Ufo\JsonRpcBundle\DocAdapters\Outputs\OpenRpcAdapter;
-use Ufo\JsonRpcBundle\Interfaces\IFacadeRpcServer;
 use Ufo\JsonRpcBundle\Server\RpcRequestHandler;
-use Ufo\RpcObject\RpcAsyncRequest;
-use Ufo\RpcObject\RpcRequest;
+use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceLocator;
 
 use function json_encode;
 
@@ -26,25 +23,20 @@ class ApiController extends AbstractController
     const COLLECTION_ROUTE = 'ufo_rpc_api_collection';
     const OPEN_RPC_ROUTE = 'ufo_rpc_api_collection';
 
-    public function __construct(
-        protected IFacadeRpcServer $rpcServerFacade,
-        protected RpcRequestHandler $requestHandler
-    ) {}
-
     /**
      * @param Request $request
      * @return Response
      */
     #[Route('', name: self::API_ROUTE, methods: ["GET", "POST"], format: 'json')]
-    public function serverAction(Request $request): Response
+    public function serverAction(Request $request, RpcRequestHandler $requestHandler): Response
     {
-        return new JsonResponse($this->requestHandler->handle($request));
+        return new JsonResponse($requestHandler->handle($request));
     }
 
     #[Route('/method/{method}', name: self::COLLECTION_ROUTE, methods: ["GET"], format: 'json')]
-    public function docsAction(string $method): Response
+    public function docsAction(string $method, ServiceLocator $serviceLocator): Response
     {
-        $smd = $this->rpcServerFacade->handleSmRequest()->getService($method);
+        $smd = $serviceLocator->getService($method);
 
         return new JsonResponse($smd->toArray());
     }
@@ -52,7 +44,7 @@ class ApiController extends AbstractController
     #[Route('/openrpc.json', name: self::OPEN_RPC_ROUTE, methods: ["GET"], format: 'json')]
     public function openRpcAction(OpenRpcAdapter $openRpcAdapter): Response
     {
-        $doc = $openRpcAdapter->adapt($this->rpcServerFacade->handleSmRequest());
+        $doc = $openRpcAdapter->adapt();
 
         return new JsonResponse(json_encode($doc, JSON_PRETTY_PRINT), json: true);
     }

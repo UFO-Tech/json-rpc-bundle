@@ -3,7 +3,6 @@
 namespace Ufo\JsonRpcBundle\ConfigService;
 
 use Symfony\Component\DependencyInjection\Attribute\Target;
-use Symfony\Component\Config\Definition\Processor;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Yaml\Yaml;
 use Ufo\JsonRpcBundle\DependencyInjection\Configuration;
@@ -49,7 +48,8 @@ final readonly class RpcMainConfig
         $this->securityConfig = new RpcSecurityConfig($configs[RpcSecurityConfig::NAME], $this);
         $this->docsConfig = new RpcDocsConfig($configs[RpcDocsConfig::NAME], $this);
         $this->asyncConfig = new RpcAsyncConfig($configs[RpcAsyncConfig::NAME], $this);
-        $this->url = parse_url($requestStack->getCurrentRequest()?->getUri()) ?? [];
+        $url = $requestStack->getCurrentRequest()?->getUri() ?? "";
+        $this->url = parse_url($url) ?? [];
     }
 
     protected function recursiveMerge(array $config, array $extraConfig): array

@@ -17,7 +17,7 @@ class RpcCallbackProcessor
         protected SerializerInterface $serializer
     ) {}
 
-    public function process(RpcRequest $request)
+    public function process(RpcRequest $request): void
     {
         try {
             $error = false;

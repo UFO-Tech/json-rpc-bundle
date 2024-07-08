@@ -3,23 +3,9 @@
 namespace Ufo\JsonRpcBundle\Server;
 
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Serializer\Context\ContextBuilderInterface;
-use Symfony\Component\Serializer\Context\Normalizer\ObjectNormalizerContextBuilder;
-use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
-use Symfony\Component\Serializer\SerializerInterface;
-use Ufo\JsonRpcBundle\Serializer\RpcResponseContextBuilder;
-use Ufo\RpcError\AbstractRpcErrorException;
-use Ufo\RpcError\RpcAsyncRequestException;
 use Ufo\RpcError\RpcJsonParseException;
-use Ufo\RpcError\WrongWayException;
-use Ufo\JsonRpcBundle\Interfaces\IFacadeRpcServer;
-use Ufo\JsonRpcBundle\Serializer\RpcErrorNormalizer;
-use Ufo\JsonRpcBundle\Server\Async\RpcAsyncProcessor;
-use Ufo\JsonRpcBundle\Server\Async\RpcCallbackProcessor;
 use Ufo\RpcObject\RpcBatchRequest;
-use Ufo\RpcObject\RpcError;
 use Ufo\RpcObject\RpcRequest;
-use Ufo\RpcObject\RpcResponse;
 
 class RpcRequestHelper
 {
@@ -58,6 +44,7 @@ class RpcRequestHelper
         if ($this->isGet()) {
             return $this;
         }
+        $this->checkBatchRequest();
         if ($this->isBatchRequest) {
             $this->batchRequest = RpcBatchRequest::fromJson($this->request->getContent());
         } else {

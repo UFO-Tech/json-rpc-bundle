@@ -14,12 +14,14 @@ use function implode;
 class OpenRpcAdapter
 {
 
-    protected ServiceLocator $serviceLocator;
     protected OpenRpcSpecBuilder $rpcSpecBuilder;
 
-    public function adapt(ServiceLocator $serviceLocator): array
+    public function __construct(
+        protected ServiceLocator $serviceLocator,
+    ) {}
+
+    public function adapt(): array
     {
-        $this->serviceLocator = $serviceLocator;
         $this->buildSignature();
         $this->buildServer();
         $this->buildServices();

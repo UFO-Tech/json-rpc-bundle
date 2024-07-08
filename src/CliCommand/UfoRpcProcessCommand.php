@@ -23,7 +23,7 @@ use Ufo\RpcObject\RpcRequest;
 )]
 class UfoRpcProcessCommand extends Command
 {
-    const COMMAND_NAME = 'ufo:rpc:process';
+    const string COMMAND_NAME = 'ufo:rpc:process';
 
     public function __construct(
         protected IRpcSecurity $rpcSecurity,

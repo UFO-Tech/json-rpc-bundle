@@ -30,7 +30,7 @@ use function current;
  */
 class UfoReflectionProcedure
 {
-    const EMPTY_DOC = '/**'.PHP_EOL.' *'.PHP_EOL.' */';
+    const string EMPTY_DOC = '/**'.PHP_EOL.' *'.PHP_EOL.' */';
 
     /**
      * @var ReflectionMethod[]

@@ -14,44 +14,19 @@ services:
         $rpcConfigs:  '%ufo_json_rpc%'
         $environment: '%kernel.environment%'
     
-    Ufo\JsonRpcBundle\Controller\ApiController:
-        $rpcServerFacade: '@Ufo\JsonRpcBundle\Server\RpcServerFacade'
-    
-    Ufo\JsonRpcBundle\Server\RpcRequestHandler:
-        $rpcServerFacade: '@Ufo\JsonRpcBundle\Server\RpcServerFacade'
     
     Ufo\RpcObject\Rules\Validator\RpcValidator:
         class: Ufo\RpcObject\Rules\Validator\RpcValidator
-    
-    Ufo\JsonRpcBundle\Server\RpcServerFacade:
-        $rpcSecurity: '@Ufo\JsonRpcBundle\Security\TokenRpcSecurity'
-    
-    Ufo\JsonRpcBundle\Server\RpcServerFacadeCli:
-        arguments:
-            $logger:      null
-            $rpcSecurity: '@Ufo\JsonRpcBundle\Security\TokenRpcCliSecurity'
-    
-    Ufo\JsonRpcBundle\Server\RpcRequestHandlerCli:
-        class: 'Ufo\JsonRpcBundle\Server\RpcRequestHandler'
-        arguments:
-            $rpcServerFacade: '@Ufo\JsonRpcBundle\Server\RpcServerFacadeCli'
-    
-    
-    Ufo\JsonRpcBundle\EventListener\HandleExceptionListener:
-        arguments:
-            $environment: '%kernel.environment%'
-        tags:
-            - { name: kernel.event_listener, event: kernel.exception, priority: 10 }
     
     Ufo\JsonRpcBundle\Serializer\RpcErrorNormalizer:
         arguments:
             $environment: '%kernel.environment%'
     
-    Ufo\JsonRpcBundle\CliCommand\UfoRpcProcessCommand:
-        arguments:
-            $rpcSecurity:    '@Ufo\JsonRpcBundle\Security\TokenRpcCliSecurity'
-            $requestHandler: '@Ufo\JsonRpcBundle\Server\RpcRequestHandlerCli'
+    Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity:
+        class: Ufo\JsonRpcBundle\Security\TokenRpcSecurity
     
-    Ufo\JsonRpcBundle\EventListener\HandleCliListener:
-        $rpcSecurity: '@Ufo\JsonRpcBundle\Security\TokenRpcCliSecurity'
+    Ufo\JsonRpcBundle\Server\ServiceMap\ServiceLocator:
+        factory: ['@Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMapFactory', 'getServiceLocator']
+
+    
     

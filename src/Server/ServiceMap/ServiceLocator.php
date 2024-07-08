@@ -15,9 +15,9 @@ use function is_null;
 
 class ServiceLocator implements ContainerInterface
 {
-    const ENV_JSON_RPC_2 = 'JSON-RPC-2.0';
-    const JSON = 'application/json';
-    const POST = 'POST';
+    const string ENV_JSON_RPC_2 = 'JSON-RPC-2.0';
+    const string JSON = 'application/json';
+    const string POST = 'POST';
 
     protected string $contentType = self::JSON;
 
@@ -182,10 +182,7 @@ class ServiceLocator implements ContainerInterface
      */
     public function getService(string $name): Service
     {
-        if (isset($this->services[$name])) {
-            return $this->services[$name];
-        }
-        throw new RpcMethodNotFoundExceptionRpc("Method '$name' is not found");
+        return $this->services[$name] ?? throw new RpcMethodNotFoundExceptionRpc("Method '$name' is not found");
     }
 
     public function removeService(string $name): bool

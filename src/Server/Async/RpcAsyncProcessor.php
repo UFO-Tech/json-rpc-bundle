@@ -8,18 +8,14 @@ use Symfony\Component\Process\Process;
 use Symfony\Component\Serializer\SerializerInterface;
 use Throwable;
 use Ufo\JsonRpcBundle\CliCommand\UfoRpcProcessCommand;
-use Ufo\JsonRpcBundle\Interfaces\IFacadeRpcServer;
-use Ufo\JsonRpcBundle\Server\RpcServerFacade;
-use Ufo\JsonRpcBundle\Server\RpcServerFacadeCli;
+use Ufo\JsonRpcBundle\Security\TokenRpcCliSecurity;
+use Ufo\JsonRpcBundle\Server\RpcServer;
 use Ufo\RpcError\RpcAsyncRequestException;
 use Ufo\RpcObject\RpcAsyncRequest;
-use Ufo\RpcObject\RpcError;
 use Ufo\RpcObject\RpcRequest;
 use Ufo\RpcObject\RpcResponse;
-use Ufo\RpcObject\Transformer\Transformer;
 
 use function array_merge;
-use function hash;
 
 use const PHP_EOL;
 
@@ -42,8 +38,9 @@ class RpcAsyncProcessor
     protected array $requestObjects = [];
 
     public function __construct(
-        protected RpcServerFacadeCli $facadeRpcServer,
-        protected SerializerInterface $serializer
+        protected RpcServer $rpcServer,
+        protected SerializerInterface $serializer,
+        protected TokenRpcCliSecurity $rpcSecurity
     ) {}
 
     /**
@@ -147,8 +144,8 @@ class RpcAsyncProcessor
 
     public function __invoke(RpcAsyncRequest $message): void
     {
-        $this->facadeRpcServer->getSecurity()->setToken($message->token);
-        $response = $this->facadeRpcServer->handle($message->getRpcRequest());
+        $this->rpcSecurity->setToken($message->token);
+        $response = $this->rpcServer->handle($message->getRpcRequest());
         try {
             echo '>>> '.$this->serializer->serialize($message->getRpcRequest()->toArray(), 'json');
             echo PHP_EOL;
