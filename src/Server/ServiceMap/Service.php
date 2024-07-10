@@ -3,13 +3,16 @@
 namespace Ufo\JsonRpcBundle\Server\ServiceMap;
 
 use InvalidArgumentException;
-use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
-use Ufo\RpcError\WrongWayException;
-use Ufo\RpcObject\RPC\Assertions;
+use ReflectionClass;
+use ReflectionException;
+use Ufo\RpcError\RpcInternalException;
+use Ufo\RpcObject\Helpers\TypeHintResolver;
 use Ufo\RpcObject\RPC\AssertionsCollection;
 use Ufo\RpcObject\RPC\Cache;
 use Ufo\RpcObject\RPC\Info;
 use Ufo\RpcObject\RPC\Response;
+
+use function is_null;
 
 class Service
 {
@@ -65,11 +68,33 @@ class Service
 
     public function __construct(
         protected string $name,
-        protected IRpcService $procedure,
+        protected string $procedureFQCN,
         public readonly string $concat = Info::DEFAULT_CONCAT
     ) {
         $t = explode($this->concat, $this->name);
         $this->methodName = end($t);
+    }
+
+    /**
+     * @throws ReflectionException
+     * @throws RpcInternalException
+     */
+    public static function fromArray(array $data): static
+    {
+        $refClass = new ReflectionClass(static::class);
+        $service = $refClass->newInstanceWithoutConstructor();
+        foreach ($data as $propertyName => $value) {
+            if ($propertyName === 'responseInfo') {
+                if (is_null($value['responseFormat'])) continue;
+                $value = new Response(
+                    $value['responseFormat'],
+                    $value['dto'],
+                    $value['collection'],
+                );
+            }
+            $refClass->getProperty($propertyName)->setValue($service, $value);
+        }
+        return $service;
     }
 
     /**
@@ -324,12 +349,9 @@ class Service
         return TypeHintResolver::normalize($type);
     }
 
-    /**
-     * @return IRpcService
-     */
-    public function getProcedure(): IRpcService
+    public function getProcedureFQCN(): string
     {
-        return $this->procedure;
+        return $this->procedureFQCN;
     }
 
     public function getSchema(): array
@@ -340,6 +362,11 @@ class Service
     public function getReturnDescription(): string
     {
         return $this->returnDescription;
+    }
+
+    public function getAssertions(): ?AssertionsCollection
+    {
+        return $this->assertions;
     }
 
 }

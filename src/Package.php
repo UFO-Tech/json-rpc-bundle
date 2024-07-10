@@ -8,10 +8,10 @@ use function str_replace;
 
 final class Package
 {
-    const VERSION = 6;
-    const BUNDLE_NAME = 'ufo-tech/json-rpc-bundle';
-    const BUNDLE_PATH = 'vendor/ufo-tech/json-rpc-bundle/src';
-    const SPECIFICATION = 'https://www.jsonrpc.org/specification';
+    const int VERSION = 7;
+    const string BUNDLE_NAME = 'ufo-tech/json-rpc-bundle';
+    const string BUNDLE_PATH = 'vendor/ufo-tech/json-rpc-bundle/src';
+    const string SPECIFICATION = 'https://www.jsonrpc.org/specification';
 
     protected static array $composerProject = [];
     protected static array $composerBundle = [];
@@ -66,6 +66,7 @@ final class Package
 
     protected static function projectDir(): string
     {
-        return str_replace(self::BUNDLE_PATH, '' , __DIR__);
+        $dir = __DIR__ . '/..';
+        return str_replace(self::BUNDLE_PATH, '' , $dir);
     }
 }

@@ -2,14 +2,11 @@
 
 namespace Ufo\JsonRpcBundle\Validations\JsonSchema;
 
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
-use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
-use Ufo\JsonRpcBundle\Server\ServiceMap\TypeHintResolver;
 use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Genearator;
+use Ufo\RpcObject\Helpers\TypeHintResolver;
 use Ufo\RpcObject\RPC\Assertions;
-use Symfony\Component\Validator\Constraints as Assert;
 
 use function is_array;
 

@@ -5,11 +5,14 @@ namespace Ufo\JsonRpcBundle\DocAdapters\Outputs\OpenRpc;
 use PSX\OpenAPI\Contact;
 use PSX\OpenAPI\Info;
 use PSX\OpenAPI\License;
+use PSX\OpenAPI\Schemas;
 use PSX\OpenAPI\Tag;
+use PSX\OpenRPC\Components;
 use PSX\OpenRPC\ContentDescriptor;
 use PSX\OpenRPC\Error;
 use PSX\OpenRPC\Method;
 use PSX\OpenRPC\OpenRPC;
+use Ufo\RpcObject\RPC\Response;
 
 class OpenRpcSpecBuilder
 {
@@ -30,13 +33,13 @@ class OpenRpcSpecBuilder
     public static function createBuilder(
         string $title,
         string $description = '',
-        ?string $apiVersion = null,
+        string $apiVersion = 'latest',
         string $openRpcVersion = self::OPEN_RPC_VER,
         ?string $licenseName = null,
         ?string $contactName = null,
         ?string $contactLink = null,
     ): static {
-        $builder = new self($openRpcVersion);
+        $builder = new static($openRpcVersion);
         $license = new License();
         $license->setName($licenseName);
         $info = new Info();
@@ -84,9 +87,10 @@ class OpenRpcSpecBuilder
         bool $required = true,
         mixed $default = null,
         array $schema = null,
+        ?string $assertions = null,
     ): ContentDescriptor
     {
-        $parameter = new ContentDescriptor();
+        $parameter = new UfoRpcParameter($assertions);
         $parameter->setName($name);
         $parameter->setDescription($description);
         $parameter->setRequired($required);
@@ -95,6 +99,8 @@ class OpenRpcSpecBuilder
             ...$schema
         ];
         $parameter->setSchema((object) $schema);
+
+        $parameter->toRecord()->put('x-ufo-assertions', $assertions);
 
         $params = $method->getParams();
         $params[] = $parameter;
@@ -106,7 +112,7 @@ class OpenRpcSpecBuilder
         Method $method,
         string $name,
         string $description,
-        array $schema
+        array $schema,
     ): ContentDescriptor
     {
         $result = new ContentDescriptor();
@@ -143,6 +149,16 @@ class OpenRpcSpecBuilder
     public function getOpenRPC(): OpenRPC
     {
         return $this->openRPC;
+    }
+
+    public function setComponents(array $schema): self
+    {
+        $components = new Components();
+        $schema = new Schemas($schema);
+        $components->setSchemas($schema);
+        $this->openRPC->setComponents($components);
+
+        return $this;
     }
 
     public function build(): array

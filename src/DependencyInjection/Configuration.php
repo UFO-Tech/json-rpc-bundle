@@ -66,9 +66,6 @@ class Configuration implements ConfigurationInterface
                                 ->end()
                                 ->arrayNode(RpcDocsConfig::VALIDATIONS)
                                     ->children()
-                                        ->booleanNode(RpcDocsConfig::JSON_SCHEMA)
-                                            ->defaultTrue()
-                                        ->end()
                                         ->booleanNode(RpcDocsConfig::SYMFONY_ASSERTS)
                                             ->defaultFalse()
                                         ->end()
@@ -90,6 +87,7 @@ class Configuration implements ConfigurationInterface
                     ->end()
                 ->end()
             ->end()
+            ->ignoreExtraKeys(false)
         ;
 
         return $treeBuilder;

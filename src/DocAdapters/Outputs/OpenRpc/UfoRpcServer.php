@@ -26,6 +26,10 @@ UFO Tech, or Universal Flexible Open Technologies, is an initiative aimed at pro
         $record->put('x-method', "POST");
         $record->put('x-ufo', [
             'envelop' => $this->envelop,
+            'documentation' =>  [
+                'json-rpc' => Package::protocolSpecification(),
+                Package::bundleName() => Package::bundleDocumentation(),
+            ]
         ]);
         return $record;
     }

@@ -8,19 +8,16 @@ ufo_json_rpc:
         protected_methods: ['POST']               # Protection of GET and POST requests
         token_key_in_header: 'Ufo-RPC-Token'      # Name of the key in the header
         clients_tokens:
-            - 'ClientTokenExample'                # Hardcoded token example. Importantly!!! Replace or delete it!
             - '%env(resolve:UFO_API_TOKEN)%'      # Token example from .env.local
     
     # Configuration for API documentation
     docs:
         # Optional response details
         response:
-            key_for_methods: methods        # Key used to map services for API methods
             async_dsn_info:  false          # Provide information about API that work asynchronously
             
             # Information about validations
             validations:
-                json_schema:     true      # deprecated (wil be removed on v.7.0)
                 symfony_asserts: false      # Indicates if an array of Symfony validation constraints is used
     
     async:

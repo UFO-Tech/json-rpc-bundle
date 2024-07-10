@@ -3,43 +3,44 @@
 namespace Ufo\JsonRpcBundle\Server\ServiceMap;
 
 use Psr\Cache\CacheItemPoolInterface;
+use Psr\Container\ContainerInterface;
+use ReflectionException;
+use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 use Symfony\Component\DependencyInjection\Attribute\TaggedIterator;
 use Symfony\Component\Routing\RouterInterface;
-use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\Controller\ApiController;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\UfoReflectionProcedure;
+use Ufo\RpcError\RpcInternalException;
 use Ufo\RpcError\WrongWayException;
 use Ufo\RpcObject\RPC\Cache;
+use Ufo\RpcObject\Transformer\Transformer;
 
-use function is_null;
+use function json_decode;
 
 class ServiceMapFactory
 {
-    const string CACHE_SL = 'rps.service_locator';
+    const string CACHE_SM = 'rps.service_map';
 
     protected ServiceLocator $serviceLocator;
+    protected ServiceMap $serviceMap;
 
     /**
-     * @var IRpcService[]
+     * @throws RpcInternalException
      */
-    protected array $procedures = [];
-
-
     public function __construct(
         protected CacheItemPoolInterface $cache,
         protected RpcMainConfig $rpcConfig,
         protected SerializerInterface $serializer,
         #[TaggedIterator('ufo.rpc.service')]
-        iterable $procedures,
-        protected RouterInterface $router
+        protected iterable $procedures,
+        protected RouterInterface $router,
+        #[AutowireLocator('ufo.rpc.service')]
+        protected ContainerInterface $locator,
     ) {
-        foreach ($procedures as $procedure) {
-            $this->procedures[$procedure::class] = $procedure;
-        }
         $this->buildServiceLocator();
     }
 
@@ -48,72 +49,80 @@ class ServiceMapFactory
         return $this->serviceLocator;
     }
 
+    public function getServiceMap(): ServiceMap
+    {
+        return $this->serviceMap;
+    }
+
     protected function buildServiceLocator(): void
     {
-        $this->serviceLocator = $this->defaultSL();
+        $this->initServices();
         try {
             if ($this->rpcConfig->environment !== Cache::ENV_PROD) {
                 throw new WrongWayException();
             }
-            $states = $this->cache->get(static::CACHE_SL, function (ItemInterface $item) {return [];});
-            if (empty($states)) {
-                throw new WrongWayException();
-            }
+            $states = $this->fromCache();
 
             foreach ($states as $state) {
-                $procedure = $this->procedures[$state['procedure']] ?? null;
-                if (is_null($procedure)) {
-                    continue;
-                }
-                $state['procedure'] = $procedure;
-                $service = $this->serializer->denormalize($state, Service::class);
-                $this->serviceLocator->addService($service);
+                $serviceData = $this->serializer->decode($state,'json');
+                $this->serviceMap->addService(Service::fromArray($serviceData));
             }
         } catch (WrongWayException) {
-            $this->setProcedures($this->procedures);
+            $this->setProcedures();
+        } catch (ReflectionException $e) {
+            throw new RpcInternalException('ServiceMap not created', previous:  $e);
         }
     }
 
-    protected function saveServiceLocator(): void
+    protected function saveServiceMap(): void
     {
         if ($this->rpcConfig->environment !== Cache::ENV_PROD) {
             return;
         }
-        $states = $this->cache->get(static::CACHE_SL, function () {return [];});
-        if (!empty($states)) {
-            return;
-        }
-        $this->cache->delete(static::CACHE_SL);
-        $this->cache->get(static::CACHE_SL, function (ItemInterface $item) {
-            $item->expiresAfter(31536000);
-            try {
-                $states = [];
-                foreach ($this->serviceLocator->getServices() as $service) {
-                    $state = $this->serializer->normalize(
-                        $service,
-                        context: [AbstractNormalizer::IGNORED_ATTRIBUTES => ['procedure']]
-                    );
-                    $state['procedure'] = $service->getProcedure()::class;;
-                    $states[$service->getName()] = $state;
+        try {
+            $this->fromCache();
+        } catch (WrongWayException) {
+            $this->cache->get(static::CACHE_SM, function (ItemInterface $item) {
+                $item->expiresAfter(31536000);
+                try {
+                    $states = [];
+                    foreach ($this->serviceMap->getServices() as $service) {
+                        $state = $this->serializer->serialize($service, 'json');
+                        $states[$service->getName()] = $state;
+                    }
+                    $item->set($states);
+                    return $states;
+                } catch (\Throwable $e) {
+                    return [];
                 }
-                $item->set($states);
-                return $states;
-            } catch (\Throwable $e) {
-                return [];
-            }
-        });
+            });
+        }
     }
 
-    protected function defaultSL(): ServiceLocator
+    /**
+     * @throws WrongWayException
+     */
+    protected function fromCache(): array
     {
-        $sl = new ServiceLocator($this->rpcConfig);
-        $sl->setTarget($this->router->generate(ApiController::API_ROUTE));
-        return $sl;
+        if (empty($smd = $this->cache->get(static::CACHE_SM, function () { return []; }))) {
+            $this->cache->delete(static::CACHE_SM);
+            throw new WrongWayException();
+        }
+        return $smd;
+    }
+
+    protected function initServices(): void
+    {
+        $this->serviceLocator = new ServiceLocator($this->locator);
+        $this->serviceMap = new ServiceMap(
+            $this->router->generate(ApiController::API_ROUTE),
+            $this->rpcConfig
+        );
     }
 
     public function __destruct()
     {
-        $this->saveServiceLocator();
+        $this->saveServiceMap();
     }
 
     /**
@@ -124,19 +133,16 @@ class ServiceMapFactory
     {
         $reflection = new UfoReflectionProcedure($procedure, $this->serializer, $this->rpcConfig->docsConfig);
         foreach ($reflection->getMethods() as $service) {
-            $this->serviceLocator->addService($service);
+            $this->serviceMap->addService($service);
         }
         return $this;
     }
 
-    /**
-     * @param IRpcService[] $procedures
-     * @return void
-     */
-    public function setProcedures(iterable $procedures): void
+    protected function setProcedures(): void
     {
-        foreach ($procedures as $procedure) {
+        foreach ($this->procedures as $procedure) {
             $this->addProcedure($procedure);
         }
     }
+
 }

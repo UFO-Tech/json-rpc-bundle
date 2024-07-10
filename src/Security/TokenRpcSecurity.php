@@ -53,8 +53,6 @@ class TokenRpcSecurity implements IRpcSecurity
             $this->protectedPath = new RouteCollection();
             $this->protectedPath->add(ApiController::API_ROUTE,
                 $router->getRouteCollection()->get(ApiController::API_ROUTE));
-            $this->protectedPath->add(ApiController::COLLECTION_ROUTE,
-                $router->getRouteCollection()->get(ApiController::COLLECTION_ROUTE));
         }
     }
 

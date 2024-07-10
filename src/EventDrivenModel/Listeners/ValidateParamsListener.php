@@ -8,11 +8,11 @@ use ReflectionMethod;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Ufo\JsonRpcBundle\EventDrivenModel\RpcEventFactory;
+use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceLocator;
 use Ufo\RpcError\RpcBadParamException;
 use Ufo\RpcObject\Events\RpcErrorEvent;
 use Ufo\RpcObject\Events\RpcEvent;
 use Ufo\RpcObject\Events\RpcPreExecuteEvent;
-use Ufo\RpcObject\Events\RpcRequestEvent;
 use Ufo\RpcObject\RpcError;
 use Ufo\RpcObject\Rules\Validator\ConstraintsImposedException;
 use Ufo\RpcObject\Rules\Validator\RpcValidator;
@@ -35,6 +35,7 @@ class ValidateParamsListener
         protected string $environment,
         protected RpcEventFactory $eventFactory,
         protected RpcValidator $rpcValidator,
+        protected ServiceLocator $serviceLocator
     ) {}
 
     public function constraintValidation(RpcPreExecuteEvent $event): void
@@ -42,7 +43,7 @@ class ValidateParamsListener
         if ($event->rpcRequest->hasError()) return;
         try {
             $this->rpcValidator->validateMethodParams(
-                $event->service->getProcedure(),
+                $this->serviceLocator->get($event->service->getProcedureFQCN()),
                 $event->service->getMethodName(),
                 $event->params
             );
@@ -99,7 +100,7 @@ class ValidateParamsListener
             $requestedParams = $service->getDefaultParams($request->getParams());
         }
         $namedParams = [];
-        $refMethod = new ReflectionMethod($service->getProcedure(), $service->getMethodName());
+        $refMethod = new ReflectionMethod($service->getProcedureFQCN(), $service->getMethodName());
         foreach ($refMethod->getParameters() as $refParam) {
             if (array_key_exists($refParam->getName(), $requestedParams)) {
                 $namedParams[$refParam->getName()] = $requestedParams[$refParam->getName()];

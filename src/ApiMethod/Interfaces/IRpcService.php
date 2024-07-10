@@ -13,4 +13,5 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag('ufo.rpc.service')]
 interface IRpcService
 {
+    const true INIT = true;
 }

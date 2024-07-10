@@ -10,6 +10,7 @@ use TypeError;
 use Ufo\JsonRpcBundle\EventDrivenModel\RpcEventFactory;
 use Ufo\JsonRpcBundle\Serializer\RpcResponseContextBuilder;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
+use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceLocator;
 use Ufo\RpcError\RpcBadParamException;
 use Ufo\RpcError\RpcRuntimeException;
 use Ufo\RpcObject\Events\RpcErrorEvent;
@@ -29,6 +30,7 @@ class ServerEventListener
         #[Autowire('kernel.environment')]
         protected string $environment,
         protected RpcEventFactory $eventFactory,
+        protected ServiceLocator $serviceLocator,
         protected RpcResponseContextBuilder $contextBuilder,
     ) {}
 
@@ -41,7 +43,7 @@ class ServerEventListener
         }
         try {
             $result = call_user_func_array([
-                $event->service->getProcedure(),
+                $this->serviceLocator->get($event->service->getProcedureFQCN()),
                 $event->service->getMethodName(),
             ], $event->params);
         } catch (TypeError $e) {

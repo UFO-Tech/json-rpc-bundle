@@ -84,7 +84,6 @@ class UfoReflectionProcedure
             $info = $infoAttribute->newInstance();
             $procedureClassName = $info->alias ?? $procedureClassName;
             $this->concat = $info->concat;
-            $this->async = $info->async;
         } catch (Throwable) {
         } finally {
             $this->name = $procedureClassName;
@@ -175,7 +174,7 @@ class UfoReflectionProcedure
                 try {
                     
                     $this->assertions->fillAssertion(
-                        $service->getProcedure()::class,
+                        $service->getProcedureFQCN(),
                         $method,
                         $paramRef
                     );
@@ -231,7 +230,7 @@ class UfoReflectionProcedure
         }
         $this->methodDoc = DocBlockFactory::createInstance()->create($docBlock);
         $className = (empty($this->name)) ? '' : $this->name.$this->concat;
-        $service = new Service($className.$method->getName(), $this->procedure, $this->concat);
+        $service = new Service($className.$method->getName(), $this->procedure::class, $this->concat);
         $this->buildParams($method, $service);
         $this->buildReturns($method, $service);
         $this->findResponseInfo($method, $service);
@@ -266,7 +265,6 @@ class UfoReflectionProcedure
                 'service' => $service,
             ]));
         } catch (Throwable $e) {
-            $a = 1;
         }
     }
 

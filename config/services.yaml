@@ -28,5 +28,8 @@ services:
     Ufo\JsonRpcBundle\Server\ServiceMap\ServiceLocator:
         factory: ['@Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMapFactory', 'getServiceLocator']
 
+    Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMap:
+        factory: ['@Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMapFactory', 'getServiceMap']
+
     
     

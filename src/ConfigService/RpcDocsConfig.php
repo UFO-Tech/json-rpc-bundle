@@ -25,7 +25,7 @@ final readonly class RpcDocsConfig
     {
         $this->keyForMethods = $rpcConfigs[self::RESPONSE][self::KEY_FOR_METHODS];
         $this->asyncDsnInfo = $rpcConfigs[self::RESPONSE][self::ASYNC_DSN_INFO];
-        $this->needJsonSchema = $rpcConfigs[self::RESPONSE][self::VALIDATIONS][self::JSON_SCHEMA]; // deprecated
+        $this->needJsonSchema = true;
         $this->needSymfonyAsserts = $rpcConfigs[self::RESPONSE][self::VALIDATIONS][self::SYMFONY_ASSERTS];
     }
 

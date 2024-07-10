@@ -45,8 +45,6 @@ class RpcErrorListener implements EventSubscriberInterface
         $request = $event->getRequest();
         $apiPaths = [
             $this->router->getRouteCollection()->get(ApiController::API_ROUTE)->getPath(),
-            $this->router->getRouteCollection()->get(ApiController::COLLECTION_ROUTE)->getPath(),
-            $this->router->getRouteCollection()->get(ApiController::OPEN_RPC_ROUTE)->getPath(),
         ];
         $exception = $event->getThrowable();
         if ($exception instanceof StopHandlerException) return;

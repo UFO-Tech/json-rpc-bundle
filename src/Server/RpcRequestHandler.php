@@ -42,40 +42,28 @@ class RpcRequestHandler
     ) {}
 
     /**
+     * @param Request $request
+     * @return array
+     * @throws RpcAsyncRequestException
      * @throws RpcJsonParseException
+     * @throws RpcMethodNotFoundExceptionRpc
+     * @throws RpcRuntimeException
+     * @throws WrongWayException
      */
-    public function handle(Request $request, bool $json = false): array|string
+    public function handle(Request $request): array
     {
         $this->request = $request;
         $this->requestHelper = new RpcRequestHelper($request);
 
-        try {
-            $result = $this->handlePost();
-        } catch (WrongWayException) {
-            $result = $this->handleGet();
-        }
-
-        return $json ? $this->serializer->serialize($result, 'json') : $result;
-    }
-
-    public function handleGet(): array
-    {
-        return $this->serviceLocator->toArray();
-    }
-
-    /**
-     * @return array
-     * @throws WrongWayException
-     */
-    protected function handlePost(): array
-    {
-        if (!$this->isPost()) {
+        if (!$this->requestHelper->isPost()) {
             throw new WrongWayException();
         }
-
         return $this->smartHandle();
     }
 
+    /**
+     * @throws RpcAsyncRequestException
+     */
     protected function processQueue(array &$queue, ?Closure $callback): void
     {
         foreach ($queue as $key => &$singleRequest) {
@@ -107,11 +95,16 @@ class RpcRequestHandler
         };
     }
 
+    /**
+     * @throws RpcRuntimeException
+     * @throws RpcAsyncRequestException
+     * @throws RpcMethodNotFoundExceptionRpc
+     */
     protected function smartHandle(): array
     {
         if (($requestObj = $this->requestHelper->getRequestObject()) instanceof RpcBatchRequest) {
             $this->processQueue($requestObj->getReadyToHandle(), $this->closureSetResponse());
-            foreach ($requestObj->provideUnprocessedRequests() as $key => $unprocessedRequest) {
+            foreach ($requestObj->provideUnprocessedRequests() as $unprocessedRequest) {
                 $requestObj->addResult($this->provideSingleRequest($unprocessedRequest));
             }
             $result = $requestObj->getResults(false);
@@ -122,6 +115,10 @@ class RpcRequestHandler
         return $result;
     }
 
+    /**
+     * @throws RpcRuntimeException
+     * @throws RpcMethodNotFoundExceptionRpc
+     */
     public function provideSingleRequest(RpcRequest $singleRequest): array
     {
         $result = $this->provideSingleRequestToResponse($singleRequest);
@@ -165,15 +162,5 @@ class RpcRequestHandler
         }
 
         return $result;
-    }
-
-    public function isGet(): bool
-    {
-        return $this->requestHelper->isGet();
-    }
-
-    public function isPost(): bool
-    {
-        return $this->requestHelper->isPost();
     }
 }
