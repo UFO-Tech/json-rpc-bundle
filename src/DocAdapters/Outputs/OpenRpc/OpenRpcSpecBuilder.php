@@ -58,9 +58,9 @@ class OpenRpcSpecBuilder
         return $builder;
     }
 
-    public function addServer(string $url, string $envelop, ?string $name = UfoRpcServer::NAME): static
+    public function addServer(string $url, string $envelop, array $transports, ?string $name = UfoRpcServer::NAME): static
     {
-        $server = new UfoRpcServer($envelop, $name);
+        $server = new UfoRpcServer($envelop, $name, $transports);
         $server->setUrl($url);
         $this->servers[] = $server;
 

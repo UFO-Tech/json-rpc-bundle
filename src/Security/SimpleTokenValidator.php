@@ -26,12 +26,4 @@ class SimpleTokenValidator implements ITokenValidator
 
         return true;
     }
-
-    /**
-     * @return array
-     */
-    public function getClientsTokens(): array
-    {
-        return $this->rpcConfig->securityConfig->tokens;
-    }
 }

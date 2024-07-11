@@ -1,24 +1,23 @@
 # config/packages/ufo_json_rpc.yaml
 ufo_json_rpc:
-    project_name: 'My Project'
-    project_description: ''
-    project_version: null
-   
     security:
-        protected_methods: ['POST']               # Protection of GET and POST requests
-        token_key_in_header: 'Ufo-RPC-Token'      # Name of the key in the header
+        protected_api: true               # Protection API requests
+        protected_doc: false              # Protection API documentation
+
+        token_name: 'Ufo-RPC-Token'      # Name of the key in the header
         clients_tokens:
             - '%env(resolve:UFO_API_TOKEN)%'      # Token example from .env.local
     
     # Configuration for API documentation
     docs:
+        project_name: 'My Project'
+        project_description: ''
+        project_version: null
         # Optional response details
-        response:
-            async_dsn_info:  false          # Provide information about API that work asynchronously
+        async_dsn_info:  false          # Provide information about API that work asynchronously
             
-            # Information about validations
-            validations:
-                symfony_asserts: false      # Indicates if an array of Symfony validation constraints is used
+        validations:
+            symfony_asserts: false      # Indicates if an array of Symfony validation constraints is used
     
     async:
 #        rpc_async: '%env(resolve:RPC_TRANSPORT_DSN)%'

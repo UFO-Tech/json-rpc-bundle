@@ -63,7 +63,7 @@ class ServiceMap
 
     public function getDescription(): string
     {
-        return $this->mainConfig->projectDesc;
+        return $this->mainConfig->docsConfig->projectDesc;
     }
 
     /**

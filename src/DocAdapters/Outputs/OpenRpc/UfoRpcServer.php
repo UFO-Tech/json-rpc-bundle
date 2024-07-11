@@ -13,7 +13,8 @@ class UfoRpcServer extends Server
 
     public function __construct(
         protected string $envelop,
-        protected string $name = self::NAME
+        protected string $name = self::NAME,
+        protected array $transports = []
     ) {}
 
     public function toRecord(): RecordInterface
@@ -26,10 +27,12 @@ UFO Tech, or Universal Flexible Open Technologies, is an initiative aimed at pro
         $record->put('x-method', "POST");
         $record->put('x-ufo', [
             'envelop' => $this->envelop,
+            'transport' => $this->transports,
             'documentation' =>  [
                 'json-rpc' => Package::protocolSpecification(),
                 Package::bundleName() => Package::bundleDocumentation(),
-            ]
+            ],
+
         ]);
         return $record;
     }

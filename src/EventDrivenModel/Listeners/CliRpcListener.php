@@ -29,7 +29,7 @@ class CliRpcListener
         $io = new SymfonyStyle($event->getInput(), $event->getOutput());
         if ($event->getCommand()->getName() === 'ufo:rpc:process') {
             try {
-                if (in_array('POST', $this->rpcConfig->securityConfig->protectedMethods)) {
+                if ($this->rpcConfig->securityConfig->protectedApi) {
                     if (!($token = $event->getInput()->getOption('token'))) {
                         throw new RpcTokenNotFoundInHeaderException('Token not set!'.PHP_EOL
                                                                     .'This protected command, use option -t (--token)');
@@ -54,7 +54,7 @@ class CliRpcListener
         $command = $event->getCommand();
         if ($command && $command->getName() === UfoRpcProcessCommand::COMMAND_NAME) {
             try {
-                if (in_array('POST', $this->rpcConfig->securityConfig->protectedMethods)) {
+                if ($this->rpcConfig->securityConfig->protectedApi) {
                     if (!($token = $event->getInput()->getOption('token'))) {
                         throw new RpcTokenNotFoundInHeaderException('Token not set!'.PHP_EOL
                                                                     .'This protected command, use option -t (--token)');

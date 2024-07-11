@@ -124,7 +124,7 @@ class TokenRpcSecurity implements IRpcSecurity
     public function isValidRequest(): bool
     {
         $requestMethod = $this->request->getMethod();
-        if (in_array($requestMethod, $this->rpcConfig->securityConfig->protectedMethods)) {
+        if ($this->rpcConfig->securityConfig->protectedMethods[$requestMethod] ?? false) {
             $this->validateRequest();
         }
 

@@ -42,9 +42,9 @@ class OpenRpcAdapter
     protected function buildSignature(): void
     {
         $this->rpcSpecBuilder = OpenRpcSpecBuilder::createBuilder(
-            $this->mainConfig->projectName,
+            $this->mainConfig->docsConfig->projectName,
             $this->serviceMap->getDescription(),
-            $this->mainConfig->projectVersion ?? 'latest',
+            $this->mainConfig->docsConfig->projectVersion ?? 'latest',
             licenseName: Package::projectLicense(),
             contactName: Package::bundleName(),
             contactLink: Package::bundleDocumentation(),
@@ -63,6 +63,7 @@ class OpenRpcAdapter
         $this->rpcSpecBuilder->addServer(
             $http->getDomainUrl() . $this->serviceMap->getTarget(),
             $this->serviceMap->getEnvelope(),
+            $this->serviceMap->getTransport()
         );
     }
 

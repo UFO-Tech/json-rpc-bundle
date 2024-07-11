@@ -51,7 +51,7 @@ class TokenRpcCliSecurity implements IRpcSecurity
     public function isValidRequest(): bool
     {
         $result = true;
-        if (in_array('POST', $this->rpcConfig->securityConfig->protectedMethods)) {
+        if ($this->rpcConfig->securityConfig->protectedApi) {
             $result = $this->isValidToken($this->token);
         }
 
