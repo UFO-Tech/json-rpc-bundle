@@ -27,8 +27,6 @@ use function in_array;
 class SecurityListener
 {
     public function __construct(
-        protected AccessTokenAuthenticator $authenticator,
-        protected RouterInterface $router,
         protected IRpcSecurity $rpcSecurity,
     ) {}
 
