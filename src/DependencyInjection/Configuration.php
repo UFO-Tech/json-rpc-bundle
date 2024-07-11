@@ -32,7 +32,7 @@ class Configuration implements ConfigurationInterface
 
         $rootNode
             ->children()
-                ->arrayNode(RpcSecurityConfig::NAME)
+                ->arrayNode(RpcSecurityConfig::NAME)->ignoreExtraKeys(false)
                     ->children()
                         ->booleanNode(RpcSecurityConfig::PROTECTED_API)
                             ->defaultValue(true)
@@ -48,7 +48,7 @@ class Configuration implements ConfigurationInterface
                         ->end()
                     ->end()
                 ->end()
-                ->arrayNode(RpcDocsConfig::NAME)
+                ->arrayNode(RpcDocsConfig::NAME)->ignoreExtraKeys(false)
                     ->children()
                         ->scalarNode(RpcDocsConfig::P_PROJECT_NAME)
                             ->defaultValue(RpcDocsConfig::P_PROJECT_NAME_DEFAULT)
@@ -73,7 +73,7 @@ class Configuration implements ConfigurationInterface
 
                     ->end()
                 ->end()
-                ->arrayNode(RpcAsyncConfig::NAME)
+                ->arrayNode(RpcAsyncConfig::NAME)->ignoreExtraKeys(false)
                     ->addDefaultsIfNotSet()
                     ->children()
                         ->scalarNode(RpcAsyncConfig::RPC_ASYNC)
