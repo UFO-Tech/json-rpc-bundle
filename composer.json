@@ -55,9 +55,6 @@
     }
   },
   "scripts": {
-    "post-update-cmd": [
-      "Ufo\\JsonRpcBundle\\Command\\PostUpdateCommand::run"
-    ],
     "auto-scripts": {
       "cache:clear": "symfony-cmd",
       "assets:install --symlink --relative %PUBLIC_DIR%": "symfony-cmd"
