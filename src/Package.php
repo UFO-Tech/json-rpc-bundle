@@ -66,7 +66,7 @@ final class Package
 
     protected static function projectDir(): string
     {
-        $dir = __DIR__ . '/..';
+        $dir = __DIR__;
         return str_replace(self::BUNDLE_PATH, '' , $dir);
     }
 }
