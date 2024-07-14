@@ -2,20 +2,26 @@
 
 namespace Ufo\JsonRpcBundle;
 
+use Composer\InstalledVersions;
+
 use function file_get_contents;
 use function json_decode;
-use function str_replace;
+
 
 final class Package
 {
-    const int VERSION = 7;
     const string BUNDLE_NAME = 'ufo-tech/json-rpc-bundle';
-    const string BUNDLE_PATH = 'vendor/ufo-tech/json-rpc-bundle/src';
     const string SPECIFICATION = 'https://www.jsonrpc.org/specification';
+
+    protected const array PACKAGES = [
+        'rpc-objects',
+        'json-rpc-sdk-bundle',
+        'json-rpc-client-sdk',
+        'rpc-exceptions',
+    ];
 
     protected static array $composerProject = [];
     protected static array $composerBundle = [];
-    protected static ?string $version = null;
     protected static ?string $description = null;
     protected static ?string $homepage = null;
 
@@ -24,9 +30,32 @@ final class Package
         return Package::fromComposer('name') ?? Package::BUNDLE_NAME;
     }
 
+    public static function ufoEnvironment(): array
+    {
+        $env = [
+            'env' => $_ENV['APP_ENV'] ?? '?',
+        ];
+        foreach (self::PACKAGES as $package) {
+            $env = [
+                ...$env,
+                ...self::getEnvVersion($package)
+            ];
+        }
+        return $env;
+    }
+
+    private static function getEnvVersion(string $name): array
+    {
+        $res = [];
+        if (InstalledVersions::isInstalled('ufo-tech/' . $name)) {
+            $res = [$name => InstalledVersions::getPrettyVersion('ufo-tech/' . $name)];
+        }
+        return $res;
+    }
+
     public static function version(): string
     {
-        return self::$version ?? Package::fromComposer('version') ?? Package::VERSION;
+        return InstalledVersions::getPrettyVersion(self::BUNDLE_NAME);
     }
 
     public static function description(): string
@@ -66,7 +95,6 @@ final class Package
 
     protected static function projectDir(): string
     {
-        $dir = __DIR__;
-        return str_replace(self::BUNDLE_PATH, '' , $dir);
+        return InstalledVersions::getRootPackage()['install_path'];
     }
 }

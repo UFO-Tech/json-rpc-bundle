@@ -8,7 +8,6 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Throwable;
 use TypeError;
 use Ufo\JsonRpcBundle\EventDrivenModel\RpcEventFactory;
-use Ufo\JsonRpcBundle\Serializer\RpcResponseContextBuilder;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceLocator;
 use Ufo\RpcError\RpcBadParamException;
@@ -18,6 +17,7 @@ use Ufo\RpcObject\Events\RpcEvent;
 use Ufo\RpcObject\Events\RpcPreExecuteEvent;
 use Ufo\RpcObject\RpcRequest;
 use Ufo\RpcObject\RpcResponse;
+use Ufo\RpcObject\Transformer\RpcResponseContextBuilder;
 
 use function call_user_func_array;
 use function preg_replace;

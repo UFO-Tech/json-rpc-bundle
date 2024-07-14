@@ -14,19 +14,19 @@ class UfoRpcServer extends Server
     public function __construct(
         protected string $envelop,
         protected string $name = self::NAME,
-        protected array $transports = []
+        protected array $transports = [],
+        protected array $rpcEnv = []
     ) {}
 
     public function toRecord(): RecordInterface
     {
-        $this->description = 'Json-RPC api server from UFO Tec
-
-UFO Tech, or Universal Flexible Open Technologies, is an initiative aimed at providing PHP developers with tools to create complex yet user-friendly solutions for modern web applications and service-oriented architectures.';
+        $this->description = "Json-RPC api server from UFO Tech\n\nUFO Tech, or Universal Flexible Open Technologies, is an initiative aimed at providing PHP developers with tools to create complex yet user-friendly solutions for modern web applications and service-oriented architectures.";
         $record = parent::toRecord();
         $record->put('name', $this->name . ' v.' . Package::version());
         $record->put('x-method', "POST");
         $record->put('x-ufo', [
             'envelop' => $this->envelop,
+            'environment' => $this->rpcEnv,
             'transport' => $this->transports,
             'documentation' =>  [
                 'json-rpc' => Package::protocolSpecification(),

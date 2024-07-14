@@ -18,9 +18,12 @@ services:
     Ufo\RpcObject\Rules\Validator\RpcValidator:
         class: Ufo\RpcObject\Rules\Validator\RpcValidator
     
-    Ufo\JsonRpcBundle\Serializer\RpcErrorNormalizer:
+    Ufo\RpcObject\Transformer\RpcErrorNormalizer:
         arguments:
             $environment: '%kernel.environment%'
+    
+    Ufo\RpcObject\Transformer\RpcResponseContextBuilder:
+        class: Ufo\RpcObject\Transformer\RpcResponseContextBuilder
     
     Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity:
         class: Ufo\JsonRpcBundle\Security\TokenRpcSecurity

@@ -30,11 +30,7 @@ class CliRpcListener
         if ($event->getCommand()->getName() === 'ufo:rpc:process') {
             try {
                 if ($this->rpcConfig->securityConfig->protectedApi) {
-                    if (!($token = $event->getInput()->getOption('token'))) {
-                        throw new RpcTokenNotFoundInHeaderException('Token not set!'.PHP_EOL
-                                                                    .'This protected command, use option -t (--token)');
-                    }
-                    $this->rpcSecurity->isValidToken($token);
+                    $this->rpcSecurity->isValidToken($event->getInput()->getOption('token'));
                 }
             } catch (AbstractRpcErrorException $e) {
                 $io->error([

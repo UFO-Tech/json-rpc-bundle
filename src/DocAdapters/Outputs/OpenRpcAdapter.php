@@ -5,16 +5,23 @@ use PSX\OpenRPC\Method;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\DocAdapters\Outputs\OpenRpc\OpenRpcSpecBuilder;
 use Ufo\JsonRpcBundle\Package;
+use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ResultAsDtoReflector;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMap;
+use Ufo\RpcError\RpcInternalException;
 use Ufo\RpcObject\Helpers\TypeHintResolver;
 use Ufo\RpcObject\RPC\Response;
+use Ufo\RpcObject\RPC\ResultAsDTO;
 use Ufo\RpcObject\RpcTransport;
 
 use function array_map;
+use function class_exists;
+use function explode;
 use function implode;
 use function is_array;
 use function is_null;
+use function is_string;
+use function str_contains;
 use function str_starts_with;
 use function substr;
 
@@ -63,7 +70,8 @@ class OpenRpcAdapter
         $this->rpcSpecBuilder->addServer(
             $http->getDomainUrl() . $this->serviceMap->getTarget(),
             $this->serviceMap->getEnvelope(),
-            $this->serviceMap->getTransport()
+            $this->serviceMap->getTransport(),
+            rpcEnv: Package::ufoEnvironment(),
         );
     }
 
@@ -98,14 +106,28 @@ class OpenRpcAdapter
 //        $this->rpcSpecBuilder->buildError($method);
     }
 
-    protected function rpcResponseInfoToSchema(?Response $responseInfo): ?array
+    protected function rpcResponseInfoToSchema(null|Response|ResultAsDTO $responseInfo): ?array
     {
-        if (is_null($responseInfo) || is_null($responseInfo->getResponseFormat())) return null;
+        if (is_null($responseInfo)) return null;
 
+        if ($responseInfo instanceof ResultAsDTO) {
+            $schema = $this->formatFromResultAsDto($responseInfo);
+        } else {
+            $schema = $this->formatFromResponse($responseInfo);
+        }
+        return $schema;
+    }
+
+    protected function formatFromResultAsDto(ResultAsDTO $responseInfo): ?array
+    {
         $schema = [];
-        $format = $responseInfo->getResponseFormat();
-        if ($responseInfo->isCollection()) {
-            $format = $format[0];
+        try {
+            $format = $responseInfo->getResponseFormat();
+        } catch (RpcInternalException) {
+            new ResultAsDtoReflector($responseInfo);
+            $format = $responseInfo->getResponseFormat();
+        }
+        if ($responseInfo->collection) {
             $schema['type'] = 'array';
             $schema['items'] = $this->schemaFromDto($format);
         } else {
@@ -114,13 +136,36 @@ class OpenRpcAdapter
         return $schema;
     }
 
+    protected function formatFromResponse(Response $responseInfo): ?array
+    {
+        return $this->formatFromResultAsDto(
+            new ResultAsDTO(
+                $responseInfo->getDto(),
+                $responseInfo->isCollection()
+            )
+        );
+    }
+
+    protected function createSchemaLink(string $dtoName): array
+    {
+        return ['$ref' => '#/components/schemas/' . $dtoName];
+    }
+
+    /**
+     * @throws RpcInternalException
+     */
     protected function schemaFromDto(array $format): array
     {
         $dtoName = $format['$dto'];
+        $format['$collections'] = $format['$collections'] ?? [];
+        $collections = array_map(fn($dtoName) => $this->createSchemaLink($dtoName), $format['$collections']);
         unset($format['$dto']);
+        unset($format['$collections']);
 
-        $schemaLink = ['$ref' => '#/components/schemas/' . $dtoName];
+
+        $schemaLink = $this->createSchemaLink($dtoName);
         if (!isset($this->schemas[$dtoName])) {
+            $this->schemas[$dtoName] = [];
             $schema = [
                 'type' => 'object',
                 'properties' => [],
@@ -132,17 +177,57 @@ class OpenRpcAdapter
                 } else {
                     $schema['required'][] = $name;
                 }
-                $jsonValue = TypeHintResolver::phpToJsonSchema($value);
-
-                    $jsonValue = [
-                        ((is_array($jsonValue))? 'oneOf' : 'type') => $jsonValue
-                    ];
+                if (!$jsonValue = $this->detectDtoOnType($value, $collections[$name] ?? [])) {
+                    $jsonValue = $this->detectArrayOfType($value);
+                }
 
                 $schema['properties'][$name] = $jsonValue;
             }
             $this->schemas[$dtoName] = $schema;
         }
         return $schemaLink;
+    }
+
+    protected function detectArrayOfType(string $type): array
+    {
+        $jsonValue = [TypeHintResolver::TYPE => TypeHintResolver::phpToJsonSchema($type)];
+        if (str_contains($type, '|')) {
+            $phpTypes = explode('|', $type);
+
+            $types = [];
+            foreach ($phpTypes as $type) {
+                if (!$t = $this->detectDtoOnType($type)) {
+                    $t = [TypeHintResolver::TYPE => TypeHintResolver::phpToJsonSchema($type)];
+                }
+                $types[] = $t;
+            }
+            $jsonValue = ['oneOf' => $types];
+        }
+        return $jsonValue;
+
+    }
+
+    /**
+     * @throws RpcInternalException
+     */
+    protected function detectDtoOnType(string $type, array $refCollection = []): ?array
+    {
+        $jsonValue = null;
+        if ($type === 'collection') {
+            $jsonValue = [
+                'type' => 'array',
+                'items' => $refCollection
+            ];
+        }
+        if (!$jsonValue && TypeHintResolver::isRealClass($type)) {
+            $newDtoResponse = new ResultAsDTO($type);
+            new ResultAsDtoReflector($newDtoResponse);
+            if (isset($this->schemas[$newDtoResponse->getResponseFormat()['$dto']])) {
+                return $this->createSchemaLink($newDtoResponse->getResponseFormat()['$dto']);
+            }
+            $jsonValue = $this->schemaFromDto($newDtoResponse->getResponseFormat());
+        }
+        return $jsonValue;
     }
 
     protected function buildParam(Method $method, array $param, Service $service): void

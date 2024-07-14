@@ -7,7 +7,6 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Serializer\SerializerInterface;
 use Ufo\JsonRpcBundle\EventDrivenModel\RpcEventFactory;
 use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
-use Ufo\JsonRpcBundle\Serializer\RpcResponseContextBuilder;
 use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceLocator;
 use Ufo\RpcError\RpcAsyncRequestException;
 use Ufo\RpcError\RpcJsonParseException;
@@ -21,7 +20,7 @@ use Ufo\RpcObject\Events\RpcEvent;
 use Ufo\RpcObject\RpcBatchRequest;
 use Ufo\RpcObject\RpcRequest;
 use Ufo\RpcObject\RpcResponse;
-
+use Ufo\RpcObject\Transformer\RpcResponseContextBuilder;
 
 class RpcRequestHandler
 {

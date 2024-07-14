@@ -38,6 +38,7 @@ class JsonSchemaNormalizer implements NormalizerInterface
          * @var ?Service $service
          */
         $service = $context['service'] ?? null;
+
         $assertionsList = $assertionsCollection->getAssertionsCollection();
         $properties = [];
         foreach ($service->getParams() as $property => $data) {

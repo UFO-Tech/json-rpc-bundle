@@ -15,11 +15,13 @@ use Throwable;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 use Ufo\JsonRpcBundle\ConfigService\RpcDocsConfig;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
+use Ufo\RpcError\RpcInternalException;
 use Ufo\RpcObject\RPC\Assertions;
 use Ufo\RpcObject\RPC\AssertionsCollection;
 use Ufo\RpcObject\RPC\Cache;
 use Ufo\RpcObject\RPC\Info;
 use Ufo\RpcObject\RPC\Response;
+use Ufo\RpcObject\RPC\ResultAsDTO;
 use Ufo\RpcObject\Transformer\AttributeHelper;
 
 use function count;
@@ -116,13 +118,22 @@ class UfoReflectionProcedure
         }
     }
 
+    /**
+     * @throws RpcInternalException
+     */
     protected function findResponseInfo(ReflectionMethod $method, Service $service): void
     {
-        $responseInfo = new Response();
-        if ($method->getAttributes(Response::class)) {
+        if ($method->getAttributes(ResultAsDTO::class)) {
+            /** @var ResultAsDTO $responseInfo */
+            $responseInfo = $method->getAttributes(ResultAsDTO::class)[0]->newInstance();
+            new ResultAsDtoReflector($responseInfo);
+
+            $service->setResponseInfo($responseInfo);
+        } elseif ($method->getAttributes(Response::class)) {
             $responseInfo = $method->getAttributes(Response::class)[0]->newInstance();
+            $resultAsDto = new ResultAsDTO($responseInfo->getDto(), $responseInfo->isCollection());
+            $service->setResponseInfo($resultAsDto);
         }
-        $service->setResponseInfo($responseInfo);
     }
 
     protected function typeFrom(ReflectionNamedType|string $type): string
@@ -264,8 +275,7 @@ class UfoReflectionProcedure
             $service->setSchema($this->serializer->normalize($this->assertions, context: [
                 'service' => $service,
             ]));
-        } catch (Throwable $e) {
-        }
+        } catch (Throwable $e) {}
     }
 
     protected function buildAssets(ReflectionMethod $method, Service $service): void

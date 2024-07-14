@@ -13,9 +13,9 @@ use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
 use Throwable;
 use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
-use Ufo\JsonRpcBundle\Serializer\RpcErrorNormalizer;
 use Ufo\JsonRpcBundle\Server\RpcRequestHandler;
 use Ufo\RpcObject\RpcRequest;
+use Ufo\RpcObject\Transformer\RpcErrorNormalizer;
 
 #[AsCommand(
     name: UfoRpcProcessCommand::COMMAND_NAME,

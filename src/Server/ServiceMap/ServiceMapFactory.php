@@ -87,7 +87,7 @@ class ServiceMapFactory
                 try {
                     $states = [];
                     foreach ($this->serviceMap->getServices() as $service) {
-                        $state = $this->serializer->serialize($service, 'json');
+                        $state = $this->serializer->serialize($service, 'json', ['service' => $service]);
                         $states[$service->getName()] = $state;
                     }
                     $item->set($states);

@@ -15,7 +15,6 @@ use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\Serializer\SerializerInterface;
 use Ufo\JsonRpcBundle\Controller\ApiController;
 use Ufo\JsonRpcBundle\Exceptions\StopHandlerException;
-use Ufo\JsonRpcBundle\Serializer\RpcResponseContextBuilder;
 use Ufo\JsonRpcBundle\Server\RpcRequestHelper;
 use Ufo\RpcError\ExceptionToArrayTransformer;
 use Ufo\RpcError\RpcInvalidTokenException;
@@ -23,6 +22,7 @@ use Ufo\RpcError\RpcJsonParseException;
 use Ufo\RpcError\RpcTokenNotFoundInHeaderException;
 use Ufo\RpcObject\RpcError;
 use Ufo\RpcObject\RpcResponse;
+use Ufo\RpcObject\Transformer\RpcResponseContextBuilder;
 
 use function in_array;
 

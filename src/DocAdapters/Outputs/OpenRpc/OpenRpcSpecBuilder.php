@@ -16,7 +16,7 @@ use Ufo\RpcObject\RPC\Response;
 
 class OpenRpcSpecBuilder
 {
-    public const string OPEN_RPC_VER = "1.2.6";
+    public const string OPEN_RPC_VER = "1.3.2";
 
     protected OpenRPC $openRPC;
 
@@ -58,9 +58,15 @@ class OpenRpcSpecBuilder
         return $builder;
     }
 
-    public function addServer(string $url, string $envelop, array $transports, ?string $name = UfoRpcServer::NAME): static
+    public function addServer(
+        string $url,
+        string $envelop,
+        array $transports,
+        ?string $name = UfoRpcServer::NAME,
+        array $rpcEnv = []
+    ): static
     {
-        $server = new UfoRpcServer($envelop, $name, $transports);
+        $server = new UfoRpcServer($envelop, $name, $transports, $rpcEnv);
         $server->setUrl($url);
         $this->servers[] = $server;
 

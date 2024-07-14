@@ -5,12 +5,14 @@ namespace Ufo\JsonRpcBundle\Server\ServiceMap;
 use InvalidArgumentException;
 use ReflectionClass;
 use ReflectionException;
+use ReflectionObject;
 use Ufo\RpcError\RpcInternalException;
 use Ufo\RpcObject\Helpers\TypeHintResolver;
 use Ufo\RpcObject\RPC\AssertionsCollection;
 use Ufo\RpcObject\RPC\Cache;
 use Ufo\RpcObject\RPC\Info;
 use Ufo\RpcObject\RPC\Response;
+use Ufo\RpcObject\RPC\ResultAsDTO;
 
 use function is_null;
 
@@ -22,7 +24,7 @@ class Service
 
     protected string $returnDescription = '';
 
-    protected ?Response $responseInfo = null;
+    protected ?ResultAsDTO $responseInfo = null;
 
     protected array $schema = [];
 
@@ -33,17 +35,17 @@ class Service
     protected ?Cache $cacheInfo = null;
 
     /**
-     * @return Response|null
+     * @return ?ResultAsDTO
      */
-    public function getResponseInfo(): ?Response
+    public function getResponseInfo(): ?ResultAsDTO
     {
         return $this->responseInfo;
     }
 
     /**
-     * @param Response|null $responseInfo
+     * @param ?ResultAsDTO $responseInfo
      */
-    public function setResponseInfo(?Response $responseInfo): void
+    public function setResponseInfo(?ResultAsDTO $responseInfo): void
     {
         $this->responseInfo = $responseInfo;
     }
@@ -83,14 +85,17 @@ class Service
     {
         $refClass = new ReflectionClass(static::class);
         $service = $refClass->newInstanceWithoutConstructor();
+        $data['assertions'] = null;
         foreach ($data as $propertyName => $value) {
             if ($propertyName === 'responseInfo') {
-                if (is_null($value['responseFormat'])) continue;
-                $value = new Response(
-                    $value['responseFormat'],
-                    $value['dto'],
-                    $value['collection'],
+                if (is_null($value)) continue;
+                $rf = $value['responseFormat'];
+                $value = new ResultAsDTO(
+                    $value['dtoFQCN'],
+                    $value['collection']
                 );
+                $refResultAsDTO = new ReflectionObject($value);
+                $refResultAsDTO->getProperty('dtoFormat')->setValue($value, $rf);
             }
             $refClass->getProperty($propertyName)->setValue($service, $value);
         }
