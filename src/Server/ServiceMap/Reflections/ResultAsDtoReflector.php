@@ -50,8 +50,6 @@ class ResultAsDtoReflector
         $this->responseFormat['$dto'] = $ref->getShortName();
         foreach ($ref->getProperties(\ReflectionProperty::IS_PUBLIC) as $property) {
 
-
-
             $nullable = ($property->getType()->allowsNull()) ? '?' : '';
             try {
                 $this->responseFormat[$property->getName()] = $nullable . $this->getType($property, $property->getType());
@@ -74,7 +72,7 @@ class ResultAsDtoReflector
             new self($resAsDto);
             if ($typeName === 'array' && $resAsDto->collection) {
                 $typeName = 'collection';
-                $this->responseFormat['$collections'][$property->getName()] = $resAsDto->getResponseFormat()['$dto'];
+                $this->responseFormat['$collections'][$property->getName()] = $resAsDto;
             }
         }
         return $typeName;

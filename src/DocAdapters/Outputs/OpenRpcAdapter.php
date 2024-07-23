@@ -157,11 +157,16 @@ class OpenRpcAdapter
     protected function schemaFromDto(array $format): array
     {
         $dtoName = $format['$dto'];
-        $format['$collections'] = $format['$collections'] ?? [];
-        $collections = array_map(fn($dtoName) => $this->createSchemaLink($dtoName), $format['$collections']);
+        $collections = array_map(
+            function (ResultAsDTO $res) {
+                return [
+                    'schema' => $this->createSchemaLink($res->getResponseFormat()['$dto']),
+                    'format' => $res
+                ];
+            } , $format['$collections'] ?? []
+        );
         unset($format['$dto']);
         unset($format['$collections']);
-
 
         $schemaLink = $this->createSchemaLink($dtoName);
         if (!isset($this->schemas[$dtoName])) {
@@ -216,8 +221,11 @@ class OpenRpcAdapter
         if ($type === 'collection') {
             $jsonValue = [
                 'type' => 'array',
-                'items' => $refCollection
+                'items' => $refCollection['schema']
             ];
+            if (!isset($this->schemas[$refCollection['format']->getResponseFormat()['$dto']])) {
+                $this->schemaFromDto($refCollection['format']->getResponseFormat());
+            }
         }
         if (!$jsonValue && TypeHintResolver::isRealClass($type)) {
             $newDtoResponse = new ResultAsDTO($type);
