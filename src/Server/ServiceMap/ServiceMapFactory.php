@@ -17,8 +17,10 @@ use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\UfoReflectionProcedure;
 use Ufo\RpcError\RpcInternalException;
 use Ufo\RpcError\WrongWayException;
 use Ufo\RpcObject\RPC\Cache;
+use Ufo\RpcObject\RPC\IgnoreApi;
 use Ufo\RpcObject\Transformer\Transformer;
 
+use function count;
 use function json_decode;
 
 class ServiceMapFactory

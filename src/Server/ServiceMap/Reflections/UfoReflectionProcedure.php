@@ -19,6 +19,7 @@ use Ufo\RpcError\RpcInternalException;
 use Ufo\RpcObject\RPC\Assertions;
 use Ufo\RpcObject\RPC\AssertionsCollection;
 use Ufo\RpcObject\RPC\Cache;
+use Ufo\RpcObject\RPC\IgnoreApi;
 use Ufo\RpcObject\RPC\Info;
 use Ufo\RpcObject\RPC\Response;
 use Ufo\RpcObject\RPC\ResultAsDTO;
@@ -66,9 +67,8 @@ class UfoReflectionProcedure
         $this->reflection = new ReflectionClass(get_class($procedure));
         $this->provideNameAndNamespace();
         foreach ($this->reflection->getMethods() as $method) {
-            if (str_starts_with($method->getName(), '__')) {
-                continue;
-            }
+            if (str_starts_with($method->getName(), '__') || count($method->getAttributes(IgnoreApi::class)) > 0) continue;
+
             if ($method->isPublic()) {
                 $this->methods[] = $this->buildSignature($method);
             }
