@@ -8,6 +8,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Ufo\JsonRpcBundle\DocAdapters\Outputs\OpenRpcAdapter;
+use Ufo\JsonRpcBundle\DocAdapters\Outputs\PostmanAdapter;
 use Ufo\JsonRpcBundle\Server\RpcRequestHandler;
 use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceLocator;
 use Ufo\RpcError\RpcAsyncRequestException;
@@ -27,6 +28,7 @@ use const JSON_PRETTY_PRINT;
 class ApiController extends AbstractController
 {
     const string API_ROUTE = 'ufo_rpc_api_server';
+    const string POSTMAN_ROUTE = 'ufo_rpc_api_postman';
     const string COLLECTION_ROUTE = 'ufo_rpc_api_collection';
     const string OPEN_RPC_ROUTE = 'ufo_rpc_api_collection';
 
@@ -49,6 +51,13 @@ class ApiController extends AbstractController
         } else {
             $result = $openRpcAdapter->adapt();
         }
+        return new JsonResponse(json_encode($result, JSON_PRETTY_PRINT), json: true);
+    }
+
+    #[Route('/postman', name: self::POSTMAN_ROUTE, methods: ["GET"], format: 'json')]
+    public function postmanAction(PostmanAdapter $postmanAdapter): Response
+    {
+        $result = $postmanAdapter->adapt();
         return new JsonResponse(json_encode($result, JSON_PRETTY_PRINT), json: true);
     }
 
