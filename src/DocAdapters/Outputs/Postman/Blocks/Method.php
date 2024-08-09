@@ -5,6 +5,7 @@ namespace Ufo\JsonRpcBundle\DocAdapters\Outputs\Postman\Blocks;
 use function array_map;
 use function is_array;
 use function json_encode;
+use function rand;
 use function uniqid;
 
 use const JSON_PRETTY_PRINT;
@@ -39,12 +40,15 @@ final class Method implements IPostmanBlock
             $params = array_merge($params, $this->paramConvert($param));
         }
 
-        return [
+        $rpc = [
             'jsonrpc' => '2.0',
             'method' => $this->name,
-            'params' => $params,
-            'id' => rand(1,10000)
         ];
+        if (!empty($params)) {
+            $rpc['params'] = $params;
+        }
+        $rpc['id'] = rand(1,10000);
+        return $rpc;
     }
 
     protected function paramConvert(array $param): array
