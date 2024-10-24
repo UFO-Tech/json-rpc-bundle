@@ -9,11 +9,13 @@ use Symfony\Component\Serializer\SerializerInterface;
 use Throwable;
 use Ufo\JsonRpcBundle\CliCommand\UfoRpcProcessCommand;
 use Ufo\JsonRpcBundle\Security\TokenRpcCliSecurity;
+use Ufo\JsonRpcBundle\Server\RpcRequestHandler;
 use Ufo\JsonRpcBundle\Server\RpcServer;
 use Ufo\RpcError\RpcAsyncRequestException;
 use Ufo\RpcObject\RpcAsyncRequest;
 use Ufo\RpcObject\RpcRequest;
 use Ufo\RpcObject\RpcResponse;
+use Ufo\RpcObject\Transformer\RpcResponseContextBuilder;
 
 use function array_merge;
 
@@ -40,7 +42,8 @@ class RpcAsyncProcessor
     public function __construct(
         protected RpcServer $rpcServer,
         protected SerializerInterface $serializer,
-        protected TokenRpcCliSecurity $rpcSecurity
+        protected TokenRpcCliSecurity $rpcSecurity,
+        protected RpcCallbackProcessor $callbackProcessor,
     ) {}
 
     /**
@@ -146,14 +149,19 @@ class RpcAsyncProcessor
     {
         $this->rpcSecurity->setToken($message->token);
         $response = $this->rpcServer->handle($message->getRpcRequest());
+
+        if ($message->getRpcRequest()->isAsync()) {
+            $this->callbackProcessor->process($message->getRpcRequest());
+        }
+
         try {
             echo '>>> '.$this->serializer->serialize($message->getRpcRequest()->toArray(), 'json');
             echo PHP_EOL;
             $group = $message->getRpcRequest()->hasError() ? RpcResponse::IS_ERROR : RpcResponse::IS_RESULT;
-            echo '<<< '.$this->serializer->serialize($response, 'json', ['groups' => [$group]]).PHP_EOL.PHP_EOL;
         } catch (Throwable $e) {
-            echo '<<< '.$this->serializer->serialize($response, 'json', ['groups' => [RpcResponse::IS_ERROR]]);
+            $group = RpcResponse::IS_ERROR;
         }
+        echo '<<< '.$this->serializer->serialize($response, 'json', ['groups' => [$group]]);
         echo PHP_EOL.PHP_EOL;
     }
 

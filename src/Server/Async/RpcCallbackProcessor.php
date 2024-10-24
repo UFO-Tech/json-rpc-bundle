@@ -23,10 +23,11 @@ class RpcCallbackProcessor
             $error = false;
             $response = $this->client->request('POST', $request->getRpcParams()->getCallbackObject()->getTarget(), [
                 'headers' => [
+                    'Content-Type' => 'application/json',
                     'Accept' => 'application/json',
                 ],
                 'body'    => $this->serializer->serialize($request->getResponseObject(), 'json', context: [
-                    AbstractNormalizer::GROUPS => $request->getResponseObject()->getResponseSignature(),
+                    AbstractNormalizer::GROUPS => $request->getResponseObject()?->getResponseSignature(),
                 ]),
             ]);
             $statusCode = $response->getStatusCode();
