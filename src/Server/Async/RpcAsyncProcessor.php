@@ -3,6 +3,7 @@
 namespace Ufo\JsonRpcBundle\Server\Async;
 
 use Closure;
+use DateTime;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Serializer\SerializerInterface;
@@ -18,7 +19,11 @@ use Ufo\RpcObject\RpcResponse;
 use Ufo\RpcObject\Transformer\RpcResponseContextBuilder;
 
 use function array_merge;
+use function is_null;
+use function sprintf;
+use function time;
 
+use const JSON_UNESCAPED_UNICODE;
 use const PHP_EOL;
 
 #[AsMessageHandler]
@@ -147,21 +152,36 @@ class RpcAsyncProcessor
 
     public function __invoke(RpcAsyncRequest $message): void
     {
+        echo PHP_EOL;
+        echo (new DateTime())->format('Y-m-d H:i:s') . ':';
+        echo PHP_EOL;
+        echo '>>> ' . $this->serializer->serialize(
+                $message->getRpcRequest()->toArray(),
+                'json',
+                ['json_encode_options' => JSON_UNESCAPED_UNICODE]
+            );
+        echo PHP_EOL;
+
         $this->rpcSecurity->setToken($message->token);
+        $this->rpcSecurity->isValidRequest();
+
         $response = $this->rpcServer->handle($message->getRpcRequest());
-
-        if ($message->getRpcRequest()->isAsync()) {
-            $this->callbackProcessor->process($message->getRpcRequest());
-        }
-
         try {
-            echo '>>> '.$this->serializer->serialize($message->getRpcRequest()->toArray(), 'json');
-            echo PHP_EOL;
+            if ($message->getRpcRequest()->isAsync()) {
+                $this->callbackProcessor->process($message->getRpcRequest());
+            }
             $group = $message->getRpcRequest()->hasError() ? RpcResponse::IS_ERROR : RpcResponse::IS_RESULT;
         } catch (Throwable $e) {
             $group = RpcResponse::IS_ERROR;
         }
-        echo '<<< '.$this->serializer->serialize($response, 'json', ['groups' => [$group]]);
+        echo '<<< ' . $this->serializer->serialize(
+                $response,
+                'json',
+                [
+                    'groups' => [$group],
+                    'json_encode_options' => JSON_UNESCAPED_UNICODE
+                ]
+            );
         echo PHP_EOL.PHP_EOL;
     }
 
