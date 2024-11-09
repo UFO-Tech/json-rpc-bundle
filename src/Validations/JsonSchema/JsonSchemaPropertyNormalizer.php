@@ -32,7 +32,8 @@ class JsonSchemaPropertyNormalizer implements NormalizerInterface
      */
     public function normalize($object, ?string $format = null, array $context = []): array
     {
-        $this->checkTheType($context);
+        $type = $context['type'] ?? '';
+        $this->checkTheType($type);
         foreach ($object->assertions as $assertion) {
             $this->generator->dispatch($assertion, $this->schema);
         }
@@ -42,21 +43,22 @@ class JsonSchemaPropertyNormalizer implements NormalizerInterface
         return $schema;
     }
 
-    protected function checkTheType(array $context): void
+    protected function checkTheType(array|string $type): void
     {
-        $type = $context['type'] ?? '';
         try {
-            $this->schema = $this->convertSingleType($type);
+            if (is_array($type)) {
+                $this->schema['oneOf'] = $this->convertArrayOfTypes($type);
+            } else {
+                $this->schema = $this->convertSingleType($type);
+            }
         } catch (InvalidArgumentException) {
             $this->schema['oneOf'] = TypeHintResolver::mixedForJsonSchema();
-        } catch (TypeError) {
-            $this->schema['oneOf'] = $this->convertArrayOfTypes($type);
         }
     }
 
     public function convertSingleType(string $type): array
     {
-        if (empty($type)) throw new InvalidArgumentException();
+        if (empty($type)) throw new InvalidArgumentException('Parameter type is empty');
         $result = TypeHintResolver::phpToJsonSchema($type);
         return [TypeHintResolver::TYPE => $result];
     }
