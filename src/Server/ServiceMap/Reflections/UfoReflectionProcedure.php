@@ -147,7 +147,7 @@ class UfoReflectionProcedure
         $returns = [];
         if ($reflection instanceof ReflectionNamedType) {
             $return = $reflection->getName();
-            if ($reflection->allowsNull()) {
+            if ($reflection->allowsNull() && $return !== 'null') {
                 $returns[] = $return;
                 $returns[] = 'null';
             }
