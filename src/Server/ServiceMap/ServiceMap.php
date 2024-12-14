@@ -11,7 +11,9 @@ use Ufo\JsonRpcBundle\Package;
 use Ufo\RpcError\RpcMethodNotFoundExceptionRpc;
 use Ufo\RpcObject\RpcTransport;
 
+use function array_key_exists;
 use function is_null;
+use function is_subclass_of;
 
 class ServiceMap
 {
@@ -73,13 +75,19 @@ class ServiceMap
     public function addService(Service $service): static
     {
         $name = $service->getName();
-        if (array_key_exists($name, $this->services)) {
-            throw new RuntimeException('Attempt to register a service already registered detected');
+        if (array_key_exists($name, $this->services)
+            && !is_subclass_of($service->getProcedureFQCN(), $this->services[$name]->getProcedureFQCN())
+        ) {
+            if (is_subclass_of($this->services[$name]->getProcedureFQCN(), $service->getProcedureFQCN())) {
+                return $this;
+            } else {
+                throw new RuntimeException('Attempt to register a service "'. $name .'" already registered detected');
+            }
         }
         $this->services[$name] = $service;
-
         return $this;
     }
+
 
     /**
      * @return Service[]
