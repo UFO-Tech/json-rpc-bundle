@@ -33,7 +33,7 @@
     "symfony/http-client": "^7.0",
     "symfony/process": "^7.0",
     "ext-dom": "*",
-    "ufo-tech/rpc-objects": "^2.7.*",
+    "ufo-tech/rpc-objects": "2.7.*",
     "doctrine/persistence": ">=3.1",
     "symfony/security-bundle": "^7.0",
     "phpdocumentor/reflection-docblock": ">=5.3",
