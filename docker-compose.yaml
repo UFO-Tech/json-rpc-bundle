@@ -16,6 +16,18 @@ services:
     networks:
       - app
 
+  php-cli:
+    container_name: php_cli_${PROJECT_NAME}
+    build:
+      context: ./docker/configs/php-cli
+      dockerfile: Dockerfile
+      args:
+        WORKDIR: ${WORKDIR}
+    volumes:
+      - ./:${WORKDIR}
+    networks:
+      - app
+
 networks:
   app:
     name: vitamin_bot_net_vitamin
