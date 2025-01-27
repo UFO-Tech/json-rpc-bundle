@@ -4,6 +4,7 @@ namespace Ufo\JsonRpcBundle\Validations\JsonSchema\Generate;
 
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 use Symfony\Component\Validator\Constraint;
+use Psr\Log\LoggerInterface;
 use Throwable;
 use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Enums\CompositeConstraintType;
 use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Interfaces\IConstraintGenerator;
@@ -23,7 +24,8 @@ class Genearator
      */
     public function __construct(
         #[AutowireIterator('rpc.constraint')]
-        iterable $constraints = []
+        iterable $constraints = [],
+        private ?LoggerInterface $logger = null
     ) {
         foreach ($constraints as $generator) {
             $this->constraints[$generator->getSupportedClass()] = $generator;
@@ -42,6 +44,14 @@ class Genearator
         $processed[$hash] = true;
 
         try {
+            if (!isset($this->constraints[$constraint::class])) {
+                $this->logger?->warning(sprintf(
+                    'No generator found for constraint: %s',
+                    $constraint::class
+                ));
+                return;
+            }
+
             $this->constraints[$constraint::class]->generate($constraint, $rules);
             $this->processNestedConstraints($constraint, $rules);
         } catch (Throwable) {
