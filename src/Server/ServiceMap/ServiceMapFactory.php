@@ -5,8 +5,8 @@ namespace Ufo\JsonRpcBundle\Server\ServiceMap;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Container\ContainerInterface;
 use ReflectionException;
+use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
-use Symfony\Component\DependencyInjection\Attribute\TaggedIterator;
 use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Contracts\Cache\ItemInterface;
@@ -37,7 +37,7 @@ class ServiceMapFactory
         protected CacheItemPoolInterface $cache,
         protected RpcMainConfig $rpcConfig,
         protected SerializerInterface $serializer,
-        #[TaggedIterator('ufo.rpc.service')]
+        #[AutowireIterator('ufo.rpc.service')]
         protected iterable $procedures,
         protected RouterInterface $router,
         #[AutowireLocator('ufo.rpc.service')]
