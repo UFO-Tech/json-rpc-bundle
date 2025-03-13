@@ -3,14 +3,10 @@
 namespace Ufo\JsonRpcBundle\Server\RpcCache;
 
 use Psr\Cache\CacheItemPoolInterface;
-use Symfony\Component\DependencyInjection\Attribute\TaggedIterator;
-use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
-use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceLocator;
 use Ufo\RpcError\WrongWayException;
-use Ufo\RpcObject\RPC\Cache;
 use Ufo\RpcObject\RpcCachedResponse;
 use Ufo\RpcObject\RpcRequest;
 use Ufo\RpcObject\RpcResponse;
@@ -28,8 +24,6 @@ class RpcCacheService
         protected CacheItemPoolInterface $cache,
         protected RpcMainConfig $rpcConfig,
     ) {}
-
-
 
     public function getCacheResponse(RpcRequest $singleRequest): RpcResponse
     {
@@ -52,8 +46,7 @@ class RpcCacheService
     {
         if ($cache = $response->getCacheInfo()) {
             if (in_array($this->rpcConfig->environment, $cache->environments)) {
-                $cacheKey = sprintf("%s.%s", $singleRequest->getMethod(),
-                    $this->hashArrayData($singleRequest->getParams()));
+                $cacheKey = sprintf("%s.%s", $singleRequest->getMethod(), $this->hashArrayData($singleRequest->getParams()));
                 $this->cache->delete($cacheKey);
                 $this->cache->get($cacheKey, function (ItemInterface $item) use ($response, $cache) {
                     $item->expiresAfter($cache->lifetimeSecond);
@@ -64,7 +57,7 @@ class RpcCacheService
         }
     }
 
-    protected function hashArrayData(array $data): string
+    public function hashArrayData(array $data): string
     {
         ksort($data);
         $paramString = json_encode($data);

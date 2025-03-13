@@ -8,6 +8,7 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Throwable;
 use TypeError;
 use Ufo\JsonRpcBundle\EventDrivenModel\RpcEventFactory;
+use Ufo\JsonRpcBundle\Locker\LockerService;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceLocator;
 use Ufo\RpcError\RpcBadParamException;
@@ -27,6 +28,7 @@ use function preg_replace;
 class ServerEventListener
 {
     public function __construct(
+        protected LockerService $lockerService,
         #[Autowire('kernel.environment')]
         protected string $environment,
         protected RpcEventFactory $eventFactory,
@@ -54,6 +56,8 @@ class ServerEventListener
         } catch (Throwable $e) {
             $this->eventFactory->fireError($event->rpcRequest, RpcRuntimeException::fromThrowable($e));
             return;
+        } finally {
+            $this->lockerService->release();
         }
         $this->eventFactory->fire(RpcEvent::POST_EXECUTE, $result);
 

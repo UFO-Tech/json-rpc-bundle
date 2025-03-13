@@ -8,8 +8,6 @@ use Throwable;
 use Ufo\RpcObject\Events\RpcErrorEvent;
 use Ufo\RpcObject\Events\RpcEvent;
 
-use function is_array;
-
 #[AsEventListener(RpcEvent::ERROR, 'onError')]
 class LoggerListener
 {

@@ -11,6 +11,7 @@ use Ufo\RpcObject\Helpers\TypeHintResolver;
 use Ufo\RpcObject\RPC\AssertionsCollection;
 use Ufo\RpcObject\RPC\Cache;
 use Ufo\RpcObject\RPC\Info;
+use Ufo\RpcObject\RPC\Lock;
 use Ufo\RpcObject\RPC\Response;
 use Ufo\RpcObject\RPC\ResultAsDTO;
 
@@ -33,6 +34,8 @@ class Service
     protected ?AssertionsCollection $assertions = null;
 
     protected ?Cache $cacheInfo = null;
+
+    protected ?Lock $lockInfo = null;
 
     /**
      * @return ?ResultAsDTO
@@ -102,10 +105,6 @@ class Service
         return $service;
     }
 
-    /**
-     * @param Cache $cacheInfo
-     * @return static
-     */
     public function setCacheInfo(Cache $cacheInfo): static
     {
         $this->cacheInfo = $cacheInfo;
@@ -118,9 +117,18 @@ class Service
         return $this->cacheInfo;
     }
 
-    /**
-     * @return string
-     */
+    public function setLockInfo(?Lock $lockInfo): static
+    {
+        $this->lockInfo = $lockInfo;
+
+        return $this;
+    }
+
+    public function getLockInfo(): ?Lock
+    {
+        return $this->lockInfo;
+    }
+
     public function getMethodName(): string
     {
         return $this->methodName;

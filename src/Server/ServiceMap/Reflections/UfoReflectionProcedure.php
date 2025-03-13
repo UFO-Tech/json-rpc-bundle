@@ -14,16 +14,15 @@ use Symfony\Component\Serializer\SerializerInterface;
 use Throwable;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 use Ufo\JsonRpcBundle\ConfigService\RpcDocsConfig;
+use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\Fillers\ChainServiceFiller;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\RpcError\RpcInternalException;
-use Ufo\RpcObject\RPC\Assertions;
 use Ufo\RpcObject\RPC\AssertionsCollection;
 use Ufo\RpcObject\RPC\Cache;
 use Ufo\RpcObject\RPC\IgnoreApi;
 use Ufo\RpcObject\RPC\Info;
 use Ufo\RpcObject\RPC\Response;
 use Ufo\RpcObject\RPC\ResultAsDTO;
-use Ufo\RpcObject\Transformer\AttributeHelper;
 
 use function count;
 use function current;
@@ -61,8 +60,8 @@ class UfoReflectionProcedure
 
     public function __construct(
         protected IRpcService $procedure,
-        protected SerializerInterface $serializer,
-        protected RpcDocsConfig $rpcDocsConfig
+        protected RpcDocsConfig $rpcDocsConfig,
+        protected ChainServiceFiller $chainServiceFiller,
     ) {
         $this->reflection = new ReflectionClass(get_class($procedure));
         $this->provideNameAndNamespace();
@@ -93,146 +92,11 @@ class UfoReflectionProcedure
         }
     }
 
-    protected function buildReturns(ReflectionMethod $method, Service $service): void
-    {
-        $returnReflection = $method->getReturnType();
-        $returns = [];
-        if (is_null($returnReflection) && is_string($method->getDocComment())) {
-            foreach ($this->methodDoc->getTagsByName('return') as $return) {
-                $returns[] = (string)$return->getType();
-            }
-        } else {
-            $returns = $this->getTypes($returnReflection);
-        }
-        $returnDesc = $this->getReturnDescription($this->methodDoc);
-        if (is_array($returns)) {
-            foreach ($returns as $type) {
-                $service->addReturn($this->typeFrom($type), $returnDesc);
-            }
-        } else {
-            $service->addReturn($this->typeFrom($returns), $returnDesc);
-        }
-        $cache = $method->getAttributes(Cache::class);
-        if (count($cache) > 0) {
-            $service->setCacheInfo(current($cache)->newInstance());
-        }
-    }
-
-    /**
-     * @throws RpcInternalException
-     */
-    protected function findResponseInfo(ReflectionMethod $method, Service $service): void
-    {
-        if ($method->getAttributes(ResultAsDTO::class)) {
-            /** @var ResultAsDTO $responseInfo */
-            $responseInfo = $method->getAttributes(ResultAsDTO::class)[0]->newInstance();
-            new ResultAsDtoReflector($responseInfo);
-
-            $service->setResponseInfo($responseInfo);
-        } elseif ($method->getAttributes(Response::class)) {
-            $responseInfo = $method->getAttributes(Response::class)[0]->newInstance();
-            $resultAsDto = new ResultAsDTO($responseInfo->getDto(), $responseInfo->isCollection());
-            $service->setResponseInfo($resultAsDto);
-        }
-    }
-
-    protected function typeFrom(ReflectionNamedType|string $type): string
-    {
-        return ($type instanceof ReflectionNamedType) ? $type->getName() : $type;
-    }
-
-    protected function getTypes(?ReflectionType $reflection): array|string
-    {
-        $return = 'any';
-        $returns = [];
-        if ($reflection instanceof ReflectionNamedType) {
-            $return = $reflection->getName();
-            if ($reflection->allowsNull() && $return !== 'null') {
-                $returns[] = $return;
-                $returns[] = 'null';
-            }
-        } elseif ($reflection instanceof ReflectionUnionType) {
-            foreach ($reflection->getTypes() as $type) {
-                $returns[] = $this->getTypes($type);
-            }
-        }
-
-        return !empty($returns) ? $returns : $return;
-    }
-
-    protected function buildParams(ReflectionMethod $method, Service $service): void
-    {
-        $params = [];
-        $paramsReflection = $method->getParameters();
-        $this->assertions = new AssertionsCollection();
-        if (!empty($paramsReflection)) {
-            $docBlock = $this->methodDoc;
-            foreach ($paramsReflection as $i => $paramRef) {
-                $params[$i] = [
-                    'type'       => $this->getTypes($paramRef->getType()),
-                    'additional' => [
-                        'name'        => $paramRef->getName(),
-                        'description' => $this->getParamDescription($docBlock, $paramRef->getName()),
-                        'optional'    => false,
-                        'schema'      => [],
-                    ],
-                ];
-                try {
-                    $params[$i]['additional']['default'] = $paramRef->getDefaultValue();
-                    $params[$i]['additional']['optional'] = true;
-                } catch (ReflectionException) {
-                }
-                try {
-                    
-                    $this->assertions->fillAssertion(
-                        $service->getProcedureFQCN(),
-                        $method,
-                        $paramRef
-                    );
-                } catch (Throwable) {
-                }
-            }
-        }
-        foreach ($params as $param) {
-            $service->addParam($param['type'], $param['additional']);
-        }
-    }
-
-    protected function getParamDescription(DocBlock $docBlock, string $paramName): string
-    {
-        $desc = '';
-        /**
-         * @var DocBlock\Tags\Param $param
-         */
-        foreach ($docBlock->getTagsByName('param') as $param) {
-            if (!($param->getVariableName() === $paramName)) {
-                continue;
-            }
-            if ($param->getDescription()) {
-                $desc = $param->getDescription()->getBodyTemplate();
-            }
-            break;
-        }
-
-        return $desc;
-    }
-
-    protected function getReturnDescription(DocBlock $docBlock): string
-    {
-        $desc = '';
-        /**
-         * @var DocBlock\Tags\Return_ $return
-         */
-        foreach ($docBlock->getTagsByName('return') as $return) {
-            $desc = $return->getDescription();
-        }
-        return $desc;
-
-    }
 
     /**
      * @param ReflectionMethod $method
      * @return Service
+     * @throws RpcInternalException
      */
     protected function buildSignature(ReflectionMethod $method): Service
     {
@@ -240,47 +104,11 @@ class UfoReflectionProcedure
             $docBlock = static::EMPTY_DOC;
         }
         $this->methodDoc = DocBlockFactory::createInstance()->create($docBlock);
-        $className = (empty($this->name)) ? '' : $this->name.$this->concat;
+        $className = (empty($this->name)) ? '' : $this->name . $this->concat;
         $service = new Service($className.$method->getName(), $this->procedure::class, $this->concat);
-        $this->buildParams($method, $service);
-        $this->buildReturns($method, $service);
-        $this->findResponseInfo($method, $service);
-        $this->buildDescription($method, $service);
-        $this->buildThrows($method, $service);
-        if ($this->rpcDocsConfig->needJsonSchema) {
-            $this->buildJsonSchema($method, $service);
-        }
-        if ($this->rpcDocsConfig->needSymfonyAsserts) {
-            $this->buildAssets($method, $service);
-        }
 
+        $this->chainServiceFiller->fill($method, $service, $this->methodDoc);
         return $service;
-    }
-
-    protected function buildDescription(ReflectionMethod $method, Service $service): void
-    {
-        $service->setDescription($this->methodDoc->getSummary());
-    }
-
-    protected function buildThrows(ReflectionMethod $method, Service $service): void
-    {
-        //        foreach ($this->methodDoc->getTagsByName('throws') as $throw) {
-        //            $service->addThrow((string)$throw);
-        //        }
-    }
-
-    protected function buildJsonSchema(ReflectionMethod $method, Service $service): void
-    {
-        try {
-            $service->setSchema($this->serializer->normalize($this->assertions, context: [
-                'service' => $service,
-            ]));
-        } catch (Throwable $e) {}
-    }
-
-    protected function buildAssets(ReflectionMethod $method, Service $service): void
-    {
-        $service->setAssertions($this->assertions);
     }
 
     /**

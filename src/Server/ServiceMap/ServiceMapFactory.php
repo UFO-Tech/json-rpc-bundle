@@ -13,15 +13,11 @@ use Symfony\Contracts\Cache\ItemInterface;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\Controller\ApiController;
+use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\Fillers\ChainServiceFiller;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\UfoReflectionProcedure;
 use Ufo\RpcError\RpcInternalException;
 use Ufo\RpcError\WrongWayException;
 use Ufo\RpcObject\RPC\Cache;
-use Ufo\RpcObject\RPC\IgnoreApi;
-use Ufo\RpcObject\Transformer\Transformer;
-
-use function count;
-use function json_decode;
 
 class ServiceMapFactory
 {
@@ -42,6 +38,8 @@ class ServiceMapFactory
         protected RouterInterface $router,
         #[AutowireLocator('ufo.rpc.service')]
         protected ContainerInterface $locator,
+        protected ChainServiceFiller $chainServiceFiller,
+
     ) {
         $this->buildServiceLocator();
     }
@@ -133,7 +131,11 @@ class ServiceMapFactory
      */
     public function addProcedure(IRpcService $procedure): static
     {
-        $reflection = new UfoReflectionProcedure($procedure, $this->serializer, $this->rpcConfig->docsConfig);
+        $reflection = new UfoReflectionProcedure(
+            $procedure,
+            $this->rpcConfig->docsConfig,
+            $this->chainServiceFiller
+        );
         foreach ($reflection->getMethods() as $service) {
             $this->serviceMap->addService($service);
         }
