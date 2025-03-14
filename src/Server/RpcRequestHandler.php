@@ -25,7 +25,7 @@ use Ufo\RpcObject\Transformer\RpcResponseContextBuilder;
 class RpcRequestHandler
 {
     protected Request $request;
-    protected RpcRequestHelper $requestHelper;
+    protected ?RpcRequestHelper $requestHelper = null;
 
     protected null|array|string $response = null;
 
@@ -38,6 +38,7 @@ class RpcRequestHandler
         protected RpcEventFactory $eventFactory,
         protected IRpcSecurity $rpcSecurity,
         protected ServiceLocator $serviceLocator,
+        protected CurrentRpcRequestHolder $currentRpcRequestHolder,
     ) {}
 
     /**
@@ -57,6 +58,7 @@ class RpcRequestHandler
         if (!$this->requestHelper->isPost()) {
             throw new WrongWayException();
         }
+        $this->currentRpcRequestHolder->setRpcRequest($this->requestHelper->getRequestObject());
         return $this->smartHandle();
     }
 
