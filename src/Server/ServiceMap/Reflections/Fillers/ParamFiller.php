@@ -5,8 +5,10 @@ namespace Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\Fillers;
 use phpDocumentor\Reflection\DocBlock;
 use ReflectionException;
 use ReflectionMethod;
+use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 
+#[AutoconfigureTag(IServiceFiller::TAG, ['priority' => 100])]
 class ParamFiller extends AbstractServiceFiller
 {
 
