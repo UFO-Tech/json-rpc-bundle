@@ -34,5 +34,5 @@ services:
     Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMap:
         factory: ['@Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMapFactory', 'getServiceMap']
 
-    
-    
+    Ufo\JsonRpcBundle\Locker\UfoLockerStore:
+        class: Ufo\JsonRpcBundle\Locker\UfoLockerStore
