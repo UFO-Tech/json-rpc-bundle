@@ -5,13 +5,14 @@ namespace Ufo\JsonRpcBundle\Server\ServiceMap\Reflections;
 use ReflectionProperty;
 use ReflectionType;
 use Ufo\RpcError\RpcInternalException;
-use Ufo\RpcObject\RPC\ResultAsDTO;
+use Ufo\RpcObject\RPC\DTO;
 
 use function class_exists;
 use function count;
+use function get_class;
 use function implode;
 
-class ResultAsDtoReflector
+class DtoReflector
 {
 
     protected \ReflectionClass $refDTO;
@@ -22,7 +23,7 @@ class ResultAsDtoReflector
      * @throws RpcInternalException
      */
     public function __construct(
-        public readonly ResultAsDTO $resultAsDto,
+        public readonly DTO $dto,
     )
     {
         $this->reflect();
@@ -32,16 +33,16 @@ class ResultAsDtoReflector
 
     protected function setResult(): void
     {
-        $refAttr = new \ReflectionObject($this->resultAsDto);
-        $refAttr->getProperty('dtoFormat')->setValue($this->resultAsDto, $this->responseFormat);
+        $refAttr = new \ReflectionObject($this->dto);
+        $refAttr->getProperty('dtoFormat')->setValue($this->dto, $this->responseFormat);
     }
 
     protected function reflect(): void
     {
-        if (!class_exists($this->resultAsDto->dtoFQCN)) {
-            throw new RpcInternalException('Class "' . $this->resultAsDto->dtoFQCN . '" is not found');
+        if (!class_exists($this->dto->dtoFQCN)) {
+            throw new RpcInternalException('Class "' . $this->dto->dtoFQCN.'" is not found');
         }
-        $this->refDTO = new \ReflectionClass($this->resultAsDto->dtoFQCN);
+        $this->refDTO = new \ReflectionClass($this->dto->dtoFQCN);
     }
 
     protected function parse(): void
@@ -63,16 +64,20 @@ class ResultAsDtoReflector
         }
     }
 
+    /**
+     * @throws RpcInternalException
+     */
     protected function getType(ReflectionProperty $property, ReflectionType $type): string
     {
+        /** @var DTO $dto */
         $typeName = $type->getName();
-        if (count($property->getAttributes(ResultAsDTO::class)) > 0) {
-            /** @var ResultAsDTO $resAsDto */
-            $resAsDto = $property->getAttributes(ResultAsDTO::class)[0]->newInstance();
-            new self($resAsDto);
-            if ($typeName === 'array' && $resAsDto->collection) {
+        $attrFQCN = get_class($this->dto);
+        if (count($property->getAttributes($attrFQCN)) > 0) {
+            $dto = $property->getAttributes($attrFQCN)[0]->newInstance();
+            new static($dto);
+            if ($typeName === 'array' && $dto->collection) {
                 $typeName = 'collection';
-                $this->responseFormat['$collections'][$property->getName()] = $resAsDto;
+                $this->responseFormat['$collections'][$property->getName()] = $dto;
             }
         }
         return $typeName;

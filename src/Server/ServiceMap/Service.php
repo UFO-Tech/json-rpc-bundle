@@ -6,16 +6,29 @@ use InvalidArgumentException;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionObject;
+use TypeError;
+use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\DtoReflector;
 use Ufo\RpcError\RpcInternalException;
+use Ufo\RpcObject\DTO\DTOTransformer;
 use Ufo\RpcObject\Helpers\TypeHintResolver;
 use Ufo\RpcObject\RPC\AssertionsCollection;
 use Ufo\RpcObject\RPC\Cache;
+use Ufo\RpcObject\RPC\DTO;
 use Ufo\RpcObject\RPC\Info;
 use Ufo\RpcObject\RPC\Lock;
 use Ufo\RpcObject\RPC\Response;
 use Ufo\RpcObject\RPC\ResultAsDTO;
 
+use function array_key_exists;
+use function array_keys;
+use function class_exists;
+use function count;
+use function end;
+use function explode;
+use function in_array;
+use function is_array;
 use function is_null;
+use function json_encode;
 
 class Service
 {
@@ -36,6 +49,27 @@ class Service
     protected ?Cache $cacheInfo = null;
 
     protected ?Lock $lockInfo = null;
+
+    /**
+     * @var array<string,DtoReflector>
+     */
+    protected array $paramsDto = [];
+
+    public function getParamDto(string $param): ?DtoReflector
+    {
+        return $this->paramsDto[$param] ?? null;
+    }
+
+    public function getParamsDto(): array
+    {
+        return $this->paramsDto;
+    }
+
+    public function addParamsDto(string $param, DtoReflector $dtoReflector): static
+    {
+        $this->paramsDto[$param] = $dtoReflector;
+        return $this;
+    }
 
     /**
      * @return ?ResultAsDTO
@@ -81,8 +115,9 @@ class Service
     }
 
     /**
+     * @param array $data
+     * @return Service
      * @throws ReflectionException
-     * @throws RpcInternalException
      */
     public static function fromArray(array $data): static
     {
@@ -90,25 +125,34 @@ class Service
         $service = $refClass->newInstanceWithoutConstructor();
         $data['assertions'] = null;
         foreach ($data as $propertyName => $value) {
-            if ($propertyName === 'responseInfo') {
-                if (is_null($value)) continue;
-                $rf = $value['responseFormat'];
-                $value = new ResultAsDTO(
-                    $value['dtoFQCN'],
-                    $value['collection']
-                );
-                $refResultAsDTO = new ReflectionObject($value);
-                $refResultAsDTO->getProperty('dtoFormat')->setValue($value, $rf);
+            try {
+                $value = match ($propertyName) {
+                    'responseInfo', 'paramsDto' => static::hydrateResponseInfo($value),
+                    default => $value,
+                };
+            } catch (\Throwable) {
+                continue;
             }
+
             $refClass->getProperty($propertyName)->setValue($service, $value);
         }
         return $service;
     }
 
+    protected static function hydrateResponseInfo(array $value): ResultAsDTO
+    {
+        $objects = $rf = $value['format'];
+        $result = new ResultAsDTO($value['dtoFQCN'], $value['collection']);
+        foreach ($rf['$collections'] ?? [] as $param => $data) {
+            $objects['$collections'][$param] = static::hydrateResponseInfo($data);
+        }
+        (new ReflectionObject($result))->getProperty('dtoFormat')->setValue($result, $objects);
+        return $result;
+    }
+
     public function setCacheInfo(Cache $cacheInfo): static
     {
         $this->cacheInfo = $cacheInfo;
-
         return $this;
     }
 
@@ -159,14 +203,7 @@ class Service
      */
     public function addParam(string|array $type, array $options = []): static
     {
-        if (is_string($type)) {
-            $type = $this->validateParamType($type);
-        }
-        if (is_array($type)) {
-            foreach ($type as $key => $paramType) {
-                $type[$key] = $this->validateParamType($paramType);
-            }
-        }
+        $type = $this->validateParamType($type);
         $paramOptions = ['type' => $type];
         foreach ($options as $key => $value) {
             if (in_array($key, array_keys($this->paramOptionTypes))) {
@@ -183,7 +220,10 @@ class Service
 
     public function setSchema(array $schema): static
     {
-        $this->schema = $schema;
+        $this->schema = [
+            ...$this->schema,
+            ...$schema
+        ];
 
         return $this;
     }
@@ -195,6 +235,7 @@ class Service
      *
      * @param array $params
      * @return self
+     * @throws RpcInternalException
      */
     public function addParams(array $params): static
     {
@@ -239,6 +280,7 @@ class Service
      * @param string $type
      * @param string|null $desc
      * @return $this
+     * @throws RpcInternalException
      */
     public function addReturn(string $type, ?string $desc = null): static
     {
@@ -250,6 +292,7 @@ class Service
     /**
      * @param array $types
      * @return $this
+     * @throws RpcInternalException
      */
     public function setReturn(array $types): static
     {
@@ -303,6 +346,9 @@ class Service
         return $this->return;
     }
 
+    /**
+     * @throws RpcInternalException
+     */
     public function toArray(): array
     {
         $return = $this->getReturn()[0];
@@ -336,6 +382,9 @@ class Service
         return $this;
     }
 
+    /**
+     * @throws RpcInternalException
+     */
     public function toJson(): string
     {
         return json_encode([
@@ -347,6 +396,7 @@ class Service
      * Cast to string.
      *
      * @return string
+     * @throws RpcInternalException
      */
     public function __toString(): string
     {
@@ -354,12 +404,16 @@ class Service
     }
 
     /**
-     * @param string $type
-     * @return string
+     * @param array|string $type
+     * @return array|string
      */
-    protected function validateParamType(string $type): string
+    protected function validateParamType(array|string $type): array|string
     {
-        return TypeHintResolver::normalize($type);
+        try {
+            return TypeHintResolver::normalize($type);
+        } catch (TypeError) {
+            return TypeHintResolver::normalizeArray($type);
+        }
     }
 
     public function getProcedureFQCN(): string

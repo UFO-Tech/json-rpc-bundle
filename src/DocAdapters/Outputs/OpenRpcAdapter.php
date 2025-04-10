@@ -5,11 +5,13 @@ use PSX\OpenRPC\Method;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\DocAdapters\Outputs\OpenRpc\OpenRpcSpecBuilder;
 use Ufo\JsonRpcBundle\Package;
+use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\DtoReflector;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ResultAsDtoReflector;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMap;
 use Ufo\RpcError\RpcInternalException;
 use Ufo\RpcObject\Helpers\TypeHintResolver;
+use Ufo\RpcObject\RPC\DTO;
 use Ufo\RpcObject\RPC\Response;
 use Ufo\RpcObject\RPC\ResultAsDTO;
 use Ufo\RpcObject\RpcTransport;
@@ -158,7 +160,7 @@ class OpenRpcAdapter
     {
         $dtoName = $format['$dto'];
         $collections = array_map(
-            function (ResultAsDTO $res) {
+            function (DTO $res) {
                 return [
                     'schema' => $this->createSchemaLink($res->getResponseFormat()['$dto']),
                     'format' => $res
@@ -229,7 +231,7 @@ class OpenRpcAdapter
         }
         if (!$jsonValue && TypeHintResolver::isRealClass($type)) {
             $newDtoResponse = new ResultAsDTO($type);
-            new ResultAsDtoReflector($newDtoResponse);
+            new DtoReflector($newDtoResponse);
             if (isset($this->schemas[$newDtoResponse->getResponseFormat()['$dto']])) {
                 return $this->createSchemaLink($newDtoResponse->getResponseFormat()['$dto']);
             }
