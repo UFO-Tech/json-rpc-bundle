@@ -58,7 +58,9 @@ class RpcRequestHandler
         if (!$this->requestHelper->isPost()) {
             throw new WrongWayException();
         }
-        $this->currentRpcRequestHolder->setRpcRequest($this->requestHelper->getRequestObject());
+        if (!$this->requestHelper->isBatchRequest()) {
+            $this->currentRpcRequestHolder->setRpcRequest($this->requestHelper->getRequestObject());
+        }
         return $this->smartHandle();
     }
 

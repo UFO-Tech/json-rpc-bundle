@@ -6,7 +6,6 @@ use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\DocAdapters\Outputs\OpenRpc\OpenRpcSpecBuilder;
 use Ufo\JsonRpcBundle\Package;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\DtoReflector;
-use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ResultAsDtoReflector;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMap;
 use Ufo\RpcError\RpcInternalException;
@@ -17,12 +16,9 @@ use Ufo\RpcObject\RPC\ResultAsDTO;
 use Ufo\RpcObject\RpcTransport;
 
 use function array_map;
-use function class_exists;
 use function explode;
 use function implode;
-use function is_array;
 use function is_null;
-use function is_string;
 use function str_contains;
 use function str_starts_with;
 use function substr;
@@ -126,7 +122,7 @@ class OpenRpcAdapter
         try {
             $format = $responseInfo->getResponseFormat();
         } catch (RpcInternalException) {
-            new ResultAsDtoReflector($responseInfo);
+            new DtoReflector($responseInfo);
             $format = $responseInfo->getResponseFormat();
         }
         if ($responseInfo->collection) {
