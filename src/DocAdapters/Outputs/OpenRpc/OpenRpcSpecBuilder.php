@@ -92,7 +92,7 @@ class OpenRpcSpecBuilder
         string $description,
         bool $required = true,
         mixed $default = null,
-        array $schema = null,
+        array $schema = [],
         ?string $assertions = null,
     ): ContentDescriptor
     {
