@@ -25,16 +25,16 @@ class JsonSchemaPropertyNormalizer implements NormalizerInterface
     ) {}
 
     /**
-     * @param Assertions $object
+     * @param Assertions $data
      * @param ?string $format
      * @param array $context
      * @return array
      */
-    public function normalize($object, ?string $format = null, array $context = []): array
+    public function normalize(mixed $data, ?string $format = null, array $context = []): array|string|int|float|bool|\ArrayObject|null
     {
         $type = $context['type'] ?? '';
         $this->checkTheType($type);
-        foreach ($object->assertions as $assertion) {
+        foreach ($data->assertions as $assertion) {
             $this->generator->dispatch($assertion, $this->schema);
         }
         $schema = $this->schema;
@@ -72,7 +72,7 @@ class JsonSchemaPropertyNormalizer implements NormalizerInterface
         return $result;
     }
 
-    public function supportsNormalization($data, ?string $format = null, array $context = []): bool
+    public function supportsNormalization(mixed $data, ?string $format = null, array $context = []): bool
     {
         return $data instanceof Assertions;
     }

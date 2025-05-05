@@ -141,14 +141,7 @@ class Service
 
     protected static function hydrateResponseInfo(array $value): ResultAsDTO
     {
-        $objects = $rf = $value['format'];
-        $a = DTOTransformer::fromArray(ResultAsDTO::class, $value, ['dtoFormat' => 'format']);
-        $result = new ResultAsDTO($value['dtoFQCN'], $value['collection']);
-        foreach ($rf['$collections'] ?? [] as $param => $data) {
-            $objects['$collections'][$param] = static::hydrateResponseInfo($data);
-        }
-        (new ReflectionObject($result))->getProperty('dtoFormat')->setValue($result, $objects);
-        return $result;
+        return DTOTransformer::fromArray(ResultAsDTO::class, $value, ['dtoFormat' => 'format']);
     }
 
     public function setCacheInfo(Cache $cacheInfo): static

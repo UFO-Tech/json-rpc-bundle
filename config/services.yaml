@@ -36,3 +36,11 @@ services:
 
     Ufo\JsonRpcBundle\Locker\UfoLockerStore:
         class: Ufo\JsonRpcBundle\Locker\UfoLockerStore
+
+    Ufo\JsonRpcBundle\CliCommand\UfoRpcProcessCommand:
+        arguments:
+            $rpcSecurity:    '@Ufo\JsonRpcBundle\Security\TokenRpcCliSecurity'
+            $requestHandler: '@Ufo\JsonRpcBundle\Server\RpcRequestHandlerCli'
+
+    Ufo\JsonRpcBundle\EventListener\HandleCliListener:
+        $rpcSecurity: '@Ufo\JsonRpcBundle\Security\TokenRpcCliSecurity'

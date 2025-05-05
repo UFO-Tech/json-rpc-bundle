@@ -15,8 +15,6 @@ use Ufo\RpcObject\Events\RpcEvent;
 use Ufo\RpcObject\RpcResponse;
 use Ufo\RpcObject\Transformer\RpcResponseContextBuilder;
 
-use function call_user_func_array;
-use function preg_replace;
 
 #[AsEventListener(RpcEvent::OUTPUT_ASYNC, 'process', priority: 10)]
 class AsyncServerEventListener
@@ -32,7 +30,6 @@ class AsyncServerEventListener
 
     public function process(RpcAsyncOutputEvent $event): void
     {
-        $request = $event->rpcRequest;
         $batchRequest = $event->batchRequest;
         $output = $event->output;
         try {
@@ -50,21 +47,13 @@ class AsyncServerEventListener
                 $error = AbstractRpcErrorException::fromCode(AbstractRpcErrorException::DEFAULT_CODE, 'Uncatched async error', $e);
             }
             throw $error;
-//            $response = new RpcResponse(
-//                id: $request->getId(),
-//                error: $error,
-//                version: $request->getVersion(),
-//                requestObject: $request,
-//                contextBuilder: $this->contextBuilder
-//            );
         }
-        $result = $this->serializer->normalize($response, context:  $this->contextBuilder->withResponseSignature($response)
-                                                                    ->toArray());
+        $result = $this->serializer->normalize(
+            $response,
+            context:  $this->contextBuilder->withResponseSignature($response)->toArray()
+        );
         $batchRequest->addResult($result);
-
-
-
-//        $event->stopPropagation();
+        $event->stopPropagation();
     }
 
 }

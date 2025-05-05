@@ -14,8 +14,9 @@ use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
 use Ufo\RpcError\AbstractRpcErrorException;
 use Ufo\RpcError\RpcTokenNotFoundInHeaderException;
 
+use const PHP_EOL;
+
 #[AsEventListener(ConsoleEvents::COMMAND, method: 'onConsoleCommand', priority: 1000)]
-#[AsEventListener(ConsoleEvents::ERROR, method: 'onConsoleError', priority: 1000)]
 class CliRpcListener
 {
     public function __construct(
@@ -29,27 +30,6 @@ class CliRpcListener
         if ($event->getCommand()->getName() === 'ufo:rpc:process') {
             try {
                 if ($this->rpcConfig->securityConfig->protectedApi) {
-                    $this->rpcSecurity->isValidToken($event->getInput()->getOption('token'));
-                }
-            } catch (AbstractRpcErrorException $e) {
-                $io->error([
-                    $e->getMessage(),
-                ]);
-                $event->getCommand()->setCode(function () {
-                    return Command::FAILURE;
-                });
-                die;
-            }
-        }
-    }
-
-    public function onConsoleError(ConsoleErrorEvent $event): void
-    {
-        $io = new SymfonyStyle($event->getInput(), $event->getOutput());
-        $command = $event->getCommand();
-        if ($command && $command->getName() === UfoRpcProcessCommand::COMMAND_NAME) {
-            try {
-                if ($this->rpcConfig->securityConfig->protectedApi) {
                     if (!($token = $event->getInput()->getOption('token'))) {
                         throw new RpcTokenNotFoundInHeaderException('Token not set!'.PHP_EOL
                                                                     .'This protected command, use option -t (--token)');
@@ -60,6 +40,9 @@ class CliRpcListener
                 $io->error([
                     $e->getMessage(),
                 ]);
+                $event->getCommand()->setCode(function () {
+                    return Command::FAILURE;
+                });
                 die;
             }
         }

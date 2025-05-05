@@ -29,8 +29,8 @@ use const PHP_EOL;
 #[AsMessageHandler]
 class RpcAsyncProcessor
 {
-    const R = 'rpc.refresh.queue';
-    const CONSOLE = 'bin/console';
+    const string R = 'rpc.refresh.queue';
+    const string CONSOLE = 'bin/console';
 
     /**
      * @var Process[]
@@ -61,10 +61,10 @@ class RpcAsyncProcessor
 
     public function createProcesses(
         RpcRequest $request,
-        string $token = null,
+        ?string $token = null,
         array $additionParams = [],
-        string $cwd = null,
-        array $env = null,
+        ?string $cwd = null,
+        ?array $env = null,
         mixed $input = null,
         ?float $timeout = 60
     ): Process {
@@ -76,13 +76,14 @@ class RpcAsyncProcessor
         $start = [
             $console,
             UfoRpcProcessCommand::COMMAND_NAME,
+            '-t' . $token,
             // todo regenerate raw json
-            $request->getRawJson(),
+            (string)$request->getRawJson(),
         ];
         if (!empty($token)) {
-            $start[] = '-t'.$token;
+            $start[] = '-t' . $token;
         }
-        $process = new Process(array_merge($start, $additionParams), $cwd, $env, $input, $timeout);
+        $process = new Process([...$start, ...$additionParams], $cwd, $env, $input, $timeout);
         $process->start();
         $this->processes[$request->getId()] = $process;
         $this->counter[$request->getId()] = 0;

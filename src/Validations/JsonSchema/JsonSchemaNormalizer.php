@@ -27,19 +27,19 @@ class JsonSchemaNormalizer implements NormalizerInterface
     ) {}
 
     /**
-     * @param AssertionsCollection $assertionsCollection
+     * @param AssertionsCollection $data
      * @param ?string $format
      * @param array $context
      * @return array
      */
-    public function normalize($assertionsCollection, ?string $format = null, array $context = []): array
+    public function normalize(mixed $data, ?string $format = null, array $context = []): array|string|int|float|bool|\ArrayObject|null
     {
         /**
          * @var ?Service $service
          */
         $service = $context['service'] ?? null;
 
-        $assertionsList = $assertionsCollection->getAssertionsCollection();
+        $assertionsList = $data->getAssertionsCollection();
         $properties = [];
         foreach ($service->getParams() as $property => $data) {
             $assertions = $assertionsList[$property] ?? new Assertions([]);
@@ -54,7 +54,7 @@ class JsonSchemaNormalizer implements NormalizerInterface
             ];
     }
 
-    public function supportsNormalization($data, ?string $format = null, array $context = []): bool
+    public function supportsNormalization(mixed $data, ?string $format = null, array $context = []): bool
     {
         return $data instanceof AssertionsCollection;
     }
