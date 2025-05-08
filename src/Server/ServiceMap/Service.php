@@ -3,41 +3,40 @@
 namespace Ufo\JsonRpcBundle\Server\ServiceMap;
 
 use InvalidArgumentException;
-use ReflectionClass;
-use ReflectionException;
-use ReflectionObject;
 use TypeError;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\DtoReflector;
 use Ufo\RpcError\RpcInternalException;
-use Ufo\RpcObject\DTO\DTOTransformer;
+use Ufo\RpcObject\DTO\ArrayConstructibleTrait;
+use Ufo\RpcObject\DTO\IArrayConstructible;
+use Ufo\RpcObject\DTO\IArrayConvertible;
 use Ufo\RpcObject\Helpers\TypeHintResolver;
 use Ufo\RpcObject\RPC\AssertionsCollection;
 use Ufo\RpcObject\RPC\Cache;
 use Ufo\RpcObject\RPC\DTO;
 use Ufo\RpcObject\RPC\Info;
 use Ufo\RpcObject\RPC\Lock;
-use Ufo\RpcObject\RPC\Response;
 use Ufo\RpcObject\RPC\ResultAsDTO;
 
 use function array_key_exists;
 use function array_keys;
-use function class_exists;
 use function count;
 use function end;
 use function explode;
 use function in_array;
 use function is_array;
-use function is_null;
 use function json_encode;
 
-class Service
+class Service implements IArrayConvertible, IArrayConstructible
 {
-    protected string $description;
+    use ArrayConstructibleTrait;
 
-    protected array $return;
+    protected string $description = '';
+
+    protected array $return = [];
 
     protected string $returnDescription = '';
 
+    #[DTO(ResultAsDTO::class, renameKeys: ['dtoFormat' => 'format'])]
     protected ?ResultAsDTO $responseInfo = null;
 
     protected array $schema = [];
@@ -46,8 +45,10 @@ class Service
 
     protected ?AssertionsCollection $assertions = null;
 
+    #[DTO(Cache::class)]
     protected ?Cache $cacheInfo = null;
 
+    #[DTO(Lock::class)]
     protected ?Lock $lockInfo = null;
 
     /**
@@ -112,36 +113,6 @@ class Service
     ) {
         $t = explode($this->concat, $this->name);
         $this->methodName = end($t);
-    }
-
-    /**
-     * @param array $data
-     * @return Service
-     * @throws ReflectionException
-     */
-    public static function fromArray(array $data): static
-    {
-        $refClass = new ReflectionClass(static::class);
-        $service = $refClass->newInstanceWithoutConstructor();
-        $data['assertions'] = null;
-        foreach ($data as $propertyName => $value) {
-            try {
-                $value = match ($propertyName) {
-                    'responseInfo', 'paramsDto' => static::hydrateResponseInfo($value),
-                    default => $value,
-                };
-            } catch (\Throwable $e) {
-                continue;
-            }
-
-            $refClass->getProperty($propertyName)->setValue($service, $value);
-        }
-        return $service;
-    }
-
-    protected static function hydrateResponseInfo(array $value): ResultAsDTO
-    {
-        return DTOTransformer::fromArray(ResultAsDTO::class, $value, ['dtoFormat' => 'format']);
     }
 
     public function setCacheInfo(Cache $cacheInfo): static
