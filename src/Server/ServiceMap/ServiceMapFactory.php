@@ -65,7 +65,7 @@ class ServiceMapFactory
 
             foreach ($states as $state) {
                 $serviceData = $this->serializer->decode($state, 'json');
-                $this->serviceMap->addService(Service::fromArray($serviceData));
+                $this->serviceMap->addService(Service::fromArray($serviceData, ['assertions' => null]));
             }
         } catch (WrongWayException) {
             $this->setProcedures();
@@ -108,6 +108,7 @@ class ServiceMapFactory
             $this->cache->delete(static::CACHE_SM);
             throw new WrongWayException();
         }
+        $this->serviceMap->setFromCacheTrue();
         return $smd;
     }
 

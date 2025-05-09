@@ -47,6 +47,11 @@ class AssertionsFiller extends AbstractServiceFiller
                         $method,
                         $paramRef
                     );
+
+                    $service->setUfoAssertions(
+                        $paramRef->getName(),
+                        $assertions->getAssertionsCollection()[$paramRef->getName()]?->constructorArgs ?? null
+                    );
                 } catch (Throwable) {}
             }
         }

@@ -7,6 +7,7 @@ use TypeError;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\DtoReflector;
 use Ufo\RpcError\RpcInternalException;
 use Ufo\RpcObject\DTO\ArrayConstructibleTrait;
+use Ufo\RpcObject\DTO\DTOTransformer;
 use Ufo\RpcObject\DTO\IArrayConstructible;
 use Ufo\RpcObject\DTO\IArrayConvertible;
 use Ufo\RpcObject\Helpers\TypeHintResolver;
@@ -44,6 +45,8 @@ class Service implements IArrayConvertible, IArrayConstructible
     protected array $throws = [];
 
     protected ?AssertionsCollection $assertions = null;
+
+    protected array $ufoAssertions = [];
 
     #[DTO(Cache::class)]
     protected ?Cache $cacheInfo = null;
@@ -136,6 +139,16 @@ class Service implements IArrayConvertible, IArrayConstructible
     public function getLockInfo(): ?Lock
     {
         return $this->lockInfo;
+    }
+
+    public function getUfoAssertions(): array
+    {
+        return $this->ufoAssertions;
+    }
+
+    public function getUfoAssertion(string $paramName): ?string
+    {
+        return $this->ufoAssertions[$paramName] ?? null;
     }
 
     public function getMethodName(): string
@@ -343,7 +356,12 @@ class Service implements IArrayConvertible, IArrayConstructible
     public function setAssertions(AssertionsCollection $assertions): static
     {
         $this->assertions = $assertions;
+        return $this;
+    }
 
+    public function setUfoAssertions(string $paramName, ?string $ufoAssertion): static
+    {
+        $this->ufoAssertions[$paramName] = $ufoAssertion;
         return $this;
     }
 

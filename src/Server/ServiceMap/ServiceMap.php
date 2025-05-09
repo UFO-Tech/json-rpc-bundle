@@ -22,6 +22,7 @@ class ServiceMap
 
     protected string $envelope;
     protected array $services = [];
+    protected bool $fromCache = false;
 
     public function __construct(
         protected string $target,
@@ -105,5 +106,18 @@ class ServiceMap
     {
         return $this->services[$serviceName] ?? throw new ServiceNotFoundException('Service "'.$serviceName.'" is not found on RPC Service Map');
     }
+
+    public function setFromCacheTrue(): static
+    {
+        $this->fromCache = true;
+
+        return $this;
+    }
+
+    public function isFromCache(): bool
+    {
+        return $this->fromCache;
+    }
+
 }
 

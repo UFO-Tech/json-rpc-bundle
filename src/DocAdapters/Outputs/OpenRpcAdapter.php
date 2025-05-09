@@ -9,6 +9,7 @@ use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\DtoReflector;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMap;
 use Ufo\RpcError\RpcInternalException;
+use Ufo\RpcObject\DTO\DTOTransformer;
 use Ufo\RpcObject\Helpers\TypeHintResolver;
 use Ufo\RpcObject\RPC\DTO;
 use Ufo\RpcObject\RPC\Response;
@@ -69,7 +70,10 @@ class OpenRpcAdapter
             $http->getDomainUrl() . $this->serviceMap->getTarget(),
             $this->serviceMap->getEnvelope(),
             $this->serviceMap->getTransport(),
-            rpcEnv: Package::ufoEnvironment(),
+            rpcEnv: [
+                ...['fromCache' => $this->serviceMap->isFromCache()],
+                ...Package::ufoEnvironment(),
+            ],
         );
     }
 
@@ -155,14 +159,16 @@ class OpenRpcAdapter
     protected function schemaFromDto(array $format): array
     {
         $dtoName = $format['$dto'];
-        $collections = array_map(
-            function (DTO $res) {
-                return [
-                    'schema' => $this->createSchemaLink($res->getResponseFormat()['$dto']),
-                    'format' => $res
-                ];
-            } , $format['$collections'] ?? []
-        );
+        try {
+            $collections = array_map(
+                function (DTO $res) {
+                    return [
+                        'schema' => $this->createSchemaLink($res->getResponseFormat()['$dto']),
+                        'format' => $res
+                    ];
+                } , DTOTransformer::fromArray(DTO::class, $format['$collections'] ?? [])
+            );
+        } catch (\Throwable) {}
         unset($format['$dto']);
         unset($format['$collections']);
 
@@ -216,13 +222,14 @@ class OpenRpcAdapter
     protected function detectDtoOnType(string $type, array $refCollection = []): ?array
     {
         $jsonValue = null;
-        if ($type === 'collection') {
+        if ($type === 'collection' && !empty($refCollection)) {
             $jsonValue = [
                 'type' => 'array',
-                'items' => $refCollection['schema']
+                'items' => $refCollection['schema'] ?? []
             ];
-            if (!isset($this->schemas[$refCollection['format']->getResponseFormat()['$dto']])) {
-                $this->schemaFromDto($refCollection['format']->getResponseFormat());
+            $dto = $refCollection['format'] ?? null;;
+            if ($dto instanceof DTO && !isset($this->schemas[$dto?->getFormat()['$dto']])) {
+                $this->schemaFromDto($dto->getFormat());
             }
         }
         if (!$jsonValue && TypeHintResolver::isRealClass($type)) {
@@ -239,9 +246,6 @@ class OpenRpcAdapter
     protected function buildParam(Method $method, array $param, Service $service): void
     {
         $schema = $service->getSchema()['properties'] ?? [];
-
-        $assertions = $service->getAssertions()?->getAssertionsCollection()[$param['name']]?->constructorArgs ?? null;
-
         $this->rpcSpecBuilder->buildParam(
             $method,
             $param['name'],
@@ -249,7 +253,7 @@ class OpenRpcAdapter
             !$param['optional'],
             $param['default'] ?? null,
             $schema[$param['name']] ?? [],
-            $assertions
+            $service->getUfoAssertion($param['name'])
         );
     }
 }
