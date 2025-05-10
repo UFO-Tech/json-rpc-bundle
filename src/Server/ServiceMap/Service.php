@@ -7,7 +7,6 @@ use TypeError;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\DtoReflector;
 use Ufo\RpcError\RpcInternalException;
 use Ufo\RpcObject\DTO\ArrayConstructibleTrait;
-use Ufo\RpcObject\DTO\DTOTransformer;
 use Ufo\RpcObject\DTO\IArrayConstructible;
 use Ufo\RpcObject\DTO\IArrayConvertible;
 use Ufo\RpcObject\Helpers\TypeHintResolver;

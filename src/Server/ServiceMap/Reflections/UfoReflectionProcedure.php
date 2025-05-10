@@ -5,12 +5,7 @@ namespace Ufo\JsonRpcBundle\Server\ServiceMap\Reflections;
 use phpDocumentor\Reflection\DocBlock;
 use phpDocumentor\Reflection\DocBlockFactory;
 use ReflectionClass;
-use ReflectionException;
 use ReflectionMethod;
-use ReflectionNamedType;
-use ReflectionType;
-use ReflectionUnionType;
-use Symfony\Component\Serializer\SerializerInterface;
 use Throwable;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 use Ufo\JsonRpcBundle\ConfigService\RpcDocsConfig;
@@ -18,14 +13,10 @@ use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\Fillers\ChainServiceFiller;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\RpcError\RpcInternalException;
 use Ufo\RpcObject\RPC\AssertionsCollection;
-use Ufo\RpcObject\RPC\Cache;
 use Ufo\RpcObject\RPC\IgnoreApi;
 use Ufo\RpcObject\RPC\Info;
-use Ufo\RpcObject\RPC\Response;
-use Ufo\RpcObject\RPC\ResultAsDTO;
 
 use function count;
-use function current;
 
 /**
  * Class/Object reflection

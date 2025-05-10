@@ -7,7 +7,6 @@ use ReflectionMethod;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\DtoReflector;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\RpcError\RpcInternalException;
-use Ufo\RpcObject\RPC\Response;
 use Ufo\RpcObject\RPC\ResultAsDTO;
 
 class ResponseFiller extends AbstractServiceFiller
@@ -20,10 +19,6 @@ class ResponseFiller extends AbstractServiceFiller
         /** @var ResultAsDTO $responseInfo */
         if ($responseInfo = $this->getAttribute($method, $service, ResultAsDTO::class, 'setResponseInfo')) {
             new DtoReflector($responseInfo);
-        } elseif ($responseInfo = $this->getAttribute($method, $service, Response::class)) {
-            /** @var Response $responseInfo */
-            $resultAsDto = new ResultAsDTO($responseInfo->getDto(), $responseInfo->isCollection());
-            $service->setResponseInfo($resultAsDto);
         }
     }
 }

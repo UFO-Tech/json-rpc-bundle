@@ -12,7 +12,6 @@ use PSX\OpenRPC\ContentDescriptor;
 use PSX\OpenRPC\Error;
 use PSX\OpenRPC\Method;
 use PSX\OpenRPC\OpenRPC;
-use Ufo\RpcObject\RPC\Response;
 
 class OpenRpcSpecBuilder
 {

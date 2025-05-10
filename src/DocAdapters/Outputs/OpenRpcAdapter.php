@@ -12,7 +12,6 @@ use Ufo\RpcError\RpcInternalException;
 use Ufo\RpcObject\DTO\DTOTransformer;
 use Ufo\RpcObject\Helpers\TypeHintResolver;
 use Ufo\RpcObject\RPC\DTO;
-use Ufo\RpcObject\RPC\Response;
 use Ufo\RpcObject\RPC\ResultAsDTO;
 use Ufo\RpcObject\RpcTransport;
 
@@ -108,16 +107,11 @@ class OpenRpcAdapter
 //        $this->rpcSpecBuilder->buildError($method);
     }
 
-    protected function rpcResponseInfoToSchema(null|Response|ResultAsDTO $responseInfo): ?array
+    protected function rpcResponseInfoToSchema(?ResultAsDTO $responseInfo): ?array
     {
         if (is_null($responseInfo)) return null;
 
-        if ($responseInfo instanceof ResultAsDTO) {
-            $schema = $this->formatFromResultAsDto($responseInfo);
-        } else {
-            $schema = $this->formatFromResponse($responseInfo);
-        }
-        return $schema;
+        return $this->formatFromResultAsDto($responseInfo);
     }
 
     protected function formatFromResultAsDto(ResultAsDTO $responseInfo): ?array
