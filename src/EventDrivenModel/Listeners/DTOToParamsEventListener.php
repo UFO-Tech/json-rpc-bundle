@@ -13,7 +13,7 @@ use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceLocator;
 use Ufo\RpcError\RpcBadParamException;
 use Ufo\RpcError\RpcRuntimeException;
-use Ufo\RpcObject\DTO\DTOTransformer;
+use Ufo\DTO\DTOTransformer;
 use Ufo\RpcObject\Events\RpcErrorEvent;
 use Ufo\RpcObject\Events\RpcEvent;
 use Ufo\RpcObject\Events\RpcPreExecuteEvent;

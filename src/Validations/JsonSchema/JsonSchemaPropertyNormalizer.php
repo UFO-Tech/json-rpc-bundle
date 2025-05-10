@@ -5,9 +5,8 @@ namespace Ufo\JsonRpcBundle\Validations\JsonSchema;
 use InvalidArgumentException;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
-use TypeError;
 use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Genearator;
-use Ufo\RpcObject\Helpers\TypeHintResolver;
+use Ufo\DTO\Helpers\TypeHintResolver;
 use Ufo\RpcObject\RPC\Assertions;
 
 use function is_array;

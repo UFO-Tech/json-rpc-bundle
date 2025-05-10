@@ -7,11 +7,10 @@ use ReflectionException;
 use ReflectionMethod;
 use ReflectionParameter;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
-use TypeError;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\DtoReflector;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\RpcError\RpcInternalException;
-use Ufo\RpcObject\Helpers\TypeHintResolver;
+use Ufo\DTO\Helpers\TypeHintResolver;
 use Ufo\RpcObject\RPC\DTO;
 
 use function array_map;

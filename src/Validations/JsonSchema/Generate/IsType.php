@@ -5,7 +5,7 @@ namespace Ufo\JsonRpcBundle\Validations\JsonSchema\Generate;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\Constraints\Type;
-use Ufo\RpcObject\Helpers\TypeHintResolver;
+use Ufo\DTO\Helpers\TypeHintResolver;
 use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Interfaces\IConstraintGenerator;
 
 use function is_string;

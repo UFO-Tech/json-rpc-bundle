@@ -34,6 +34,7 @@
     "symfony/http-client": "^7.2",
     "symfony/process": "^7.2",
     "ext-dom": "*",
+    "ufo-tech/dto-transformer": "^1.0",
     "ufo-tech/rpc-objects": "^3.0",
     "ufo-tech/rpc-exceptions": ">=1.0.3",
     "doctrine/persistence": ">=3.1",

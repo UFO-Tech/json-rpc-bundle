@@ -14,6 +14,7 @@ final class Package
     const string SPECIFICATION = 'https://www.jsonrpc.org/specification';
 
     protected const array PACKAGES = [
+        'dto-transformer',
         'rpc-objects',
         'json-rpc-sdk-bundle',
         'json-rpc-client-sdk',
