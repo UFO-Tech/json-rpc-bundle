@@ -7,10 +7,6 @@
     {
       "name": "Alex Maystrenko",
       "email": "ashterix69@gmail.com"
-    },
-    {
-      "name" : "Maksym Trofimov",
-      "email" : "makx.work@gmail.com"
     }
   ],
   "type": "symfony-bundle",
