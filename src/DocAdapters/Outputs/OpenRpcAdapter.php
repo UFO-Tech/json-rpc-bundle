@@ -157,10 +157,10 @@ class OpenRpcAdapter
             $collections = array_map(
                 function (DTO $res) {
                     return [
-                        'schema' => $this->createSchemaLink($res->getResponseFormat()['$dto']),
+                        'schema' => $this->createSchemaLink($res->getFormat()['$dto']),
                         'format' => $res
                     ];
-                } , DTOTransformer::fromArray(DTO::class, $format['$collections'] ?? [])
+                }, $format['$collections'] ?? []
             );
         } catch (\Throwable) {}
         unset($format['$dto']);
@@ -227,12 +227,12 @@ class OpenRpcAdapter
             }
         }
         if (!$jsonValue && TypeHintResolver::isRealClass($type)) {
-            $newDtoResponse = new ResultAsDTO($type);
+            $newDtoResponse = new DTO($type);
             new DtoReflector($newDtoResponse);
-            if (isset($this->schemas[$newDtoResponse->getResponseFormat()['$dto']])) {
-                return $this->createSchemaLink($newDtoResponse->getResponseFormat()['$dto']);
+            if (isset($this->schemas[$newDtoResponse->getFormat()['$dto']])) {
+                return $this->createSchemaLink($newDtoResponse->getFormat()['$dto']);
             }
-            $jsonValue = $this->schemaFromDto($newDtoResponse->getResponseFormat());
+            $jsonValue = $this->schemaFromDto($newDtoResponse->getFormat());
         }
         return $jsonValue;
     }
