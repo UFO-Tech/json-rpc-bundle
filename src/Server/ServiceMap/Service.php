@@ -392,7 +392,7 @@ class Service implements IArrayConvertible, IArrayConstructible
     protected function validateParamType(array|string $type): array|string
     {
         try {
-            return TypeHintResolver::normalize($type);
+            return TypeHintResolver::phpToJsonSchema(TypeHintResolver::normalize($type));
         } catch (TypeError) {
             return TypeHintResolver::normalizeArray($type);
         }
