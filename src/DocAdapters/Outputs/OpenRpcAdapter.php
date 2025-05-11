@@ -94,8 +94,7 @@ class OpenRpcAdapter
             $service->getParams()
         );
 
-        $schema = $this->rpcResponseInfoToSchema($service->getResponseInfo())
-                  ?? ['type' => $this->detectArrayOfType(implode('|', $service->getReturn()))];
+        $schema = $this->rpcResponseInfoToSchema($service->getResponseInfo()) ?? $this->formatFromResponse($service);
 
         $this->rpcSpecBuilder->buildResult(
             $method,
@@ -132,14 +131,10 @@ class OpenRpcAdapter
         return $schema;
     }
 
-    protected function formatFromResponse(Response $responseInfo): ?array
+    protected function formatFromResponse(Service $service): ?array
     {
-        return $this->formatFromResultAsDto(
-            new ResultAsDTO(
-                $responseInfo->getDto(),
-                $responseInfo->isCollection()
-            )
-        );
+        $res = $this->detectArrayOfType(implode('|', $service->getReturn()));
+        return ['type' => ($res['type'] ?? $res)];
     }
 
     protected function createSchemaLink(string $dtoName): array
