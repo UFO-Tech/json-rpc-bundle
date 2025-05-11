@@ -95,7 +95,7 @@ class OpenRpcAdapter
         );
 
         $schema = $this->rpcResponseInfoToSchema($service->getResponseInfo())
-            ?? ['type' => implode(', ', $service->getReturn())];
+                  ?? ['type' => $this->detectArrayOfType(implode('|', $service->getReturn()))];
 
         $this->rpcSpecBuilder->buildResult(
             $method,
@@ -107,21 +107,21 @@ class OpenRpcAdapter
 //        $this->rpcSpecBuilder->buildError($method);
     }
 
-    protected function rpcResponseInfoToSchema(?ResultAsDTO $responseInfo): ?array
+    protected function rpcResponseInfoToSchema(?DTO $responseInfo): ?array
     {
         if (is_null($responseInfo)) return null;
 
         return $this->formatFromResultAsDto($responseInfo);
     }
 
-    protected function formatFromResultAsDto(ResultAsDTO $responseInfo): ?array
+    protected function formatFromResultAsDto(DTO $responseInfo): ?array
     {
         $schema = [];
         try {
-            $format = $responseInfo->getResponseFormat();
+            $format = $responseInfo->getFormat();
         } catch (RpcInternalException) {
             new DtoReflector($responseInfo);
-            $format = $responseInfo->getResponseFormat();
+            $format = $responseInfo->getFormat();
         }
         if ($responseInfo->collection) {
             $schema['type'] = 'array';
