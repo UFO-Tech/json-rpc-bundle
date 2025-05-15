@@ -3,23 +3,10 @@
 namespace Ufo\JsonRpcBundle\EventDrivenModel\Listeners;
 
 
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
-use Throwable;
-use TypeError;
-use Ufo\JsonRpcBundle\EventDrivenModel\RpcEventFactory;
-use Ufo\JsonRpcBundle\Locker\LockerService;
-use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
-use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceLocator;
-use Ufo\RpcError\RpcBadParamException;
-use Ufo\RpcError\RpcRuntimeException;
 use Ufo\DTO\DTOTransformer;
-use Ufo\RpcObject\Events\RpcErrorEvent;
 use Ufo\RpcObject\Events\RpcEvent;
 use Ufo\RpcObject\Events\RpcPreExecuteEvent;
-use Ufo\RpcObject\RpcRequest;
-use Ufo\RpcObject\RpcResponse;
-use Ufo\RpcObject\Transformer\RpcResponseContextBuilder;
 
 use function call_user_func_array;
 use function count;

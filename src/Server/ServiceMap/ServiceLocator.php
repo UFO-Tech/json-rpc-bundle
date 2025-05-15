@@ -25,7 +25,11 @@ class ServiceLocator implements ContainerInterface
     public function get(string $id): IRpcService
     {
         try {
-            return $this->locator->get($id);
+            $service = $this->locator->get($id);
+            if (!$service instanceof IRpcService) {
+                throw new ServiceNotFoundException();
+            }
+            return $service;
         } catch (NotFoundExceptionInterface) {
             throw new ServiceNotFoundException('Service "'.$id.'" is not found on RPC Service Locator');
         }
@@ -33,7 +37,12 @@ class ServiceLocator implements ContainerInterface
 
     public function has(string $id): bool
     {
-        return $this->locator->has($id);
+        $isset = false;
+        try {
+            $this->get($id);
+            $isset = true;
+        } catch (NotFoundExceptionInterface) {}
+        return $isset;
     }
 }
 

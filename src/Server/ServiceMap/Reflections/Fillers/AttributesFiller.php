@@ -7,10 +7,10 @@ use ReflectionMethod;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\RpcObject\RPC\Cache;
 
-class CacheFiller extends AbstractServiceFiller
+class AttributesFiller extends AbstractServiceFiller
 {
     public function fill(ReflectionMethod $method, Service $service, DocBlock $methodDoc): void
     {
-        $this->getAttribute($method, $service, Cache::class, 'setCacheInfo');
+        $this->getAttributes($method, $service);
     }
 }

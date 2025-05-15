@@ -10,6 +10,7 @@ use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Contracts\Cache\ItemInterface;
+use Ufo\DTO\ServiceTransformer;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\Controller\ApiController;
@@ -18,6 +19,8 @@ use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\UfoReflectionProcedure;
 use Ufo\RpcError\RpcInternalException;
 use Ufo\RpcError\WrongWayException;
 use Ufo\RpcObject\RPC\Cache;
+
+use function json_encode;
 
 class ServiceMapFactory
 {
@@ -87,7 +90,8 @@ class ServiceMapFactory
                 try {
                     $states = [];
                     foreach ($this->serviceMap->getServices() as $service) {
-                        $state = $this->serializer->serialize($service, 'json', ['service' => $service]);
+                        $data = ServiceTransformer::toArray($service);
+                        $state = json_encode($data);
                         $states[$service->getName()] = $state;
                     }
                     $item->set($states);

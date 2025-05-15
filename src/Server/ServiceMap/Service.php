@@ -3,18 +3,18 @@
 namespace Ufo\JsonRpcBundle\Server\ServiceMap;
 
 use InvalidArgumentException;
+use ReflectionException;
 use TypeError;
+use Ufo\DTO\DTOTransformer;
+use Ufo\DTO\ServiceTransformer;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\DtoReflector;
 use Ufo\RpcError\RpcInternalException;
-use Ufo\DTO\ArrayConstructibleTrait;
 use Ufo\DTO\Interfaces\IArrayConstructible;
 use Ufo\DTO\Interfaces\IArrayConvertible;
 use Ufo\DTO\Helpers\TypeHintResolver;
 use Ufo\RpcObject\RPC\AssertionsCollection;
-use Ufo\RpcObject\RPC\Cache;
 use Ufo\RpcObject\RPC\DTO;
 use Ufo\RpcObject\RPC\Info;
-use Ufo\RpcObject\RPC\Lock;
 use Ufo\RpcObject\RPC\ResultAsDTO;
 
 use function array_key_exists;
@@ -28,7 +28,6 @@ use function json_encode;
 
 class Service implements IArrayConvertible, IArrayConstructible
 {
-    use ArrayConstructibleTrait;
 
     protected string $description = '';
 
@@ -47,16 +46,41 @@ class Service implements IArrayConvertible, IArrayConstructible
 
     protected array $ufoAssertions = [];
 
-    #[DTO(Cache::class)]
-    protected ?Cache $cacheInfo = null;
-
-    #[DTO(Lock::class)]
-    protected ?Lock $lockInfo = null;
-
     /**
      * @var array<string,DtoReflector>
      */
     protected array $paramsDto = [];
+
+    #[DTO(ServiceAttributesCollection::class)]
+    protected ?ServiceAttributesCollection $attrCollection = null;
+
+    /**
+     * Parameter option types.
+     *
+     * @var array
+     */
+    protected array $paramOptionTypes = [
+        'name'        => 'is_string',
+        'optional'    => 'is_bool',
+        'default'     => null,
+        'description' => 'is_string',
+    ];
+
+    protected array $params = [];
+
+    protected array $defaultParams = [];
+
+    protected string $methodName;
+
+    public function __construct(
+        protected string $name,
+        protected string $procedureFQCN,
+        public readonly string $concat = Info::DEFAULT_CONCAT
+    ) {
+        $t = explode($this->concat, $this->name);
+        $this->methodName = end($t);
+        $this->attrCollection = new ServiceAttributesCollection();
+    }
 
     public function getParamDto(string $param): ?DtoReflector
     {
@@ -88,56 +112,6 @@ class Service implements IArrayConvertible, IArrayConstructible
     public function setResponseInfo(?ResultAsDTO $responseInfo): void
     {
         $this->responseInfo = $responseInfo;
-    }
-
-    /**
-     * Parameter option types.
-     *
-     * @var array
-     */
-    protected array $paramOptionTypes = [
-        'name'        => 'is_string',
-        'optional'    => 'is_bool',
-        'default'     => null,
-        'description' => 'is_string',
-    ];
-
-    protected array $params = [];
-
-    protected array $defaultParams = [];
-
-    protected string $methodName;
-
-    public function __construct(
-        protected string $name,
-        protected string $procedureFQCN,
-        public readonly string $concat = Info::DEFAULT_CONCAT
-    ) {
-        $t = explode($this->concat, $this->name);
-        $this->methodName = end($t);
-    }
-
-    public function setCacheInfo(Cache $cacheInfo): static
-    {
-        $this->cacheInfo = $cacheInfo;
-        return $this;
-    }
-
-    public function getCacheInfo(): ?Cache
-    {
-        return $this->cacheInfo;
-    }
-
-    public function setLockInfo(?Lock $lockInfo): static
-    {
-        $this->lockInfo = $lockInfo;
-
-        return $this;
-    }
-
-    public function getLockInfo(): ?Lock
-    {
-        return $this->lockInfo;
     }
 
     public function getUfoAssertions(): array
@@ -338,6 +312,7 @@ class Service implements IArrayConvertible, IArrayConstructible
             'parameters'     => $this->getParams(),
             'returns'        => $return,
             'responseFormat' => $this->responseInfo->getResponseFormat() ?? $return,
+            'attrCollection' => DTOTransformer::toArray($this->attrCollection),
         ];
         if (!empty($this->throws)) {
             $array['throws'] = $this->throws;
@@ -418,4 +393,26 @@ class Service implements IArrayConvertible, IArrayConstructible
         return $this->assertions;
     }
 
+    public function getAttrCollection(): ServiceAttributesCollection
+    {
+        return $this->attrCollection;
+    }
+
+    public function setAttribute(object $attribute): static
+    {
+        $this->attrCollection->addAttribute($attribute);
+        return $this;
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    public static function fromArray(array $data, array $renameKey = []): static
+    {
+        /**
+         * @var static $self
+         */
+        $self = ServiceTransformer::fromArray(static::class, $data, $renameKey);
+        return $self;
+    }
 }

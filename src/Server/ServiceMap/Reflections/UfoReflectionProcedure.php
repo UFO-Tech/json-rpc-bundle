@@ -16,7 +16,10 @@ use Ufo\RpcObject\RPC\AssertionsCollection;
 use Ufo\RpcObject\RPC\IgnoreApi;
 use Ufo\RpcObject\RPC\Info;
 
+use function array_filter;
+use function array_values;
 use function count;
+use function in_array;
 
 /**
  * Class/Object reflection
@@ -26,7 +29,7 @@ class UfoReflectionProcedure
     const string EMPTY_DOC = '/**'.PHP_EOL.' *'.PHP_EOL.' */';
 
     /**
-     * @var ReflectionMethod[]
+     * @var Service[]
      */
     protected array $methods = [];
 
@@ -83,7 +86,6 @@ class UfoReflectionProcedure
         }
     }
 
-
     /**
      * @param ReflectionMethod $method
      * @return Service
@@ -105,8 +107,16 @@ class UfoReflectionProcedure
     /**
      * @return Service[]
      */
-    public function getMethods(): array
+    public function getMethods(array $names = []): array
     {
+        if (!empty($names)) {
+            return array_values(
+                array_filter(
+                    $this->methods,
+                    fn(Service $method) => in_array($method->getMethodName(), $names)
+                )
+            );
+        }
         return $this->methods;
     }
 

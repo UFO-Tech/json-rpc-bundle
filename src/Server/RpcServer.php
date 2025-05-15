@@ -7,7 +7,7 @@ use Ufo\JsonRpcBundle\Exceptions\ServiceNotFoundException;
 use Ufo\JsonRpcBundle\Server\RpcCache\RpcCacheService;
 use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMap;
 use Ufo\RpcObject\Events\RpcEvent;
-use Ufo\RpcObject\Events\RpcResponseEvent;
+use Ufo\RpcObject\Events\RpcPreResponseEvent;
 use Ufo\RpcError\RpcMethodNotFoundExceptionRpc;
 use Ufo\RpcError\WrongWayException;
 use Ufo\RpcObject\RpcRequest;
@@ -48,7 +48,7 @@ class RpcServer
         }
 
         $this->eventFactory->addListener(
-            RpcEvent::RESPONSE,
+            RpcEvent::PRE_RESPONSE,
             $this->onRpcResponseCallback(),
             -100000
         );
@@ -65,7 +65,7 @@ class RpcServer
 
     public function onRpcResponseCallback(): callable
     {
-        return function (RpcResponseEvent $event) {
+        return function (RpcPreResponseEvent $event) {
             $this->responseObject = $event->response;
         };
     }

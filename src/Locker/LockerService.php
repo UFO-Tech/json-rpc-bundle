@@ -7,6 +7,7 @@ use Symfony\Component\Lock\LockFactory;
 use Symfony\Component\Lock\LockInterface;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\RpcError\RpcLogicException;
+use Ufo\RpcObject\RPC\Lock;
 use Ufo\RpcObject\RpcRequest;
 
 class LockerService
@@ -23,10 +24,10 @@ class LockerService
 
     public function lock(RpcRequest $request, Service $service): void
     {
-        if (!$service->getLockInfo()) return;
+        if (!$lock = $service->getAttrCollection()->getAttribute(Lock::class)) return;
 
         try {
-            $this->lockInstance = $service->getLockInfo()->acquire($request, $this->lockFactory);
+            $this->lockInstance = $lock->acquire($request, $this->lockFactory);
         } catch (LockConflictedException $e) {
             throw new RpcLogicException("Method '{$request->getMethod()}' is locked.", previous: $e);
         }
