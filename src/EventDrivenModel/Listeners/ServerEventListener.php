@@ -116,14 +116,12 @@ class ServerEventListener
 
         $request->setResponse($response);
 
-        if ($service) {
-            $this->events[RpcEvent::PRE_RESPONSE] = $this->eventFactory->fire(
-                RpcEvent::PRE_RESPONSE,
-                $response,
-                $request,
-                $service,
-            );
-        }
+        $this->events[RpcEvent::PRE_RESPONSE] = $this->eventFactory->fire(
+            RpcEvent::PRE_RESPONSE,
+            $response,
+            $request,
+            $service,
+        );
         return $response;
     }
 

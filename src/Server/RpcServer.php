@@ -66,7 +66,7 @@ class RpcServer
     public function onRpcResponseCallback(): callable
     {
         return function (RpcPreResponseEvent $event) {
-            $this->responseObject = $event->response;
+            $this->responseObject = $event->rpcRequest->getResponseObject();
         };
     }
 
