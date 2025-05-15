@@ -19,6 +19,7 @@ use Ufo\RpcObject\RpcResponse;
 use Ufo\RpcObject\Transformer\RpcResponseContextBuilder;
 
 use function array_merge;
+use function count;
 use function is_null;
 use function sprintf;
 use function time;

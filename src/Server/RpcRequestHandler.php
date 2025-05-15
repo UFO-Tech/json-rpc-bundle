@@ -22,6 +22,8 @@ use Ufo\RpcObject\RpcRequest;
 use Ufo\RpcObject\RpcResponse;
 use Ufo\RpcObject\Transformer\RpcResponseContextBuilder;
 
+use function json_decode;
+
 class RpcRequestHandler
 {
     protected Request $request;

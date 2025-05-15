@@ -12,6 +12,7 @@ use Ufo\RpcError\AbstractRpcErrorException;
 use Ufo\RpcError\RpcAsyncRequestException;
 use Ufo\RpcObject\Events\RpcAsyncOutputEvent;
 use Ufo\RpcObject\Events\RpcEvent;
+use Ufo\RpcObject\RPC\Cache;
 use Ufo\RpcObject\RpcResponse;
 use Ufo\RpcObject\Transformer\RpcResponseContextBuilder;
 
@@ -52,6 +53,16 @@ class AsyncServerEventListener
             $response,
             context:  $this->contextBuilder->withResponseSignature($response)->toArray()
         );
+
+        $response = new RpcResponse(
+            id: $event->rpcRequest->getId() ?? 'not_processed',
+            result: $result,
+            version: $event->rpcRequest->getVersion(),
+            requestObject: $event->rpcRequest,
+            cache: $service?->getAttrCollection()->getAttribute(Cache::class),
+            contextBuilder: $this->contextBuilder
+        );
+        $event->rpcRequest->setResponse($response);
         $batchRequest->addResult($result);
         $event->stopPropagation();
     }
