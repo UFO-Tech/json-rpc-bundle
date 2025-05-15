@@ -92,14 +92,14 @@ class ServerEventListener
             $rpcRequest->setError($event->exception);
         }
 
-        $response = $this->createResponse($rpcRequest, $event->service, error: $event->rpcError);;
+        $response = $this->createResponse($rpcRequest, error: $event->rpcError);
         $event->stopPropagation();
         return $response;
     }
 
     protected function createResponse(
         RpcRequest $request,
-        Service $service,
+        ?Service $service = null,
         mixed $result = [],
         ?RpcError $error = null
     ): RpcResponse
@@ -110,18 +110,20 @@ class ServerEventListener
             error: $error,
             version: $request->getVersion(),
             requestObject: $request,
-            cache: $service->getAttrCollection()->getAttribute(Cache::class),
+            cache: $service?->getAttrCollection()->getAttribute(Cache::class),
             contextBuilder: $this->contextBuilder
         );
 
         $request->setResponse($response);
 
-        $this->events[RpcEvent::PRE_RESPONSE] = $this->eventFactory->fire(
-            RpcEvent::PRE_RESPONSE,
-            $response,
-            $request,
-            $service,
-        );
+        if ($service) {
+            $this->events[RpcEvent::PRE_RESPONSE] = $this->eventFactory->fire(
+                RpcEvent::PRE_RESPONSE,
+                $response,
+                $request,
+                $service,
+            );
+        }
         return $response;
     }
 
@@ -139,8 +141,6 @@ class ServerEventListener
                 $preResponse->rpcRequest,
                 $preResponse->service,
             );
-        } catch (\Throwable $e) {
-            $a=1;
-        }
+        } catch (\Throwable $e) {}
     }
 }
