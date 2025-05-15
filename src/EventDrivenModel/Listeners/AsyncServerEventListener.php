@@ -59,7 +59,6 @@ class AsyncServerEventListener
             result: $result,
             version: $event->rpcRequest->getVersion(),
             requestObject: $event->rpcRequest,
-            cache: $service?->getAttrCollection()->getAttribute(Cache::class),
             contextBuilder: $this->contextBuilder
         );
         $event->rpcRequest->setResponse($response);
