@@ -3,14 +3,11 @@
 namespace Ufo\JsonRpcBundle\Server\ServiceMap;
 
 use Psr\Cache\CacheItemPoolInterface;
-use Psr\Container\ContainerInterface;
 use ReflectionException;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
-use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Contracts\Cache\ItemInterface;
-use Ufo\DTO\ServiceTransformer;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\Controller\ApiController;
@@ -20,11 +17,10 @@ use Ufo\RpcError\RpcInternalException;
 use Ufo\RpcError\WrongWayException;
 use Ufo\RpcObject\RPC\Cache;
 
-use function json_encode;
-
 class ServiceMapFactory
 {
-    const string CACHE_SM = 'rps.service_map';
+    protected const int CACHE_LIFETIME  = 31536000;
+    const string CACHE_SM = 'rpc.service_map';
 
     protected ServiceLocator $serviceLocator;
     protected ServiceMap $serviceMap;
@@ -36,20 +32,13 @@ class ServiceMapFactory
         protected CacheItemPoolInterface $cache,
         protected RpcMainConfig $rpcConfig,
         protected SerializerInterface $serializer,
-        #[AutowireIterator('ufo.rpc.service')]
+        #[AutowireIterator(IRpcService::TAG)]
         protected iterable $procedures,
         protected RouterInterface $router,
-        #[AutowireLocator('ufo.rpc.service')]
-        protected ContainerInterface $locator,
         protected ChainServiceFiller $chainServiceFiller,
 
     ) {
         $this->buildServiceLocator();
-    }
-
-    public function getServiceLocator(): ServiceLocator
-    {
-        return $this->serviceLocator;
     }
 
     public function getServiceMap(): ServiceMap
@@ -67,8 +56,7 @@ class ServiceMapFactory
             $states = $this->fromCache();
 
             foreach ($states as $state) {
-                $serviceData = $this->serializer->decode($state, 'json');
-                $this->serviceMap->addService(Service::fromArray($serviceData, ['assertions' => null]));
+                $this->serviceMap->addService($state);
             }
         } catch (WrongWayException) {
             $this->setProcedures();
@@ -86,13 +74,20 @@ class ServiceMapFactory
             $this->fromCache();
         } catch (WrongWayException) {
             $this->cache->get(static::CACHE_SM, function (ItemInterface $item) {
-                $item->expiresAfter(31536000);
+                $item->expiresAfter(static::CACHE_LIFETIME);
                 try {
                     $states = [];
                     foreach ($this->serviceMap->getServices() as $service) {
-                        $data = ServiceTransformer::toArray($service);
-                        $state = json_encode($data);
-                        $states[$service->getName()] = $state;
+                        $serviceCacheName = ServiceHolder::generateServiceCacheName($service->getName());
+                        $this->cache->delete($serviceCacheName);
+                        $this->cache->get(
+                            $serviceCacheName,
+                            function (ItemInterface $item) use ($service) {
+                                $item->expiresAfter(static::CACHE_LIFETIME);
+                                return $service;
+                            }
+                        );
+                        $states[$service->getName()] = $service;
                     }
                     $item->set($states);
                     return $states;
@@ -118,7 +113,6 @@ class ServiceMapFactory
 
     protected function initServices(): void
     {
-        $this->serviceLocator = new ServiceLocator($this->locator);
         $this->serviceMap = new ServiceMap(
             $this->router->generate(ApiController::API_ROUTE),
             $this->rpcConfig
@@ -153,4 +147,5 @@ class ServiceMapFactory
             $this->addProcedure($procedure);
         }
     }
+
 }

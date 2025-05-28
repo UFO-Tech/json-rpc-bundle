@@ -5,15 +5,13 @@ namespace Ufo\JsonRpcBundle\EventDrivenModel\Listeners;
 
 use ReflectionException;
 use ReflectionMethod;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Ufo\JsonRpcBundle\EventDrivenModel\RpcEventFactory;
+use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
 use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceLocator;
 use Ufo\RpcError\RpcBadParamException;
-use Ufo\RpcObject\Events\RpcErrorEvent;
-use Ufo\RpcObject\Events\RpcEvent;
-use Ufo\RpcObject\Events\RpcPreExecuteEvent;
-use Ufo\RpcObject\RpcError;
+use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcEvent;
+use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcPreExecuteEvent;
 use Ufo\RpcObject\Rules\Validator\ConstraintsImposedException;
 use Ufo\RpcObject\Rules\Validator\RpcValidator;
 
@@ -27,12 +25,9 @@ use function sprintf;
 #[AsEventListener(RpcEvent::PRE_EXECUTE, 'validateAndPrepareNamedParams', priority: 1001)]
 #[AsEventListener(RpcEvent::PRE_EXECUTE, 'validateAndPrepareOrderedParams', priority: 1001)]
 #[AsEventListener(RpcEvent::PRE_EXECUTE, 'constraintValidation', priority: 1000)]
-#[AsEventListener(RpcEvent::ERROR, 'onConstraintsImpostError', priority: 1000)]
 class ValidateParamsListener
 {
     public function __construct(
-        #[Autowire('kernel.environment')]
-        protected string $environment,
         protected RpcEventFactory $eventFactory,
         protected RpcValidator $rpcValidator,
         protected ServiceLocator $serviceLocator
@@ -53,16 +48,6 @@ class ValidateParamsListener
         }
     }
 
-    public function onConstraintsImpostError(RpcErrorEvent $event): void
-    {
-        $e = $event->exception;
-        if (!$e instanceof ConstraintsImposedException) {
-            return;
-        }
-        $event->rpcError = new RpcError($e->getCode(), $e->getMessage(), $e->getConstraintsImposed());
-    }
-
-
     public function validateAndPrepareOrderedParams(RpcPreExecuteEvent $event): void
     {
         $request = $event->rpcRequest;
@@ -71,8 +56,8 @@ class ValidateParamsListener
             return;
         }
 
-        $requiredParamsCount = array_reduce($service->getParams(), static function ($count, $param) {
-            $count += $param['optional'] ? 0 : 1;
+        $requiredParamsCount = array_reduce($service->getParams(), static function (int $count, ParamDefinition $param) {
+            $count += $param->isOptional() ? 0 : 1;
 
             return $count;
         }, 0);

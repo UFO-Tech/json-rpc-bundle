@@ -5,9 +5,9 @@ namespace Ufo\JsonRpcBundle\Server;
 use Ufo\JsonRpcBundle\EventDrivenModel\RpcEventFactory;
 use Ufo\JsonRpcBundle\Exceptions\ServiceNotFoundException;
 use Ufo\JsonRpcBundle\Server\RpcCache\RpcCacheService;
-use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMap;
-use Ufo\RpcObject\Events\RpcEvent;
-use Ufo\RpcObject\Events\RpcPreResponseEvent;
+use Ufo\JsonRpcBundle\Server\ServiceMap\IServiceHolder;
+use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcEvent;
+use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcPreResponseEvent;
 use Ufo\RpcError\RpcMethodNotFoundExceptionRpc;
 use Ufo\RpcError\WrongWayException;
 use Ufo\RpcObject\RpcRequest;
@@ -22,11 +22,10 @@ class RpcServer
     protected RpcResponse $responseObject;
 
     public function __construct(
-        protected ServiceMap $serviceMap,
+        protected IServiceHolder $serviceHolder,
         protected RpcEventFactory $eventFactory,
         protected RpcCacheService $cache,
     ) {}
-
 
     public function newRequest(RpcRequest $requestObject): void
     {
@@ -42,7 +41,7 @@ class RpcServer
     {
         $method = $request->getMethod();
         try {
-            $service = $this->serviceMap->getService($method);
+            $service = $this->serviceHolder->getService($method);
         } catch (ServiceNotFoundException $e) {
             throw new RpcMethodNotFoundExceptionRpc($e->getMessage());
         }

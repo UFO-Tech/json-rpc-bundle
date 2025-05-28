@@ -1,43 +1,31 @@
 <?php
-/**
- * @author Doctor <ashterix69@gmail.com>
- *
- *
- * Date: 21.04.2017
- * Time: 9:23
- */
-
 namespace Ufo\JsonRpcBundle\Security\Interfaces;
 
-
-
 use Ufo\RpcError\RpcInvalidTokenException;
-use Ufo\RpcError\RpcTokenNotFoundInHeaderException;
+use Ufo\RpcError\RpcTokenNotSentException;
 
 interface IRpcSecurity
 {
-    /**
-     * @return string
-     */
-    public function getTokenHeaderKey(): string;
 
-   /**
-     * @return string
-     */
-    public function getToken(): string;
+    public function setTokenHolder(IRpcTokenHolder $holder): self;
 
     /**
-     * @param $token
-     * @return bool
-     * @throws RpcInvalidTokenException
+     * @throws RpcTokenNotSentException
+     * @return IRpcTokenHolder
      */
-    public function isValidToken($token): bool;
+    public function getTokenHolder(): IRpcTokenHolder;
 
     /**
      * @return bool
      * @throws RpcInvalidTokenException
-     * @throws RpcTokenNotFoundInHeaderException
+     * @throws RpcTokenNotSentException
      */
-    public function isValidRequest(): bool;
+    public function isValidDocRequest(): true;
 
+    /**
+     * @return bool
+     * @throws RpcInvalidTokenException
+     * @throws RpcTokenNotSentException
+     */
+    public function isValidApiRequest(): true;
 }

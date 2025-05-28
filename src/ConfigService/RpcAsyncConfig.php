@@ -14,8 +14,8 @@ final readonly class RpcAsyncConfig
 
     public function __construct(array $rpcConfigs, public RpcMainConfig $parent)
     {
-        $this->rpcAsync = $rpcConfigs[self::RPC_ASYNC];
-        $this->failed = $rpcConfigs[self::FAILED];
+        $this->rpcAsync = $rpcConfigs[self::RPC_ASYNC] ?? null;
+        $this->failed = $rpcConfigs[self::FAILED] ?? null;
     }
 
 }

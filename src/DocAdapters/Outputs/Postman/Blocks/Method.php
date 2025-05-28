@@ -2,6 +2,8 @@
 
 namespace Ufo\JsonRpcBundle\DocAdapters\Outputs\Postman\Blocks;
 
+use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
+
 use function array_map;
 use function is_array;
 use function json_encode;
@@ -25,9 +27,12 @@ final class Method implements IPostmanBlock
         readonly public Server $url,
     ) {}
 
+    /**
+     * @var ParamDefinition[]
+     */
     protected array $params = [];
 
-    public function addParam(array $param): self
+    public function addParam(ParamDefinition $param): self
     {
         $this->params[] = $param;
         return $this;
@@ -51,14 +56,14 @@ final class Method implements IPostmanBlock
         return $rpc;
     }
 
-    protected function paramConvert(array $param): array
+    protected function paramConvert(ParamDefinition $param): array
     {
-        $type = $param['type'];
-        if (is_array($param['type'])) {
+        $type = $param->getType();
+        if (is_array($type)) {
             $type = $type[0];
         }
         return [
-            $param['name'] => $param['optional'] ? $param['default'] : $this->exampleValueByType($type),
+            $param->name => $param->isOptional() ? $param->getDefault() : $this->exampleValueByType($type),
         ];
     }
 

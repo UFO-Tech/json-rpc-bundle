@@ -9,6 +9,7 @@ use Symfony\Component\Process\Process;
 use Symfony\Component\Serializer\SerializerInterface;
 use Throwable;
 use Ufo\JsonRpcBundle\CliCommand\UfoRpcProcessCommand;
+use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
 use Ufo\JsonRpcBundle\Security\TokenRpcCliSecurity;
 use Ufo\JsonRpcBundle\Server\RpcRequestHandler;
 use Ufo\JsonRpcBundle\Server\RpcServer;
@@ -48,7 +49,7 @@ class RpcAsyncProcessor
     public function __construct(
         protected RpcServer $rpcServer,
         protected SerializerInterface $serializer,
-        protected TokenRpcCliSecurity $rpcSecurity,
+        protected IRpcSecurity $rpcSecurity,
         protected RpcCallbackProcessor $callbackProcessor,
     ) {}
 
@@ -62,27 +63,22 @@ class RpcAsyncProcessor
 
     public function createProcesses(
         RpcRequest $request,
+        ?string $tokenName = null,
         ?string $token = null,
         array $additionParams = [],
         ?string $cwd = null,
         ?array $env = null,
         mixed $input = null,
-        ?float $timeout = 60
+        ?float $timeout = 3600
     ): Process {
         $console = ($_SERVER['SCRIPT_NAME']) === static::CONSOLE ? static::CONSOLE : '../'.static::CONSOLE;
-        if (empty($this->processes)) {
-            $this->processes[static::R] = static::R;
-            $this->counter[static::R] = 0;
-        }
         $start = [
             $console,
             UfoRpcProcessCommand::COMMAND_NAME,
-            '-t' . $token,
-            // todo regenerate raw json
             (string)$request->getRawJson(),
         ];
-        if (!empty($token)) {
-            $start[] = '-t' . $token;
+        if (!empty($tokenName) && !empty($token)) {
+            $start[] = '--' . $tokenName . '=' . $token;
         }
         $process = new Process([...$start, ...$additionParams], $cwd, $env, $input, $timeout);
         $process->start();
@@ -165,7 +161,7 @@ class RpcAsyncProcessor
         echo PHP_EOL;
 
         $this->rpcSecurity->setToken($message->token);
-        $this->rpcSecurity->isValidRequest();
+        $this->rpcSecurity->isValidDocRequest($message->token);
 
         $response = $this->rpcServer->handle($message->getRpcRequest());
         try {

@@ -2,12 +2,12 @@
 
 namespace Ufo\JsonRpcBundle\Server\ServiceMap;
 
-use InvalidArgumentException;
 use ReflectionException;
 use TypeError;
 use Ufo\DTO\DTOTransformer;
 use Ufo\DTO\ServiceTransformer;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\DtoReflector;
+use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
 use Ufo\RpcError\RpcInternalException;
 use Ufo\DTO\Interfaces\IArrayConstructible;
 use Ufo\DTO\Interfaces\IArrayConvertible;
@@ -18,11 +18,9 @@ use Ufo\RpcObject\RPC\Info;
 use Ufo\RpcObject\RPC\ResultAsDTO;
 
 use function array_key_exists;
-use function array_keys;
 use function count;
 use function end;
 use function explode;
-use function in_array;
 use function is_array;
 use function json_encode;
 
@@ -51,21 +49,12 @@ class Service implements IArrayConvertible, IArrayConstructible
      */
     protected array $paramsDto = [];
 
-    #[DTO(ServiceAttributesCollection::class)]
-    protected ?ServiceAttributesCollection $attrCollection = null;
+    #[DTO(AttributesCollection::class)]
+    protected ?AttributesCollection $attrCollection = null;
 
     /**
-     * Parameter option types.
-     *
-     * @var array
+     * @var array<string,ParamDefinition>
      */
-    protected array $paramOptionTypes = [
-        'name'        => 'is_string',
-        'optional'    => 'is_bool',
-        'default'     => null,
-        'description' => 'is_string',
-    ];
-
     protected array $params = [];
 
     protected array $defaultParams = [];
@@ -79,7 +68,7 @@ class Service implements IArrayConvertible, IArrayConstructible
     ) {
         $t = explode($this->concat, $this->name);
         $this->methodName = end($t);
-        $this->attrCollection = new ServiceAttributesCollection();
+        $this->attrCollection = new AttributesCollection();
     }
 
     public function getParamDto(string $param): ?DtoReflector
@@ -147,24 +136,15 @@ class Service implements IArrayConvertible, IArrayConstructible
     /**
      * Add a parameter to the service.
      *
-     * @param string|array $type
-     * @param array $options
+     * @param ParamDefinition $paramDefinition
      * @return self
-     * @throws InvalidArgumentException
      */
-    public function addParam(string|array $type, array $options = []): static
+    public function addParam(ParamDefinition $paramDefinition): static
     {
-        $type = $this->validateParamType($type);
-        $paramOptions = ['type' => $type];
-        foreach ($options as $key => $value) {
-            if (in_array($key, array_keys($this->paramOptionTypes))) {
-                $paramOptions[$key] = $value;
-                if ($key === 'default') {
-                    $this->defaultParams[$options['name']] = $value;
-                }
-            }
+        if ($paramDefinition->isOptional()) {
+            $this->defaultParams[$paramDefinition->name] = $paramDefinition->getDefault();
         }
-        $this->params[$options['name']] = $paramOptions;
+        $this->params[$paramDefinition->name] = $paramDefinition;
 
         return $this;
     }
@@ -209,7 +189,7 @@ class Service implements IArrayConvertible, IArrayConstructible
      *
      * Returns all params in specified order.
      *
-     * @return array
+     * @return array<string,ParamDefinition>
      */
     public function getParams(): array
     {
@@ -235,7 +215,7 @@ class Service implements IArrayConvertible, IArrayConstructible
      */
     public function addReturn(string $type, ?string $desc = null): static
     {
-        $this->return[] = $this->validateParamType($type);
+        $this->return[] = static::validateParamType($type);
         $this->returnDescription = $desc ?? '';
         return $this;
     }
@@ -364,7 +344,7 @@ class Service implements IArrayConvertible, IArrayConstructible
      * @param array|string $type
      * @return array|string
      */
-    protected function validateParamType(array|string $type): array|string
+    public static function validateParamType(array|string $type): array|string
     {
         try {
             return TypeHintResolver::phpToJsonSchema(TypeHintResolver::normalize($type));
@@ -393,7 +373,7 @@ class Service implements IArrayConvertible, IArrayConstructible
         return $this->assertions;
     }
 
-    public function getAttrCollection(): ServiceAttributesCollection
+    public function getAttrCollection(): AttributesCollection
     {
         return $this->attrCollection;
     }

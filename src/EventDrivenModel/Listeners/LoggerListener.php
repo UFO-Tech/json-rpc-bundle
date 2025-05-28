@@ -5,8 +5,8 @@ namespace Ufo\JsonRpcBundle\EventDrivenModel\Listeners;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Throwable;
-use Ufo\RpcObject\Events\RpcErrorEvent;
-use Ufo\RpcObject\Events\RpcEvent;
+use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcErrorEvent;
+use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcEvent;
 
 #[AsEventListener(RpcEvent::ERROR, 'onError')]
 class LoggerListener
@@ -24,7 +24,7 @@ class LoggerListener
             $params = $event->rpcRequest?->getParams();
         } catch (Throwable) {
             $method = null;
-            $params = null;
+            $params = [];
         }
         $this->logger->error($error->getMessage(), [
             'method' => $method,

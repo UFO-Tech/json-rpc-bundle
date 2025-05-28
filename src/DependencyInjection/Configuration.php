@@ -19,7 +19,7 @@ class Configuration implements ConfigurationInterface
     /**
      * Default TreeBuilder name
      */
-    const TREE_BUILDER_NAME = RpcMainConfig::NAME;
+    const string TREE_BUILDER_NAME = RpcMainConfig::NAME;
 
     /**
      * {@inheritdoc}
@@ -40,7 +40,7 @@ class Configuration implements ConfigurationInterface
                         ->booleanNode(RpcSecurityConfig::PROTECTED_DOC)
                             ->defaultValue(false)
                         ->end()
-                        ->scalarNode(RpcSecurityConfig::TOKEN_KEY)
+                        ->scalarNode(RpcSecurityConfig::TOKEN_NAME)
                             ->defaultValue(RpcSecurityConfig::DEFAULT_TOKEN_KEY)
                         ->end()
                         ->arrayNode(RpcSecurityConfig::TOKENS)

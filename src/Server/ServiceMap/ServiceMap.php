@@ -2,20 +2,19 @@
 
 namespace Ufo\JsonRpcBundle\Server\ServiceMap;
 
-use Psr\Container\ContainerInterface;
 use RuntimeException;
-use Ufo\JsonRpcBundle\ConfigService\RpcDocsConfig;
+use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\Exceptions\ServiceNotFoundException;
 use Ufo\JsonRpcBundle\Package;
-use Ufo\RpcError\RpcMethodNotFoundExceptionRpc;
 use Ufo\RpcObject\RpcTransport;
 
 use function array_key_exists;
 use function is_null;
 use function is_subclass_of;
 
-class ServiceMap
+#[AutoconfigureTag(IServiceHolder::TAG)]
+class ServiceMap implements IServiceHolder
 {
     const string ENV_JSON_RPC_2 = 'JSON-RPC-2.0';
     const string POST = 'POST';
@@ -99,6 +98,7 @@ class ServiceMap
     }
 
     /**
+     * @param string $serviceName
      * @return Service
      * @throws ServiceNotFoundException
      */

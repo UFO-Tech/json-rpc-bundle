@@ -4,6 +4,7 @@ namespace Ufo\JsonRpcBundle\DocAdapters\Outputs;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\DocAdapters\Outputs\Postman\Blocks\Method;
 use Ufo\JsonRpcBundle\DocAdapters\Outputs\Postman\PostmanSpecBuilder;
+use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMap;
 use Ufo\RpcObject\RpcTransport;
@@ -60,7 +61,7 @@ class PostmanAdapter
                 'value' => 'application/json',
             ],
             [
-                'key' => $this->mainConfig->securityConfig->tokenKeyInHeader,
+                'key' => $this->mainConfig->securityConfig->tokenName,
                 'value' => '{{' . $variableApiToken->key . '}}',
             ],
             [
@@ -83,7 +84,7 @@ class PostmanAdapter
         }
     }
 
-    protected function buildParam(Method $method, array $param): void
+    protected function buildParam(Method $method, ParamDefinition $param): void
     {
         $this->postmanSpecBuilder->buildParam(
             $method,

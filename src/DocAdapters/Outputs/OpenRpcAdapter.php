@@ -5,14 +5,14 @@ use PSX\OpenRPC\Method;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\DocAdapters\Outputs\OpenRpc\OpenRpcSpecBuilder;
 use Ufo\JsonRpcBundle\Package;
+use Ufo\JsonRpcBundle\ParamConvertors\ChainParamConvertor;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\DtoReflector;
+use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMap;
 use Ufo\RpcError\RpcInternalException;
-use Ufo\DTO\DTOTransformer;
 use Ufo\DTO\Helpers\TypeHintResolver;
 use Ufo\RpcObject\RPC\DTO;
-use Ufo\RpcObject\RPC\ResultAsDTO;
 use Ufo\RpcObject\RpcTransport;
 
 use function array_map;
@@ -33,6 +33,7 @@ class OpenRpcAdapter
     public function __construct(
         protected ServiceMap $serviceMap,
         protected RpcMainConfig $mainConfig,
+        protected ChainParamConvertor $paramConvertor,
     ) {}
 
     public function adapt(): array
@@ -90,7 +91,7 @@ class OpenRpcAdapter
             $service->getDescription()
         );
         array_map(
-            fn($param) => $this->buildParam($method, $param, $service),
+            fn(ParamDefinition $param) => $this->buildParam($method, $param, $service),
             $service->getParams()
         );
 
@@ -106,6 +107,9 @@ class OpenRpcAdapter
 //        $this->rpcSpecBuilder->buildError($method);
     }
 
+    /**
+     * @throws RpcInternalException
+     */
     protected function rpcResponseInfoToSchema(?DTO $responseInfo): ?array
     {
         if (is_null($responseInfo)) return null;
@@ -113,13 +117,16 @@ class OpenRpcAdapter
         return $this->formatFromResultAsDto($responseInfo);
     }
 
+    /**
+     * @throws RpcInternalException
+     */
     protected function formatFromResultAsDto(DTO $responseInfo): ?array
     {
         $schema = [];
         try {
             $format = $responseInfo->getFormat();
         } catch (RpcInternalException) {
-            new DtoReflector($responseInfo);
+            new DtoReflector($responseInfo, $this->paramConvertor);
             $format = $responseInfo->getFormat();
         }
         if ($responseInfo->collection) {
@@ -186,6 +193,9 @@ class OpenRpcAdapter
         return $schemaLink;
     }
 
+    /**
+     * @throws RpcInternalException
+     */
     protected function detectArrayOfType(string $type): array
     {
         $jsonValue = [TypeHintResolver::TYPE => TypeHintResolver::phpToJsonSchema($type)];
@@ -216,14 +226,14 @@ class OpenRpcAdapter
                 'type' => 'array',
                 'items' => $refCollection['schema'] ?? []
             ];
-            $dto = $refCollection['format'] ?? null;;
+            $dto = $refCollection['format'] ?? null;
             if ($dto instanceof DTO && !isset($this->schemas[$dto?->getFormat()['$dto']])) {
                 $this->schemaFromDto($dto->getFormat());
             }
         }
         if (!$jsonValue && TypeHintResolver::isRealClass($type)) {
             $newDtoResponse = new DTO($type);
-            new DtoReflector($newDtoResponse);
+            new DtoReflector($newDtoResponse, $this->paramConvertor);
             if (isset($this->schemas[$newDtoResponse->getFormat()['$dto']])) {
                 return $this->createSchemaLink($newDtoResponse->getFormat()['$dto']);
             }
@@ -232,17 +242,17 @@ class OpenRpcAdapter
         return $jsonValue;
     }
 
-    protected function buildParam(Method $method, array $param, Service $service): void
+    protected function buildParam(Method $method, ParamDefinition $param, Service $service): void
     {
         $schema = $service->getSchema()['properties'] ?? [];
         $this->rpcSpecBuilder->buildParam(
             $method,
-            $param['name'],
-            $param['description'],
-            !$param['optional'],
-            $param['default'] ?? null,
-            $schema[$param['name']] ?? [],
-            $service->getUfoAssertion($param['name'])
+            $param->name,
+            $param->description,
+            !$param->isOptional(),
+            $param->getDefault(),
+            $schema[$param->name] ?? [],
+            $service->getUfoAssertion($param->name)
         );
     }
 }

@@ -1,34 +1,23 @@
 version: "3"
 services:
+
   php:
     container_name: php_${PROJECT_NAME}
-    build:
-      context: ./
-      dockerfile: docker/configs/php/Dockerfile
-      args:
-        WORKDIR: ${WORKDIR}
+    image: ufotech/php:8.4-fpm
+    working_dir: ${WORKDIR}
+#    extra_hosts:
+#      - "host.docker.internal:host-gateway"
     environment:
       WORKDIR: ${WORKDIR}
+      GITHUB_TOKEN: ${GITHUB_TOKEN}
       XDEBUG_CONFIG: remote_host={{YOUR_IP_ADDRESS}}
       PHP_IDE_CONFIG: serverName=docker
+      HISTFILE: ${WORKDIR}/var/.bash_history
     volumes:
       - ./:${WORKDIR}
-    networks:
-      - app
+      - ./../json-rpc-sdk-bundle:${WORKDIR}/../json-rpc-sdk-bundle
+      - ./../json-rpc-bundle:${WORKDIR}/../json-rpc-bundle
+      - ./../rpc-objects:${WORKDIR}/../rpc-objects
+      - ./../rpc-exceptions:${WORKDIR}/../rpc-exceptions
+      - ./../dto-transformer:${WORKDIR}/../dto-transformer
 
-  php-cli:
-    container_name: php_cli_${PROJECT_NAME}
-    build:
-      context: ./docker/configs/php-cli
-      dockerfile: Dockerfile
-      args:
-        WORKDIR: ${WORKDIR}
-    volumes:
-      - ./:${WORKDIR}
-    networks:
-      - app
-
-networks:
-  app:
-    name: vitamin_bot_net_vitamin
-    external: true

@@ -5,15 +5,15 @@ namespace Ufo\JsonRpcBundle\Server\ServiceMap;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
 use Psr\Container\NotFoundExceptionInterface;
+use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 use Ufo\JsonRpcBundle\Exceptions\ServiceNotFoundException;
-
-use function is_null;
 
 class ServiceLocator implements ContainerInterface
 {
     public function __construct(
-        protected ContainerInterface $locator
+        #[AutowireLocator(IRpcService::TAG)]
+        protected ContainerInterface $locator,
     ) {}
 
     /**

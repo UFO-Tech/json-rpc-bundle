@@ -5,7 +5,6 @@ namespace Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\Fillers;
 use phpDocumentor\Reflection\DocBlock;
 use ReflectionMethod;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
-use Ufo\RpcObject\RPC\Cache;
 
 class AttributesFiller extends AbstractServiceFiller
 {

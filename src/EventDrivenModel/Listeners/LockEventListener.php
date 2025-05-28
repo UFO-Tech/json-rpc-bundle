@@ -3,13 +3,11 @@
 namespace Ufo\JsonRpcBundle\EventDrivenModel\Listeners;
 
 
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Ufo\JsonRpcBundle\EventDrivenModel\RpcEventFactory;
 use Ufo\JsonRpcBundle\Locker\LockerService;
-use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceLocator;
-use Ufo\RpcObject\Events\RpcEvent;
-use Ufo\RpcObject\Events\RpcPreExecuteEvent;
+use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcEvent;
+use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcPreExecuteEvent;
 use Ufo\RpcObject\Transformer\RpcResponseContextBuilder;
 
 
@@ -19,10 +17,7 @@ class LockEventListener
 
     public function __construct(
         protected LockerService $lockerService,
-        #[Autowire('kernel.environment')]
-        protected string $environment,
         protected RpcEventFactory $eventFactory,
-        protected ServiceLocator $serviceLocator,
         protected RpcResponseContextBuilder $contextBuilder,
     ) {}
 

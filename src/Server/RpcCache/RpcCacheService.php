@@ -12,7 +12,6 @@ use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\UfoReflectionProcedure;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceLocator;
 use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMap;
-use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMapFactory;
 use Ufo\RpcError\WrongWayException;
 use Ufo\RpcObject\RPC\CacheRelation;
 use Ufo\RpcObject\RpcCachedResponse;
@@ -36,7 +35,6 @@ class RpcCacheService
     public function __construct(
         protected CacheItemPoolInterface $cache,
         protected RpcMainConfig $rpcConfig,
-        protected ServiceMapFactory $serviceMapFactory,
         protected ServiceLocator $serviceLocator,
         protected ChainServiceFiller $chainServiceFiller,
         protected RpcEventFactory $eventFactory,

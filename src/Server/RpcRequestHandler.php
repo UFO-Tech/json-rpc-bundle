@@ -7,31 +7,28 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Serializer\SerializerInterface;
 use Ufo\JsonRpcBundle\EventDrivenModel\RpcEventFactory;
 use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
-use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceLocator;
+use Ufo\JsonRpcBundle\Server\RequestPrepare\RequestCarrier;
 use Ufo\RpcError\RpcAsyncRequestException;
-use Ufo\RpcError\RpcJsonParseException;
 use Ufo\RpcError\RpcMethodNotFoundExceptionRpc;
 use Ufo\RpcError\RpcRuntimeException;
-use Ufo\RpcError\WrongWayException;
 use Ufo\JsonRpcBundle\Server\Async\RpcAsyncProcessor;
 use Ufo\JsonRpcBundle\Server\Async\RpcCallbackProcessor;
-use Ufo\RpcObject\Events\RpcAsyncOutputEvent;
-use Ufo\RpcObject\Events\RpcEvent;
-use Ufo\RpcObject\RpcBatchRequest;
+use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcAsyncOutputEvent;
+use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcEvent;
+use Ufo\RpcError\WrongWayException;
 use Ufo\RpcObject\RpcRequest;
 use Ufo\RpcObject\RpcResponse;
 use Ufo\RpcObject\Transformer\RpcResponseContextBuilder;
 
-use function json_decode;
 
 class RpcRequestHandler
 {
     protected Request $request;
-    protected ?RpcRequestHelper $requestHelper = null;
 
     protected null|array|string $response = null;
 
     public function __construct(
+        protected RequestCarrier $requestCarrier,
         protected RpcServer $rpcServer,
         protected SerializerInterface $serializer,
         protected RpcAsyncProcessor $asyncProcessor,
@@ -39,31 +36,31 @@ class RpcRequestHandler
         protected RpcResponseContextBuilder $contextBuilder,
         protected RpcEventFactory $eventFactory,
         protected IRpcSecurity $rpcSecurity,
-        protected ServiceLocator $serviceLocator,
-        protected CurrentRpcRequestHolder $currentRpcRequestHolder,
     ) {}
 
     /**
-     * @param Request $request
      * @return array
      * @throws RpcAsyncRequestException
-     * @throws RpcJsonParseException
      * @throws RpcMethodNotFoundExceptionRpc
      * @throws RpcRuntimeException
      * @throws WrongWayException
      */
-    public function handle(Request $request): array
+    public function handle(): array
     {
-        $this->request = $request;
-        $this->requestHelper = new RpcRequestHelper($request);
+        try {
+            $requestObj = $this->requestCarrier->getBatchRequestObject();
+            $this->processQueue($requestObj->getReadyToHandle(), $this->closureSetResponse());
+            foreach ($requestObj->provideUnprocessedRequests() as $unprocessedRequest) {
+                $response = $this->provideSingleRequestToResponse($unprocessedRequest);
+                $requestObj->addResponse($response, $this->responseToArray($response));
+            }
+            $result = $requestObj->getResults(false);
+        } catch (WrongWayException $e) {
+            $requestObj = $this->requestCarrier->getRequestObject();
+            $result = $this->provideSingleRequest($requestObj);
+        }
 
-        if (!$this->requestHelper->isPost()) {
-            throw new WrongWayException();
-        }
-        if (!$this->requestHelper->isBatchRequest()) {
-            $this->currentRpcRequestHolder->setRpcRequest($this->requestHelper->getRequestObject());
-        }
-        return $this->smartHandle();
+        return $result;
     }
 
     /**
@@ -76,8 +73,12 @@ class RpcRequestHandler
              * @var RpcRequest $singleRequest
              */
             $singleRequest->refreshRawJson($this->serializer);
-            $this->asyncProcessor->createProcesses($singleRequest, $this->rpcSecurity->getToken(),
-                timeout: $singleRequest->getRpcParams()->getTimeout());
+            $this->asyncProcessor->createProcesses(
+                $singleRequest,
+                tokenName: strtolower($this->rpcSecurity->getTokenHolder()->getTokenKey()),
+                token: $this->rpcSecurity->getTokenHolder()->getToken(),
+                timeout: $singleRequest->getRpcParams()->getTimeout()
+            );
             unset($queue[$key]);
         }
         $this->asyncProcessor->process($callback);
@@ -90,7 +91,7 @@ class RpcRequestHandler
             $event = $this->eventFactory->fire(
                 RpcEvent::OUTPUT_ASYNC,
                 $request,
-                $this->requestHelper->getRequestObject(),
+                $this->requestCarrier->getBatchRequestObject(),
                 $output
             );
             $batchRequest = $event->batchRequest;
@@ -102,33 +103,18 @@ class RpcRequestHandler
 
     /**
      * @throws RpcRuntimeException
-     * @throws RpcAsyncRequestException
-     * @throws RpcMethodNotFoundExceptionRpc
-     */
-    protected function smartHandle(): array
-    {
-        if (($requestObj = $this->requestHelper->getRequestObject()) instanceof RpcBatchRequest) {
-            $this->processQueue($requestObj->getReadyToHandle(), $this->closureSetResponse());
-            foreach ($requestObj->provideUnprocessedRequests() as $unprocessedRequest) {
-                $requestObj->addResult($this->provideSingleRequest($unprocessedRequest));
-            }
-            $result = $requestObj->getResults(false);
-        } else {
-            $result = $this->provideSingleRequest($requestObj);
-        }
-
-        return $result;
-    }
-
-    /**
-     * @throws RpcRuntimeException
      * @throws RpcMethodNotFoundExceptionRpc
      */
     public function provideSingleRequest(RpcRequest $singleRequest): array
     {
         $result = $this->provideSingleRequestToResponse($singleRequest);
-        $context = $this->contextBuilder->withResponseSignature($result);
-        return $this->serializer->normalize($result, context: $context->toArray());
+        return $this->responseToArray($result);
+    }
+
+    public function responseToArray(RpcResponse $response): array
+    {
+        $context = $this->contextBuilder->withResponseSignature($response);
+        return $this->serializer->normalize($response, context: $context->toArray());
     }
 
     /**

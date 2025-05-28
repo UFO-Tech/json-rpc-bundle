@@ -4,7 +4,6 @@ namespace Ufo\JsonRpcBundle\Validations\JsonSchema;
 
 
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
-use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
 use Ufo\RpcObject\RPC\Assertions;
 use Ufo\RpcObject\RPC\AssertionsCollection;
@@ -41,11 +40,11 @@ class JsonSchemaNormalizer implements NormalizerInterface
 
         $assertionsList = $data->getAssertionsCollection();
         $properties = [];
-        foreach ($service->getParams() as $property => $data) {
+        foreach ($service->getParams() as $property => $paramDefinition) {
             $assertions = $assertionsList[$property] ?? new Assertions([]);
             $properties[$property] = $this->paramNormalizer->normalize(
                 $assertions,
-                context: $data
+                context: $paramDefinition->toArray()
             );
         }
         return static::HEADER + [

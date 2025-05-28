@@ -2,13 +2,17 @@
 
 namespace Ufo\JsonRpcBundle\EventDrivenModel;
 
+use Symfony\Component\HttpClient\Exception\EventSourceException;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
-use Ufo\RpcObject\Events\BaseRpcEvent;
-use Ufo\RpcObject\Events\RpcAsyncRequestEvent;
-use Ufo\RpcObject\Events\RpcErrorEvent;
-use Ufo\RpcObject\Events\RpcEvent;
-use Ufo\RpcObject\Events\RpcRequestEvent;
+use Ufo\JsonRpcBundle\EventDrivenModel\Events\BaseRpcEvent;
+use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcAsyncRequestEvent;
+use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcErrorEvent;
+use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcEvent;
+use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcRequestEvent;
 use Ufo\RpcObject\RpcRequest;
+
+use function array_filter;
+use function current;
 
 class RpcEventFactory
 {
@@ -63,5 +67,13 @@ class RpcEventFactory
         $event = new RpcErrorEvent($request, $throwable);
         $this->processEvent($event, $event->getEventName());
         return $event;
+    }
+
+    public function getEvent(string $eventFQCN): BaseRpcEvent
+    {
+        $filteredEvents = array_filter($this->eventsPool, fn($event) => $event instanceof $eventFQCN);
+        if (empty($filteredEvents))
+            throw new EventSourceException('No event found for ' . $eventFQCN);
+        return current($filteredEvents);
     }
 }

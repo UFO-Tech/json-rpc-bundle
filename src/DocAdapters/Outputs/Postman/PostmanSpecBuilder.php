@@ -7,6 +7,7 @@ use Ufo\JsonRpcBundle\DocAdapters\Outputs\Postman\Blocks\Info;
 use Ufo\JsonRpcBundle\DocAdapters\Outputs\Postman\Blocks\Method;
 use Ufo\JsonRpcBundle\DocAdapters\Outputs\Postman\Blocks\Server;
 use Ufo\JsonRpcBundle\DocAdapters\Outputs\Postman\Blocks\Variable;
+use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
 
 use function array_map;
 
@@ -58,7 +59,7 @@ class PostmanSpecBuilder
 
     public function buildParam(
         Method $method,
-        array $parameter,
+        ParamDefinition $parameter,
     ): void
     {
         $method->addParam($parameter);

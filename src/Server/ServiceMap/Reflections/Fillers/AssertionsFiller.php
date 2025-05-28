@@ -11,6 +11,8 @@ use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\RpcObject\RPC\AssertionsCollection;
 
+use function in_array;
+
 class AssertionsFiller extends AbstractServiceFiller
 {
     protected RpcDocsConfig $rpcDocsConfig;
@@ -26,9 +28,9 @@ class AssertionsFiller extends AbstractServiceFiller
     public function fill(ReflectionMethod $method, Service $service, DocBlock $methodDoc): void
     {
 
-        if ($this->rpcConfig->docsConfig->needJsonSchema) {
+//        if ($this->rpcConfig->docsConfig->needSymfonyAsserts) {
             $this->buildAssertions($method, $service);
-        }
+//        }
 
         if ($this->rpcConfig->docsConfig->needJsonSchema) {
             $this->buildJsonSchema($service);
@@ -52,7 +54,7 @@ class AssertionsFiller extends AbstractServiceFiller
                         $paramRef->getName(),
                         $assertions->getAssertionsCollection()[$paramRef->getName()]?->constructorArgs ?? null
                     );
-                } catch (Throwable) {}
+                } catch (Throwable $e) {}
             }
         }
         $service->setAssertions($assertions);
@@ -61,9 +63,13 @@ class AssertionsFiller extends AbstractServiceFiller
     protected function buildJsonSchema(Service $service): void
     {
         try {
-            $service->setSchema($this->serializer->normalize($service->getAssertions(), context: [
-                'service' => $service,
-            ]));
+            $data = $this->serializer->normalize(
+                $service->getAssertions(),
+                context: [
+                    'service' => $service,
+                ]
+            );
+            $service->setSchema($data);
         } catch (Throwable $e) {}
     }
 

@@ -5,8 +5,8 @@ namespace Ufo\JsonRpcBundle\EventDrivenModel\Listeners;
 
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Ufo\JsonRpcBundle\Server\RpcCache\RpcCacheService;
-use Ufo\RpcObject\Events\RpcEvent;
-use Ufo\RpcObject\Events\RpcPostResponseEvent;
+use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcEvent;
+use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcPostResponseEvent;
 
 #[AsEventListener(RpcEvent::POST_RESPONSE, 'process', priority: 1000)]
 class CacheRelationsEventListener

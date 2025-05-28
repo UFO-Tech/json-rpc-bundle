@@ -2,12 +2,10 @@
 
 namespace Ufo\JsonRpcBundle\Validations\JsonSchema\Generate;
 
-use ReflectionClass;
 use ReflectionException;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\Constraints\Choice;
-use Symfony\Component\Validator\Constraints\Email;
 use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Interfaces\IConstraintGenerator;
 
 use function implode;

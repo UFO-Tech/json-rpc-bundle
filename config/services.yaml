@@ -3,7 +3,10 @@ services:
     _defaults:
         autowire:      true      # Automatically injects dependencies in your services.
         autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
-    
+        bind:
+            $serviceHolder: '@Ufo\JsonRpcBundle\Server\ServiceMap\ServiceHolder'
+            $serviceMap: '@Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMap'
+
     Ufo\JsonRpcBundle\:
         resource: '../src/'
         exclude:
@@ -28,19 +31,8 @@ services:
     Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity:
         class: Ufo\JsonRpcBundle\Security\TokenRpcSecurity
     
-    Ufo\JsonRpcBundle\Server\ServiceMap\ServiceLocator:
-        factory: ['@Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMapFactory', 'getServiceLocator']
-
     Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMap:
         factory: ['@Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMapFactory', 'getServiceMap']
 
     Ufo\JsonRpcBundle\Locker\UfoLockerStore:
         class: Ufo\JsonRpcBundle\Locker\UfoLockerStore
-
-#    Ufo\JsonRpcBundle\CliCommand\UfoRpcProcessCommand:
-#        arguments:
-#            $rpcSecurity:    '@Ufo\JsonRpcBundle\Security\TokenRpcCliSecurity'
-#            $requestHandler: '@Ufo\JsonRpcBundle\Server\RpcRequestHandlerCli'
-#
-#    Ufo\JsonRpcBundle\EventListener\HandleCliListener:
-#        $rpcSecurity: '@Ufo\JsonRpcBundle\Security\TokenRpcCliSecurity'

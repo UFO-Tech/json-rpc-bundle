@@ -31,12 +31,12 @@ final readonly class RpcDocsConfig
     public function __construct(array $rpcConfigs, public RpcMainConfig $parent)
     {
         $this->keyForMethods = 'methods';
-        $this->asyncDsnInfo = $rpcConfigs[self::ASYNC_DSN_INFO];
+        $this->asyncDsnInfo = $rpcConfigs[self::ASYNC_DSN_INFO] ?? '';
         $this->needJsonSchema = true;
-        $this->needSymfonyAsserts = $rpcConfigs[self::VALIDATIONS][self::SYMFONY_ASSERTS];
-        $this->projectName = $rpcConfigs[self::P_PROJECT_NAME];
-        $this->projectDesc = $rpcConfigs[self::P_PROJECT_DESC];
-        $this->projectVersion = $rpcConfigs[self::P_PROJECT_VER];
+        $this->needSymfonyAsserts = $rpcConfigs[self::VALIDATIONS][self::SYMFONY_ASSERTS] ?? false;
+        $this->projectName = $rpcConfigs[self::P_PROJECT_NAME] ?? 'rpc';
+        $this->projectDesc = $rpcConfigs[self::P_PROJECT_DESC] ?? '';
+        $this->projectVersion = $rpcConfigs[self::P_PROJECT_VER] ?? null;
     }
 
 }
