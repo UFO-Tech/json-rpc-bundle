@@ -33,6 +33,7 @@ class ParamsConverterEventListener
     {
         $result = $event->rpcRequest->getResponseObject()->getResult(true);
         $service = $event->service;
+        if (!$result || !$service) return;
         if (!$responseInfo = $service->getResponseInfo()) return;
 
         $replacementParams = [];

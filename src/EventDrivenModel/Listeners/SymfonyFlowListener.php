@@ -43,9 +43,11 @@ use function trim;
 use const JSON_PRETTY_PRINT;
 use const JSON_UNESCAPED_UNICODE;
 
-#[AsEventListener(ConsoleEvents::COMMAND, method: 'parseCliRequestInArgs', priority: 999999)]
-#[AsEventListener(KernelEvents::REQUEST, method: 'magicPostController', priority: 1000000)]
+#[AsEventListener(KernelEvents::REQUEST, method: 'initHttpRequest', priority: 100000)]
+#[AsEventListener(KernelEvents::REQUEST, method: 'magicPostController', priority: 10000)]
 #[AsEventListener(KernelEvents::TERMINATE, method: 'firePostResponseEvent', priority: 1000000)]
+
+#[AsEventListener(ConsoleEvents::COMMAND, method: 'parseCliRequestInArgs', priority: 999999)]
 #[AsEventListener(ConsoleEvents::TERMINATE, method: 'firePostResponseEvent', priority: 1000000)]
 class SymfonyFlowListener
 {
@@ -57,6 +59,20 @@ class SymfonyFlowListener
         protected IRpcSecurity $rpcSecurity,
         protected RpcMainConfig $rpcConfig,
     ) {}
+
+    public function initHttpRequest(RequestEvent $event): void
+    {
+        $apiRoute = $this->router->getRouteCollection()->get(ApiController::API_ROUTE);
+        $request = $event->getRequest();
+
+        if ($request->getPathInfo() === $apiRoute->getPath() && $request->isMethod(Request::METHOD_POST)) {
+
+            $this->initRequest(
+                new HttpTokenHolder($this->rpcConfig, $request),
+                new RpcFromHttp($request)
+            );
+        }
+    }
 
     /**
      * @param RequestEvent $event
@@ -75,14 +91,8 @@ class SymfonyFlowListener
         $request = $event->getRequest();
 
         if ($request->getPathInfo() === $apiRoute->getPath() && $request->isMethod(Request::METHOD_POST)) {
-
-            $result = $this->handleRequest(
-                new HttpTokenHolder($this->rpcConfig, $request),
-                new RpcFromHttp($request)
-            );
-
+            $result = $this->requestHandler->handle();
             $event->setResponse(new JsonResponse($result));
-            $event->stopPropagation();
         }
     }
 
@@ -102,10 +112,12 @@ class SymfonyFlowListener
             $input = $event->getInput();
             $json = trim($input->getArgument('json'), '"');
 
-            $result = $this->handleRequest(
+            $this->initRequest(
                 new CliTokenHolder($this->rpcConfig, $input),
                 new RpcFromCli($json)
             );
+            $result = $this->requestHandler->handle();
+
             $event->getOutput()->writeln(json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
             $event->getCommand()?->setCode(fn() => Command::SUCCESS);
             $event->stopPropagation();
@@ -120,12 +132,15 @@ class SymfonyFlowListener
      * @throws RpcInvalidTokenException
      * @throws RpcMethodNotFoundExceptionRpc
      */
-    protected function handleRequest(IRpcTokenHolder $holder, IRpcRequestCarrier $carrier): array
+    protected function handleRequest(): array
+    {
+    }
+
+    protected function initRequest(IRpcTokenHolder $holder, IRpcRequestCarrier $carrier): void
     {
         $this->rpcSecurity->setTokenHolder($holder);
         $this->requestCarrier->setCarrier($carrier);
         $this->rpcSecurity->isValidApiRequest();
-        return $this->requestHandler->handle();
     }
 
     public function firePostResponseEvent(TerminateEvent|ConsoleTerminateEvent $event): void
@@ -144,9 +159,7 @@ class SymfonyFlowListener
             );
             $event->stopPropagation();
 
-        } catch (\Throwable $e) {
-            $a=1;
-        }
+        } catch (\Throwable $e) {}
     }
 
 }

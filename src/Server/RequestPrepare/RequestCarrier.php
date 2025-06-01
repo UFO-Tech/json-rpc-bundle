@@ -45,4 +45,9 @@ class RequestCarrier implements IRpcSpecialParamHandler
         return $params;
     }
 
+    public function getCarrier(): ?IRpcRequestCarrier
+    {
+        return $this->carrier;
+    }
+
 }

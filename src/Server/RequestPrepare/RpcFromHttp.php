@@ -48,4 +48,8 @@ class RpcFromHttp implements IRpcRequestCarrier
         return $this->batchRequest ?? throw new WrongWayException();
     }
 
+    public function getHttpRequest(): Request
+    {
+        return $this->request;
+    }
 }
