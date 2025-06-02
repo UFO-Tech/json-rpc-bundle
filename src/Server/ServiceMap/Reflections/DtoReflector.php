@@ -83,7 +83,7 @@ class DtoReflector
     {
         /** @var DTO $dto */
         $typeName = $type->getName();
-        $attrFQCN = get_class($this->dto);
+        $attrFQCN = DTO::class;
         $this->checkParamConverter($property, $typeName);
         if (count($property->getAttributes($attrFQCN)) > 0) {
             $dto = $property->getAttributes($attrFQCN)[0]->newInstance();
