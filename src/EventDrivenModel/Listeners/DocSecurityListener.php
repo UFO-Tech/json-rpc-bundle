@@ -16,7 +16,7 @@ use Ufo\RpcError\RpcTokenNotSentException;
 
 use function in_array;
 
-#[AsEventListener(KernelEvents::REQUEST, method: 'protectedApiDocumentation', priority: 10000)]
+#[AsEventListener(KernelEvents::REQUEST, method: 'protectedApiDocumentation', priority: 240)]
 class DocSecurityListener
 {
     public function __construct(

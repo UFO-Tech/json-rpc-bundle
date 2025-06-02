@@ -10,6 +10,7 @@ use Symfony\Component\Console\Event\ConsoleTerminateEvent;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\Event\TerminateEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
@@ -43,8 +44,8 @@ use function trim;
 use const JSON_PRETTY_PRINT;
 use const JSON_UNESCAPED_UNICODE;
 
-#[AsEventListener(KernelEvents::REQUEST, method: 'initHttpRequest', priority: 100000)]
-#[AsEventListener(KernelEvents::REQUEST, method: 'magicPostController', priority: 10000)]
+#[AsEventListener(KernelEvents::REQUEST, method: 'initHttpRequest', priority: 240)]
+#[AsEventListener(KernelEvents::REQUEST, method: 'magicPostController', priority: 230)]
 #[AsEventListener(KernelEvents::TERMINATE, method: 'firePostResponseEvent', priority: 1000000)]
 
 #[AsEventListener(ConsoleEvents::COMMAND, method: 'parseCliRequestInArgs', priority: 999999)]
@@ -64,6 +65,13 @@ class SymfonyFlowListener
     {
         $apiRoute = $this->router->getRouteCollection()->get(ApiController::API_ROUTE);
         $request = $event->getRequest();
+        if ($request->getPathInfo() === $apiRoute->getPath()
+            && ($request->isMethod(Request::METHOD_OPTIONS) || $request->isXmlHttpRequest())
+        ) {
+            $event->stopPropagation();
+            $event->setResponse(new Response());
+            return;
+        }
 
         if ($request->getPathInfo() === $apiRoute->getPath() && $request->isMethod(Request::METHOD_POST)) {
 
