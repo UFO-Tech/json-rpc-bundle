@@ -10,17 +10,12 @@ use Symfony\Component\Serializer\SerializerInterface;
 use Throwable;
 use Ufo\JsonRpcBundle\CliCommand\UfoRpcProcessCommand;
 use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
-use Ufo\JsonRpcBundle\Security\TokenRpcCliSecurity;
-use Ufo\JsonRpcBundle\Server\RpcRequestHandler;
+use Ufo\JsonRpcBundle\Security\TokenHolders\RpcAsyncTokenHolder;
 use Ufo\JsonRpcBundle\Server\RpcServer;
 use Ufo\RpcError\RpcAsyncRequestException;
 use Ufo\RpcObject\RpcAsyncRequest;
 use Ufo\RpcObject\RpcRequest;
 use Ufo\RpcObject\RpcResponse;
-use Ufo\RpcObject\Transformer\RpcResponseContextBuilder;
-
-use function array_merge;
-use function count;
 use function is_null;
 use function sprintf;
 use function time;
@@ -160,8 +155,8 @@ class RpcAsyncProcessor
             );
         echo PHP_EOL;
 
-        $this->rpcSecurity->setToken($message->token);
-        $this->rpcSecurity->isValidDocRequest($message->token);
+        $this->rpcSecurity->setTokenHolder(new RpcAsyncTokenHolder($message));
+        $this->rpcSecurity->isValidApiRequest();
 
         $response = $this->rpcServer->handle($message->getRpcRequest());
         try {

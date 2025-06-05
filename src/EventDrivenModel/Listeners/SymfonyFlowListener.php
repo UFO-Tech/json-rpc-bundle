@@ -132,18 +132,6 @@ class SymfonyFlowListener
         }
     }
 
-    /**
-     * @throws RpcRuntimeException
-     * @throws RpcTokenNotSentException
-     * @throws WrongWayException
-     * @throws RpcAsyncRequestException
-     * @throws RpcInvalidTokenException
-     * @throws RpcMethodNotFoundExceptionRpc
-     */
-    protected function handleRequest(): array
-    {
-    }
-
     protected function initRequest(IRpcTokenHolder $holder, IRpcRequestCarrier $carrier): void
     {
         $this->rpcSecurity->setTokenHolder($holder);
