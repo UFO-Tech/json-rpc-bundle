@@ -38,6 +38,7 @@ use Ufo\RpcError\RpcRuntimeException;
 use Ufo\RpcError\RpcTokenNotSentException;
 use Ufo\RpcError\WrongWayException;
 
+use function fastcgi_finish_request;
 use function json_encode;
 use function trim;
 
@@ -142,6 +143,7 @@ class SymfonyFlowListener
     public function firePostResponseEvent(TerminateEvent|ConsoleTerminateEvent $event): void
     {
         try {
+            fastcgi_finish_request();
             $preResponse = $this->eventFactory->getEvent(RpcEvent::getEventFQSN(RpcEvent::PRE_RESPONSE));
             $event->stopPropagation();
             /**
