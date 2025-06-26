@@ -20,6 +20,7 @@ use function implode;
 
 class DtoReflector
 {
+    const int DEPTH_SIZE = 3;
 
     protected \ReflectionClass $refDTO;
 
@@ -31,11 +32,12 @@ class DtoReflector
      */
     public function __construct(
         public readonly DTO $dto,
-        protected ChainParamConvertor $paramConvertor
+        protected ChainParamConvertor $paramConvertor,
+        protected int $depth = 0
     )
     {
         $this->reflect();
-        $this->parse();
+        $this->parse($this->depth);
         $this->setResult();
     }
 
@@ -57,8 +59,10 @@ class DtoReflector
         $this->refDTO = new \ReflectionClass($this->dto->dtoFQCN);
     }
 
-    protected function parse(): void
+    protected function parse(int $depth): void
     {
+        if ($depth >= static::DEPTH_SIZE) return;
+
         $ref = $this->refDTO;
         $this->responseFormat['$dto'] = $ref->getShortName();
         foreach ($ref->getProperties(\ReflectionProperty::IS_PUBLIC) as $property) {
@@ -87,7 +91,7 @@ class DtoReflector
         $this->checkParamConverter($property, $typeName);
         if (count($property->getAttributes($attrFQCN)) > 0) {
             $dto = $property->getAttributes($attrFQCN)[0]->newInstance();
-            new static($dto, $this->paramConvertor);
+            new static($dto, $this->paramConvertor, $this->depth + 1);
             if ($typeName === 'array' && $dto->collection) {
                 $typeName = TypeHintResolver::COLLECTION->value;
                 $this->responseFormat['$collections'][$property->getName()] = $dto;
