@@ -12,6 +12,7 @@ use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMap;
 use Ufo\RpcError\RpcInternalException;
 use Ufo\DTO\Helpers\TypeHintResolver;
+use Ufo\RpcError\WrongWayException;
 use Ufo\RpcObject\RPC\DTO;
 use Ufo\RpcObject\RpcTransport;
 
@@ -242,9 +243,53 @@ class OpenRpcAdapter
         return $jsonValue;
     }
 
+    protected function checkParamHasDTO(ParamDefinition $param): ?DTO
+    {
+        $dto = null;
+
+        try {
+            $class = $this->getRealObjectType($param->getRealType());
+
+            $dtoAttr = $param->getAttributesCollection()->getAttribute(DTO::class);
+            $dto = $dtoAttr ?? new DTO($class);
+            new DtoReflector($dto, $this->paramConvertor);
+        } catch (WrongWayException) {}
+
+        return $dto;
+    }
+
+    /**
+     * @param string|array $type
+     * @return string
+     * @throws WrongWayException
+     */
+    protected function getRealObjectType(string|array $type): string
+    {
+        if (is_array($type)) {
+            foreach ($type as $value) {
+                try {
+                    return $this->getRealObjectType($value);
+                } catch (WrongWayException) {}
+            }
+            throw new WrongWayException();
+        }
+
+        if (!class_exists($type)) throw new WrongWayException();
+
+        return $type;
+    }
+
     protected function buildParam(Method $method, ParamDefinition $param, Service $service): void
     {
         $schema = $service->getSchema()['properties'] ?? [];
+
+        if ($param->getType() === TypeHintResolver::OBJECT->value && $dto = $this->checkParamHasDTO($param)) {
+            $schema[$param->name] = [
+                ...$schema[$param->name] ?? [],
+                ...$this->schemaFromDto($dto->getFormat())
+            ];
+        }
+
         $this->rpcSpecBuilder->buildParam(
             $method,
             $param->name,

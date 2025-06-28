@@ -6,6 +6,7 @@ use ReflectionAttribute;
 use ReflectionParameter;
 use Ufo\DTO\ArrayConstructibleTrait;
 use Ufo\DTO\ArrayConvertibleTrait;
+use Ufo\DTO\Helpers\TypeHintResolver;
 use Ufo\DTO\Interfaces\IArrayConstructible;
 use Ufo\DTO\Interfaces\IArrayConvertible;
 use Ufo\JsonRpcBundle\Server\ServiceMap\AttributesCollection;
@@ -54,6 +55,15 @@ class ParamDefinition implements IArrayConvertible, IArrayConstructible
 
     public function setDefault(mixed $default): static
     {
+        if (
+            $default === null
+            && !$this->optional
+            && (
+                (is_string($this->realType) && !str_contains($this->realType, TypeHintResolver::NULL->value))
+                || (is_array($this->realType) && !in_array(TypeHintResolver::NULL->value, $this->realType, true))
+            )
+        ) return $this;
+
         $this->default = $default;
         $this->optional = true;
         return $this;

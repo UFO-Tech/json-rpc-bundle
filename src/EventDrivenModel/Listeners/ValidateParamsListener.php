@@ -22,9 +22,9 @@ use function is_string;
 use function key;
 use function sprintf;
 
-#[AsEventListener(RpcEvent::PRE_EXECUTE, 'validateAndPrepareNamedParams', priority: 1001)]
-#[AsEventListener(RpcEvent::PRE_EXECUTE, 'validateAndPrepareOrderedParams', priority: 1001)]
-#[AsEventListener(RpcEvent::PRE_EXECUTE, 'constraintValidation', priority: 1000)]
+#[AsEventListener(RpcEvent::PRE_EXECUTE, 'validateAndPrepareNamedParams', priority: 1002)]
+#[AsEventListener(RpcEvent::PRE_EXECUTE, 'validateAndPrepareOrderedParams', priority: 1002)]
+#[AsEventListener(RpcEvent::PRE_EXECUTE, 'constraintValidation', priority: 1001)]
 class ValidateParamsListener
 {
     public function __construct(
