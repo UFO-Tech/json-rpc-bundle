@@ -54,7 +54,8 @@ class Genearator
 
             $this->constraints[$constraint::class]->generate($constraint, $rules);
             $this->processNestedConstraints($constraint, $rules);
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            $a = 1;
         }
 
         unset($processed[$hash]);

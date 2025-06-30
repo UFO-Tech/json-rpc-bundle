@@ -12,6 +12,7 @@ use PSX\OpenRPC\ContentDescriptor;
 use PSX\OpenRPC\Error;
 use PSX\OpenRPC\Method;
 use PSX\OpenRPC\OpenRPC;
+use Ufo\RpcObject\DocsHelper\XUfoValuesEnum;
 
 class OpenRpcSpecBuilder
 {
@@ -105,7 +106,7 @@ class OpenRpcSpecBuilder
         ];
         $parameter->setSchema((object) $schema);
 
-        $parameter->toRecord()->put('x-ufo-assertions', $assertions);
+        $parameter->toRecord()->put(XUfoValuesEnum::ASSERTIONS->value, $assertions);
 
         $params = $method->getParams();
         $params[] = $parameter;

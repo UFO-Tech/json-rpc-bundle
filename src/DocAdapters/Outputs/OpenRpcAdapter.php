@@ -4,6 +4,7 @@ namespace Ufo\JsonRpcBundle\DocAdapters\Outputs;
 use PSX\OpenRPC\Method;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\DocAdapters\Outputs\OpenRpc\OpenRpcSpecBuilder;
+use Ufo\JsonRpcBundle\DocAdapters\Outputs\OpenRpc\UfoRpcParameter;
 use Ufo\JsonRpcBundle\Package;
 use Ufo\JsonRpcBundle\ParamConvertors\ChainParamConvertor;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\DtoReflector;
@@ -15,6 +16,8 @@ use Ufo\DTO\Helpers\TypeHintResolver;
 use Ufo\RpcError\WrongWayException;
 use Ufo\RpcObject\RPC\DTO;
 use Ufo\RpcObject\RpcTransport;
+use Ufo\RpcObject\DocsHelper;
+use Ufo\RpcObject\DocsHelper\UfoEnumsHelper;
 
 use function array_map;
 use function explode;
@@ -34,7 +37,7 @@ class OpenRpcAdapter
     public function __construct(
         protected ServiceMap $serviceMap,
         protected RpcMainConfig $mainConfig,
-        protected ChainParamConvertor $paramConvertor,
+        protected ChainParamConvertor $paramConvertor
     ) {}
 
     public function adapt(): array
@@ -194,6 +197,17 @@ class OpenRpcAdapter
         return $schemaLink;
     }
 
+    protected function schemaFromEnum(string $enumFQCN): array
+    {
+        $refEnum = new \ReflectionEnum($enumFQCN);
+        $enum = $refEnum->getBackingType();
+        return [
+            'enum' => array_column($enumFQCN::cases(), 'value'),
+            'type' => TypeHintResolver::phpToJsonSchema($refEnum->getBackingType()->getName()),
+            ...UfoEnumsHelper::generateEnumSchema($enumFQCN),
+        ];
+    }
+
     /**
      * @throws RpcInternalException
      */
@@ -232,7 +246,9 @@ class OpenRpcAdapter
                 $this->schemaFromDto($dto->getFormat());
             }
         }
-        if (!$jsonValue && TypeHintResolver::isRealClass($type)) {
+        if (!$jsonValue && TypeHintResolver::isEnum($type)) {
+            $jsonValue = $this->schemaFromEnum($type);
+        } elseif (!$jsonValue && TypeHintResolver::isRealClass($type)) {
             $newDtoResponse = new DTO($type);
             new DtoReflector($newDtoResponse, $this->paramConvertor);
             if (isset($this->schemas[$newDtoResponse->getFormat()['$dto']])) {
@@ -283,7 +299,17 @@ class OpenRpcAdapter
     {
         $schema = $service->getSchema()['properties'] ?? [];
 
-        if ($param->getType() === TypeHintResolver::OBJECT->value && $dto = $this->checkParamHasDTO($param)) {
+        if ($param->getType() === TypeHintResolver::OBJECT->value
+            && TypeHintResolver::isEnum($param->getRealType())
+        ) {
+            $schema[$param->name] = [
+                ...$schema[$param->name] ?? [],
+                ...$jsonValue = $this->schemaFromEnum($param->getRealType())
+            ];
+
+        } elseif ($param->getType() === TypeHintResolver::OBJECT->value
+            && $dto = $this->checkParamHasDTO($param)
+        ) {
             $schema[$param->name] = [
                 ...$schema[$param->name] ?? [],
                 ...$this->schemaFromDto($dto->getFormat())
