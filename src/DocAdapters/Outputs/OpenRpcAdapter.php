@@ -78,6 +78,7 @@ class OpenRpcAdapter
                 ...['fromCache' => $this->serviceMap->isFromCache()],
                 ...Package::ufoEnvironment(),
             ],
+            relations: $this->mainConfig->sdkVendors ?? []
         );
     }
 

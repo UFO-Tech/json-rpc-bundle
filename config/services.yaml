@@ -1,3 +1,6 @@
+parameters:
+    json_rpc_sdk: []
+
 services:
     # default configuration for services in *this* file
     _defaults:
@@ -15,6 +18,7 @@ services:
     
     Ufo\JsonRpcBundle\ConfigService\RpcMainConfig:
         $rpcConfigs:  '%ufo_json_rpc%'
+        $sdkConfigs: '%json_rpc_sdk%'
         $environment: '%kernel.environment%'
     
     

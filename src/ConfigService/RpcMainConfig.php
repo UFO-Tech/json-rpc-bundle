@@ -7,11 +7,15 @@ use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Yaml\Yaml;
 use Ufo\JsonRpcBundle\DependencyInjection\Configuration;
 
+use function array_column;
+use function array_map;
+use function array_reduce;
 use function parse_url;
 
 final readonly class RpcMainConfig
 {
     const string NAME = 'ufo_json_rpc';
+    const string SDK_NAME = 'json_rpc_sdk';
     const string P_NAME = 'ufo_json_rpc_config';
 
     public RpcSecurityConfig $securityConfig;
@@ -22,11 +26,13 @@ final readonly class RpcMainConfig
 
     public array $url;
 
+    public array $sdkVendors;
+
     public function __construct(
-        #[Target(self::P_NAME)]
         array $rpcConfigs,
         public string $environment,
-        RequestStack $requestStack
+        RequestStack $requestStack,
+        array $sdkConfigs,
     ) {
         $extraConfig = Yaml::parse(file_get_contents(__DIR__.'/../../install/packages/ufo_json_rpc.yaml'));
         $configs = $this->recursiveMerge($rpcConfigs, $extraConfig[self::NAME]);
@@ -37,6 +43,8 @@ final readonly class RpcMainConfig
         $this->asyncConfig = new RpcAsyncConfig($configs[RpcAsyncConfig::NAME], $this);
         $url = $requestStack->getCurrentRequest()?->getUri() ?? "";
         $this->url = parse_url($url) ?? [];
+
+        $this->sdkVendors = array_column($sdkConfigs['vendors'] ?? [], 'name');;
     }
 
     protected function recursiveMerge(array $config, array $extraConfig): array

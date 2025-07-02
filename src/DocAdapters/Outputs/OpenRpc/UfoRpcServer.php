@@ -17,7 +17,8 @@ class UfoRpcServer extends Server
         protected string $envelop,
         protected string $name = self::NAME,
         protected array $transports = [],
-        protected array $rpcEnv = []
+        protected array $rpcEnv = [],
+        protected array $relations = [],
     ) {}
 
     public function toRecord(): RecordInterface
@@ -29,12 +30,12 @@ class UfoRpcServer extends Server
         $record->put(XUfoValuesEnum::CORE->value, [
             'envelop' => $this->envelop,
             'environment' => $this->rpcEnv,
+            ...(!empty($this->relations) ? ['relations' => $this->relations] : []),
             'transport' => $this->transports,
             'documentation' =>  [
                 'json-rpc' => Package::protocolSpecification(),
                 Package::bundleName() => Package::bundleDocumentation(),
             ],
-
         ]);
         return $record;
     }

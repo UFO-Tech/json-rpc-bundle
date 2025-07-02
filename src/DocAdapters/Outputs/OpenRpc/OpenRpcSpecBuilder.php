@@ -63,10 +63,11 @@ class OpenRpcSpecBuilder
         string $envelop,
         array $transports,
         ?string $name = UfoRpcServer::NAME,
-        array $rpcEnv = []
+        array $rpcEnv = [],
+        array $relations = [],
     ): static
     {
-        $server = new UfoRpcServer($envelop, $name, $transports, $rpcEnv);
+        $server = new UfoRpcServer($envelop, $name, $transports, $rpcEnv, $relations);
         $server->setUrl($url);
         $this->servers[] = $server;
 
