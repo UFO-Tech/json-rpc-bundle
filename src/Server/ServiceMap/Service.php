@@ -32,6 +32,7 @@ class Service implements IArrayConvertible, IArrayConstructible
     protected array $return = [];
 
     protected string $returnDescription = '';
+    protected ?string $returnItems = null;
 
     #[DTO(ResultAsDTO::class, renameKeys: ['dtoFormat' => 'format'])]
     protected ?ResultAsDTO $responseInfo = null;
@@ -64,7 +65,8 @@ class Service implements IArrayConvertible, IArrayConstructible
     public function __construct(
         protected string $name,
         protected string $procedureFQCN,
-        public readonly string $concat = Info::DEFAULT_CONCAT
+        public readonly string $concat = Info::DEFAULT_CONCAT,
+        readonly public array $uses = []
     ) {
         $t = explode($this->concat, $this->name);
         $this->methodName = end($t);
@@ -208,15 +210,13 @@ class Service implements IArrayConvertible, IArrayConstructible
     }
 
     /**
-     * @param string $type
-     * @param string|null $desc
-     * @return $this
      * @throws RpcInternalException
      */
-    public function addReturn(string $type, ?string $desc = null): static
+    public function addReturn(string $type, ?string $desc = null, ?string $items = null): static
     {
         $this->return[] = static::validateParamType($type);
         $this->returnDescription = $desc ?? '';
+        $this->returnItems = $items;
         return $this;
     }
 
@@ -277,22 +277,25 @@ class Service implements IArrayConvertible, IArrayConstructible
         return $this->return;
     }
 
+    public function getReturnItems(): ?string
+    {
+        return $this->returnItems;
+    }
+
     /**
      * @throws RpcInternalException
      */
     public function toArray(): array
     {
-        $return = $this->getReturn()[0];
-        if (count($this->getReturn()) > 1) {
-            $return = $this->getReturn();
-        }
         $array = [
             'name'           => $this->getName(),
             'description'    => $this->getDescription(),
             'parameters'     => $this->getParams(),
-            'returns'        => $return,
+            'returns'        => (count($this->getReturn()) > 1) ? $this->getReturn() : $this->getReturn()[0],
+            'returnItems'    => $this->returnItems,
             'responseFormat' => $this->responseInfo->getResponseFormat() ?? $return,
             'attrCollection' => DTOTransformer::toArray($this->attrCollection),
+            'uses'           => $this->uses,
         ];
         if (!empty($this->throws)) {
             $array['throws'] = $this->throws;

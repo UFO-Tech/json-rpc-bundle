@@ -4,7 +4,6 @@ namespace Ufo\JsonRpcBundle\DocAdapters\Outputs;
 use PSX\OpenRPC\Method;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\DocAdapters\Outputs\OpenRpc\OpenRpcSpecBuilder;
-use Ufo\JsonRpcBundle\DocAdapters\Outputs\OpenRpc\UfoRpcParameter;
 use Ufo\JsonRpcBundle\Package;
 use Ufo\JsonRpcBundle\ParamConvertors\ChainParamConvertor;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\DtoReflector;
@@ -15,9 +14,8 @@ use Ufo\RpcError\RpcInternalException;
 use Ufo\DTO\Helpers\TypeHintResolver;
 use Ufo\RpcError\WrongWayException;
 use Ufo\RpcObject\RPC\DTO;
+use Ufo\RpcObject\RPC\ResultAsDTO;
 use Ufo\RpcObject\RpcTransport;
-use Ufo\RpcObject\DocsHelper;
-use Ufo\RpcObject\DocsHelper\UfoEnumsHelper;
 
 use function array_map;
 use function explode;
@@ -37,7 +35,7 @@ class OpenRpcAdapter
     public function __construct(
         protected ServiceMap $serviceMap,
         protected RpcMainConfig $mainConfig,
-        protected ChainParamConvertor $paramConvertor
+        protected ChainParamConvertor $paramConvertor,
     ) {}
 
     public function adapt(): array
@@ -78,7 +76,6 @@ class OpenRpcAdapter
                 ...['fromCache' => $this->serviceMap->isFromCache()],
                 ...Package::ufoEnvironment(),
             ],
-            relations: $this->mainConfig->sdkVendors ?? []
         );
     }
 
@@ -99,9 +96,29 @@ class OpenRpcAdapter
             fn(ParamDefinition $param) => $this->buildParam($method, $param, $service),
             $service->getParams()
         );
+        $objSchema = null;
+        if ($items = $service->getReturnItems()) {
+            $objSchema = TypeHintResolver::typeDescriptionToJsonSchema($items, $service->uses);
+            if ($objSchema['classFQCN'] ?? false) {
+                $service->setResponseInfo(
+                    new ResultAsDTO(
+                        $objSchema['classFQCN'],
+                        $objSchema[TypeHintResolver::TYPE] === TypeHintResolver::ARRAY->value
+                    )
+                );
+                unset($objSchema['classFQCN']);
+                unset($objSchema['additionalProperties']);
+            }
+        }
 
         $schema = $this->rpcResponseInfoToSchema($service->getResponseInfo()) ?? $this->formatFromResponse($service);
 
+        if ($objSchema) {
+            $schema = [
+                ...$schema,
+                ...$objSchema
+            ];
+        }
         $this->rpcSpecBuilder->buildResult(
             $method,
             implode(', ', $service->getReturn()),
@@ -135,8 +152,8 @@ class OpenRpcAdapter
             $format = $responseInfo->getFormat();
         }
         if ($responseInfo->collection) {
-            $schema['type'] = 'array';
-            $schema['items'] = $this->schemaFromDto($format);
+            $schema[TypeHintResolver::TYPE] = TypeHintResolver::ARRAY->value;
+            $schema[TypeHintResolver::ITEMS] = $this->schemaFromDto($format);
         } else {
             $schema = $this->schemaFromDto($format);
         }
@@ -146,7 +163,7 @@ class OpenRpcAdapter
     protected function formatFromResponse(Service $service): ?array
     {
         $res = $this->detectArrayOfType(implode('|', $service->getReturn()));
-        return ['type' => ($res['type'] ?? $res)];
+        return [TypeHintResolver::TYPE => ($res[TypeHintResolver::TYPE] ?? $res)];
     }
 
     protected function createSchemaLink(string $dtoName): array
@@ -170,14 +187,16 @@ class OpenRpcAdapter
                 }, $format['$collections'] ?? []
             );
         } catch (\Throwable) {}
+        $uses = $format['$uses'] ?? [];
         unset($format['$dto']);
         unset($format['$collections']);
+        unset($format['$uses']);
 
         $schemaLink = $this->createSchemaLink($dtoName);
         if (!isset($this->schemas[$dtoName])) {
             $this->schemas[$dtoName] = [];
             $schema = [
-                'type' => 'object',
+                TypeHintResolver::TYPE => TypeHintResolver::OBJECT->value,
                 'properties' => [],
                 'required' => []
             ];
@@ -188,7 +207,7 @@ class OpenRpcAdapter
                     $schema['required'][] = $name;
                 }
                 if (!$jsonValue = $this->detectDtoOnType($value, $collections[$name] ?? [])) {
-                    $jsonValue = $this->detectArrayOfType($value);
+                    $jsonValue = $this->detectArrayOfType($value, $uses);
                 }
 
                 $schema['properties'][$name] = $jsonValue;
@@ -198,37 +217,12 @@ class OpenRpcAdapter
         return $schemaLink;
     }
 
-    protected function schemaFromEnum(string $enumFQCN): array
-    {
-        $refEnum = new \ReflectionEnum($enumFQCN);
-        $enum = $refEnum->getBackingType();
-        return [
-            'enum' => array_column($enumFQCN::cases(), 'value'),
-            'type' => TypeHintResolver::phpToJsonSchema($refEnum->getBackingType()->getName()),
-            ...UfoEnumsHelper::generateEnumSchema($enumFQCN),
-        ];
-    }
-
     /**
      * @throws RpcInternalException
      */
-    protected function detectArrayOfType(string $type): array
+    protected function detectArrayOfType(string $type, array $uses = []): array
     {
-        $jsonValue = [TypeHintResolver::TYPE => TypeHintResolver::phpToJsonSchema($type)];
-        if (str_contains($type, '|')) {
-            $phpTypes = explode('|', $type);
-
-            $types = [];
-            foreach ($phpTypes as $type) {
-                if (!$t = $this->detectDtoOnType($type)) {
-                    $t = [TypeHintResolver::TYPE => TypeHintResolver::phpToJsonSchema($type)];
-                }
-                $types[] = $t;
-            }
-            $jsonValue = ['oneOf' => $types];
-        }
-        return $jsonValue;
-
+        return TypeHintResolver::typeDescriptionToJsonSchema($type, $uses);
     }
 
     /**
@@ -239,17 +233,15 @@ class OpenRpcAdapter
         $jsonValue = null;
         if ($type === 'collection' && !empty($refCollection)) {
             $jsonValue = [
-                'type' => 'array',
-                'items' => $refCollection['schema'] ?? []
+                TypeHintResolver::TYPE => TypeHintResolver::ARRAY->value,
+                TypeHintResolver::ITEMS => $refCollection['schema'] ?? []
             ];
             $dto = $refCollection['format'] ?? null;
             if ($dto instanceof DTO && !isset($this->schemas[$dto?->getFormat()['$dto']])) {
                 $this->schemaFromDto($dto->getFormat());
             }
         }
-        if (!$jsonValue && TypeHintResolver::isEnum($type)) {
-            $jsonValue = $this->schemaFromEnum($type);
-        } elseif (!$jsonValue && TypeHintResolver::isRealClass($type)) {
+        if (!$jsonValue && TypeHintResolver::isRealClass($type)) {
             $newDtoResponse = new DTO($type);
             new DtoReflector($newDtoResponse, $this->paramConvertor);
             if (isset($this->schemas[$newDtoResponse->getFormat()['$dto']])) {
@@ -300,20 +292,19 @@ class OpenRpcAdapter
     {
         $schema = $service->getSchema()['properties'] ?? [];
 
-        if ($param->getType() === TypeHintResolver::OBJECT->value
-            && TypeHintResolver::isEnum($param->getRealType())
-        ) {
-            $schema[$param->name] = [
-                ...$schema[$param->name] ?? [],
-                ...$jsonValue = $this->schemaFromEnum($param->getRealType())
-            ];
-
-        } elseif ($param->getType() === TypeHintResolver::OBJECT->value
-            && $dto = $this->checkParamHasDTO($param)
-        ) {
+        if ($param->getType() === TypeHintResolver::OBJECT->value && $dto = $this->checkParamHasDTO($param)) {
             $schema[$param->name] = [
                 ...$schema[$param->name] ?? [],
                 ...$this->schemaFromDto($dto->getFormat())
+            ];
+        }
+
+        if ($param->getType() === TypeHintResolver::ARRAY->value && $param->paramItems) {
+            $prevSchema = $schema[$param->name] ?? [];
+            unset($prevSchema['type']);
+            $schema[$param->name] = [
+                ...$prevSchema,
+                ...TypeHintResolver::typeDescriptionToJsonSchema($param->paramItems, $service->uses)
             ];
         }
 

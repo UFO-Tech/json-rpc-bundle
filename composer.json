@@ -1,7 +1,7 @@
 {
   "name": "ufo-tech/json-rpc-bundle",
   "description": "The bundle for easy using json-rpc api on your project",
-  "version": "8.1.0",
+  "version": "8.1.1",
   "license": "MIT",
   "authors": [
     {
@@ -38,9 +38,9 @@
     "symfony/uid": "^7.2",
     "symfony/http-client": "^7.2",
     "symfony/process": "^7.2",
-    "ufo-tech/dto-transformer": "^1.0",
-    "ufo-tech/rpc-objects": "^3.0",
-    "ufo-tech/rpc-exceptions": "^1.1",
+    "ufo-tech/dto-transformer": "^1.1",
+    "ufo-tech/rpc-objects": "^3.1",
+    "ufo-tech/rpc-exceptions": "^1.3",
     "doctrine/persistence": ">=3.1",
     "phpdocumentor/reflection-docblock": ">=5.3",
     "ramsey/uuid": "^4",

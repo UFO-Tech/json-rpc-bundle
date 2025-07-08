@@ -6,10 +6,8 @@ use ReflectionException;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\Constraints\Choice;
-use Ufo\JsonRpcBundle\DocAdapters\Outputs\OpenRpc\UfoRpcParameter;
 use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Interfaces\IConstraintGenerator;
 
-use Ufo\RpcObject\DocsHelper\UfoEnumsHelper;
 use function implode;
 
 #[AutoconfigureTag('rpc.constraint')]
@@ -28,15 +26,10 @@ class IsChoice implements IConstraintGenerator
             [$enum, $method] = $constraint->callback;
             if (method_exists($enum, $method)) {
                 $choices = $enum::$method();
-                $rules = [
-                    ...$rules,
-                    ...UfoEnumsHelper::generateEnumSchema($enum, $method),
-                ];
             }
         }
 
         $rules['enum'] = $choices;
-        ksort($rules);
     }
 
     public function getSupportedClass(): string

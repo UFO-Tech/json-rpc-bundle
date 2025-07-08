@@ -5,8 +5,8 @@ namespace Ufo\JsonRpcBundle\EventDrivenModel\Listeners;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcErrorEvent;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcEvent;
+use Ufo\RpcError\ConstraintsImposedException;
 use Ufo\RpcObject\RpcError;
-use Ufo\RpcObject\Rules\Validator\ConstraintsImposedException;
 
 #[AsEventListener(RpcEvent::ERROR, method: 'onConstraintsImpostError', priority: 1000)]
 class RpcErrorListener

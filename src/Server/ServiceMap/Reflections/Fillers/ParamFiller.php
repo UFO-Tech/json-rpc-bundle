@@ -39,7 +39,8 @@ class ParamFiller extends AbstractServiceFiller
                 $paramDefinition = ParamDefinition::fromParamReflection(
                     $paramRef,
                     $type,
-                    $this->getParamDescription($methodDoc, $paramRef->getName())
+                    $this->getParamDescription($methodDoc, $paramRef->getName()),
+                    $this->getParamType($methodDoc, $paramRef->getName()),
                 );
                 try {
                     $paramDefinition->setDefault($paramRef->getDefaultValue());
@@ -96,7 +97,6 @@ class ParamFiller extends AbstractServiceFiller
         }
     }
 
-
     protected function getParamDescription(DocBlock $docBlock, string $paramName): string
     {
         $desc = '';
@@ -116,4 +116,20 @@ class ParamFiller extends AbstractServiceFiller
         return $desc;
     }
 
+    protected function getParamType(DocBlock $docBlock, string $paramName): ?string
+    {
+        $_type = null;
+        /**
+         * @var DocBlock\Tags\Param $param
+         */
+        foreach ($docBlock->getTagsByName('param') as $param) {
+            if (!($param->getVariableName() === $paramName)) {
+                continue;
+            }
+            $_type = (string) $param->getType();
+            break;
+        }
+
+        return $_type;
+    }
 }

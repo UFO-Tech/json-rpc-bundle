@@ -4,7 +4,9 @@ namespace Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\Fillers;
 
 use phpDocumentor\Reflection\DocBlock;
 use ReflectionMethod;
+use Ufo\DTO\Helpers\TypeHintResolver;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
+use phpDocumentor\Reflection\TypeResolver;
 
 use function is_array;
 use function is_null;
@@ -27,10 +29,12 @@ class ReturnFiller extends AbstractServiceFiller
         $returnDesc = $this->getReturnDescription($methodDoc);
         if (is_array($returns)) {
             foreach ($returns as $type) {
-                $service->addReturn($this->typeFrom($type), $returnDesc);
+                $typeString = $this->getReturnType($methodDoc, $this->typeFrom($type));
+                $service->addReturn($this->typeFrom($type), $returnDesc, $typeString);
             }
         } else {
-            $service->addReturn($this->typeFrom($returns), $returnDesc);
+            $typeString = $this->getReturnType($methodDoc, $this->typeFrom($returns));
+            $service->addReturn($this->typeFrom($returns), $returnDesc, $typeString);
         }
     }
 
@@ -45,6 +49,15 @@ class ReturnFiller extends AbstractServiceFiller
         }
         return $desc;
 
+    }
+
+    protected function getReturnType(DocBlock $docBlock, string $type): ?string
+    {
+        $tags = $docBlock->getTagsByName('return');
+        if (empty($tags)) {
+            return null;
+        }
+        return (string) $tags[0]->getType();
     }
 
 }

@@ -2,6 +2,8 @@
 
 namespace Ufo\JsonRpcBundle\Server\ServiceMap\Reflections;
 
+use phpDocumentor\Reflection\DocBlockFactory;
+use phpDocumentor\Reflection\Types\ContextFactory;
 use ReflectionException;
 use ReflectionProperty;
 use ReflectionType;
@@ -64,7 +66,10 @@ class DtoReflector
         if ($depth >= static::DEPTH_SIZE) return;
 
         $ref = $this->refDTO;
+        $context = (new ContextFactory())->createFromReflector($this->refDTO);
+
         $this->responseFormat['$dto'] = $ref->getShortName();
+        $this->responseFormat['$uses'] = TypeHintResolver::getUsesNamespaces($this->dto->dtoFQCN);
         foreach ($ref->getProperties(\ReflectionProperty::IS_PUBLIC) as $property) {
 
             $nullable = ($property->getType()->allowsNull()) ? '?' : '';
@@ -72,7 +77,7 @@ class DtoReflector
                 $this->responseFormat[$property->getName()] = $nullable . $this->getType($property, $property->getType());
             } catch (\Throwable $t) {
                 $t = [];
-                foreach ($property->getType()->getTypes() as $type) {
+                foreach ($property->getType()?->getTypes() as $type) {
                     $t[] = $this->getType($property, $type);
                 }
                 $this->responseFormat[$property->getName()] = implode('|', $t);
@@ -87,17 +92,42 @@ class DtoReflector
     {
         /** @var DTO $dto */
         $typeName = $type->getName();
-        $attrFQCN = DTO::class;
         $this->checkParamConverter($property, $typeName);
-        if (count($property->getAttributes($attrFQCN)) > 0) {
-            $dto = $property->getAttributes($attrFQCN)[0]->newInstance();
+        if (count($property->getAttributes(DTO::class)) > 0) {
+            $dto = $property->getAttributes(DTO::class)[0]->newInstance();
             new static($dto, $this->paramConvertor, $this->depth + 1);
-            if ($typeName === 'array' && $dto->collection) {
+            if ($typeName === TypeHintResolver::ARRAY->value && $dto->collection) {
                 $typeName = TypeHintResolver::COLLECTION->value;
                 $this->responseFormat['$collections'][$property->getName()] = $dto;
             }
+        } else {
+            $typeName = $this->getDecriptionType($property) ?? $typeName;
         }
         return $typeName;
+    }
+
+    protected function getDecriptionType(ReflectionProperty $property): ?string
+    {
+        $descType = null;
+        $docProperty = $property->getDocComment();
+        $ctor = (new \ReflectionClass($property->getDeclaringClass()->getName()))->getConstructor();
+        $docConstructor = $ctor?->getDocComment();
+
+        if (!$docProperty && $property->isPromoted() && $docConstructor) {
+            
+            $docReflection = DocBlockFactory::createInstance()->create($docConstructor);
+            foreach ($docReflection->getTagsByName('param') as $param) {
+                if ($param->getVariableName() !== $property->getName()) continue;
+                $descType = (string)$param->getType();
+                break;
+            }
+        }   
+        if ($docProperty) {
+            $docReflection = DocBlockFactory::createInstance()->create($docProperty);
+            $descType = (string)$docReflection->getTagsByName('param')[0]?->getType();
+        }
+
+        return $descType;
     }
 
     protected function checkParamConverter(ReflectionProperty $property, string &$typeName): void

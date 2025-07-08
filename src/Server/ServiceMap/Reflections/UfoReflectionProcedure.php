@@ -4,6 +4,7 @@ namespace Ufo\JsonRpcBundle\Server\ServiceMap\Reflections;
 
 use phpDocumentor\Reflection\DocBlock;
 use phpDocumentor\Reflection\DocBlockFactory;
+use phpDocumentor\Reflection\Types\ContextFactory;
 use ReflectionClass;
 use ReflectionMethod;
 use Throwable;
@@ -98,7 +99,16 @@ class UfoReflectionProcedure
         }
         $this->methodDoc = DocBlockFactory::createInstance()->create($docBlock);
         $className = (empty($this->name)) ? '' : $this->name . $this->concat;
-        $service = new Service($className.$method->getName(), $this->procedure::class, $this->concat);
+        
+        $contextFactory = new ContextFactory();
+        $context = $contextFactory->createFromReflector($this->reflection);
+        
+        $service = new Service(
+            $className . $method->getName(),
+            $this->procedure::class,
+            $this->concat,
+            $context->getNamespaceAliases()
+        );
 
         $this->chainServiceFiller->fill($method, $service, $this->methodDoc);
         return $service;
