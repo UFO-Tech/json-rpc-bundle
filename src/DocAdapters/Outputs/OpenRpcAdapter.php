@@ -98,19 +98,13 @@ class OpenRpcAdapter
         );
         $objSchema = null;
         if ($items = $service->getReturnItems()) {
-            $objSchema = TypeHintResolver::typeDescriptionToJsonSchema($items, $service->uses);
-            if ($objSchema['classFQCN'] ?? false) {
-                $service->setResponseInfo(
-                    new ResultAsDTO(
-                        $objSchema['classFQCN'],
-                        $objSchema[TypeHintResolver::TYPE] === TypeHintResolver::ARRAY->value
-                    )
-                );
-                unset($objSchema['classFQCN']);
-                unset($objSchema['additionalProperties']);
+            $objSchema = $this->toJsonSchema($items, $service);
+            if ($objSchema[TypeHintResolver::ITEMS] ?? false) {
+                $items = &$objSchema[TypeHintResolver::ITEMS];
+                $items = $this->checkAndGetSchemaFromDesc($items);
             }
         }
-
+        
         $schema = $this->rpcResponseInfoToSchema($service->getResponseInfo()) ?? $this->formatFromResponse($service);
 
         if ($objSchema) {
@@ -128,6 +122,8 @@ class OpenRpcAdapter
         $this->rpcSpecBuilder->buildTag($method, $service->getProcedureFQCN());
 //        $this->rpcSpecBuilder->buildError($method);
     }
+
+   
 
     /**
      * @throws RpcInternalException
@@ -252,18 +248,29 @@ class OpenRpcAdapter
         return $jsonValue;
     }
 
-    protected function checkParamHasDTO(ParamDefinition $param): ?DTO
+    protected function checkParamHasDTO(ParamDefinition $param, Service $service): ?DTO
     {
         $dto = null;
+        $class = null;
+        if ($param->paramItems) {
+            $objSchema = TypeHintResolver::typeDescriptionToJsonSchema($param->paramItems, $service->uses);
+            if ($objSchema[TypeHintResolver::TYPE] ?? '' === TypeHintResolver::OBJECT->value) {
+                $class = $objSchema['classFQCN'] ?? null;
+            }
+        }
 
         try {
-            $class = $this->getRealObjectType($param->getRealType());
-
-            $dtoAttr = $param->getAttributesCollection()->getAttribute(DTO::class);
-            $dto = $dtoAttr ?? new DTO($class);
-            new DtoReflector($dto, $this->paramConvertor);
+            $class ??= $this->getRealObjectType($param->getRealType());
+            $dto = $this->createDTO($class, $param->getAttributesCollection()->getAttribute(DTO::class));
         } catch (WrongWayException) {}
 
+        return $dto;
+    }
+
+    protected function createDTO(string $classFQCN, ?DTO $dtoAttr): DTO
+    {
+        $dto = $dtoAttr ?? new DTO($classFQCN);
+        new DtoReflector($dto, $this->paramConvertor);
         return $dto;
     }
 
@@ -292,20 +299,20 @@ class OpenRpcAdapter
     {
         $schema = $service->getSchema()['properties'] ?? [];
 
-        if ($param->getType() === TypeHintResolver::OBJECT->value && $dto = $this->checkParamHasDTO($param)) {
-            $schema[$param->name] = [
-                ...$schema[$param->name] ?? [],
-                ...$this->schemaFromDto($dto->getFormat())
-            ];
+        if ($param->getType() === TypeHintResolver::OBJECT->value && $dto = $this->checkParamHasDTO($param, $service)) {
+            $schema[$param->name] = $this->schemaFromDto($dto->getFormat());
         }
 
         if ($param->getType() === TypeHintResolver::ARRAY->value && $param->paramItems) {
-            $prevSchema = $schema[$param->name] ?? [];
-            unset($prevSchema['type']);
-            $schema[$param->name] = [
-                ...$prevSchema,
-                ...TypeHintResolver::typeDescriptionToJsonSchema($param->paramItems, $service->uses)
-            ];
+            $newSchema = TypeHintResolver::typeDescriptionToJsonSchema($param->paramItems, $service->uses);
+            if ($newSchema[TypeHintResolver::ONE_OFF] ?? false) {
+                $types = &$newSchema[TypeHintResolver::ONE_OFF];
+                foreach ($types as $i => $objSchema) {
+                    $types[$i] = $this->checkAndGetSchemaFromDesc($objSchema, $param->getAttributesCollection()->getAttribute(DTO::class));
+                }
+            }
+            
+            $schema[$param->name] = $newSchema;
         }
 
         $this->rpcSpecBuilder->buildParam(
@@ -317,6 +324,33 @@ class OpenRpcAdapter
             $schema[$param->name] ?? [],
             $service->getUfoAssertion($param->name)
         );
+    }
+
+    protected function checkAndGetSchemaFromDesc(array $objSchema, ?DTO $dtoAttr = null): array
+    {
+        if (($objSchema[TypeHintResolver::TYPE] ?? '') === TypeHintResolver::OBJECT->value) {
+            $class = $objSchema['classFQCN'] ?? null;
+            $dto = $this->createDTO($class, $dtoAttr);
+            return $this->schemaFromDto($dto->getFormat());
+        }
+        return $objSchema;
+    }
+
+    protected function toJsonSchema(string $data, Service $service): ?array
+    {
+        $objSchema = TypeHintResolver::typeDescriptionToJsonSchema($data, $service->uses);
+        if ($objSchema['classFQCN'] ?? false) {
+            $service->setResponseInfo(
+                new ResultAsDTO(
+                    $objSchema['classFQCN'],
+                    $objSchema[TypeHintResolver::TYPE] === TypeHintResolver::ARRAY->value
+                )
+            );
+            unset($objSchema[TypeHintResolver::TYPE]);
+            unset($objSchema['classFQCN']);
+            unset($objSchema['additionalProperties']);
+        }
+        return $objSchema;
     }
 }
 
