@@ -69,7 +69,7 @@ class OpenRpcAdapter
     {
         $http = RpcTransport::fromArray($this->mainConfig->url);
         $this->rpcSpecBuilder->addServer(
-            $http->getDomainUrl() . $this->serviceMap->getTarget(),
+            $http->getDomainUrl().$this->serviceMap->getTarget(),
             $this->serviceMap->getEnvelope(),
             $this->serviceMap->getTransport(),
             rpcEnv: [
@@ -97,7 +97,7 @@ class OpenRpcAdapter
             $service->getParams()
         );
         $objSchema = null;
-        if ($items = $service->getReturnItems()) {
+        if ($items = $service->getReturnItems() ?? implode('|', $service->getReturn())) {
             $objSchema = $this->toJsonSchema($items, $service);
             if ($objSchema[TypeHintResolver::ITEMS] ?? false) {
                 $items = &$objSchema[TypeHintResolver::ITEMS];
@@ -330,10 +330,8 @@ class OpenRpcAdapter
             )
         ) {
             $schema[$param->name] = $this->schemaFromDto($dto->getFormat());
-        }
-
-        if ($param->getType() === TypeHintResolver::ARRAY->value && $param->paramItems) {
-            $newSchema = TypeHintResolver::typeDescriptionToJsonSchema($param->paramItems, $service->uses);
+        } elseif ($param->getType() === TypeHintResolver::ARRAY->value) {
+            $newSchema = TypeHintResolver::typeDescriptionToJsonSchema($param->paramItems ?? $param->getType(), $service->uses);
             if ($newSchema[TypeHintResolver::ONE_OFF] ?? false) {
                 $types = &$newSchema[TypeHintResolver::ONE_OFF];
                 foreach ($types as $i => $objSchema) {
@@ -342,6 +340,16 @@ class OpenRpcAdapter
             }
             
             $schema[$param->name] = $newSchema;
+        } elseif (is_array($param->getType())) {
+            if ($param->paramItems) {
+                $newSchema = TypeHintResolver::typeDescriptionToJsonSchema($param->paramItems, $service->uses);
+                $schema[$param->name] = $this->checkAndGetSchemaFromDesc($newSchema, null);
+            } else {
+                foreach ($param->getType() as $i => $type) {
+                    $newSchema = TypeHintResolver::typeDescriptionToJsonSchema($type, $service->uses);
+                    $schema[$param->name][TypeHintResolver::ONE_OFF][$i] = $this->checkAndGetSchemaFromDesc($newSchema, null);
+                }
+            }
         }
 
         $this->rpcSpecBuilder->buildParam(
