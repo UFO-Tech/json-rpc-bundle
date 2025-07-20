@@ -101,7 +101,9 @@ class DtoReflector
                 $this->responseFormat['$collections'][$property->getName()] = $dto;
             }
         } else {
-            $typeName = $this->getDecriptionType($property) ?? $typeName;
+            try {
+                $typeName = $this->getDecriptionType($property) ?? $typeName;
+            } catch (\Throwable) {}
         }
         return $typeName;
     }
@@ -124,7 +126,11 @@ class DtoReflector
         }   
         if ($docProperty) {
             $docReflection = DocBlockFactory::createInstance()->create($docProperty);
-            $descType = (string)$docReflection->getTagsByName('param')[0]?->getType();
+            try {
+                $descType = (string)$docReflection->getTagsByName('param')[0]?->getType();
+            } catch (\Throwable) {
+                $descType = (string)$docReflection->getTagsByName('var')[0]?->getType();
+            }
         }
 
         return $descType;
