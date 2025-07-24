@@ -38,7 +38,7 @@ class RequestCarrier implements IRpcSpecialParamHandler
     public function getSpecialParams(): array
     {
         try {
-            $params = $this->getRequestObject()->getParams();
+            $params = $this->getRequestObject()->getSpecialParams();
         } catch (WrongWayException) {
             $params = [];
         }
