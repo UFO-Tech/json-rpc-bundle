@@ -13,6 +13,7 @@ use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMap;
 use Ufo\RpcError\RpcInternalException;
 use Ufo\DTO\Helpers\TypeHintResolver;
 use Ufo\RpcError\WrongWayException;
+use Ufo\RpcObject\DocsHelper\UfoEnumsHelper;
 use Ufo\RpcObject\RPC\DTO;
 use Ufo\RpcObject\RPC\ResultAsDTO;
 use Ufo\RpcObject\RpcTransport;
@@ -242,7 +243,9 @@ class OpenRpcAdapter
                 $this->schemaFromDto($dto->getFormat());
             }
         }
-        if (!$jsonValue && TypeHintResolver::isRealClass($type)) {
+        if (!$jsonValue && TypeHintResolver::isEnum($type)) {
+            $jsonValue = $this->schemaFromEnum($type);
+        } elseif (!$jsonValue && TypeHintResolver::isRealClass($type)) {
             $newDtoResponse = new DTO($type);
             new DtoReflector($newDtoResponse, $this->paramConvertor);
             if (isset($this->schemas[$newDtoResponse->getFormat()['$dto']])) {
@@ -251,6 +254,16 @@ class OpenRpcAdapter
             $jsonValue = $this->schemaFromDto($newDtoResponse->getFormat());
         }
         return $jsonValue;
+    }
+
+    protected function schemaFromEnum(string $enumFQCN): array
+    {
+        $refEnum = new \ReflectionEnum($enumFQCN);
+        return [
+            'enum' => array_column($enumFQCN::cases(), 'value'),
+            'type' => TypeHintResolver::phpToJsonSchema($refEnum->getBackingType()->getName()),
+            ...UfoEnumsHelper::generateEnumSchema($enumFQCN),
+        ];
     }
 
     protected function checkParamHasDTO(string $type, string|array $realType, array $uses = [], ?DTO $dtoAttr = null): ?DTO
@@ -321,9 +334,16 @@ class OpenRpcAdapter
     {
         $schema = $service->getSchema()['properties'] ?? [];
 
-        if ($param->getType() === TypeHintResolver::OBJECT->value 
+        if (is_string($param->getType())
+            && TypeHintResolver::isEnum($param->getRealType())
+        ) {
+            $schema[$param->name] = [
+                ...$schema[$param->name] ?? [],
+                ...$this->schemaFromEnum($param->getRealType())
+            ];
+        } elseif ($param->getType() === TypeHintResolver::OBJECT->value
             && $dto = $this->checkParamHasDTO(
-                $param->paramItems, 
+                $param->paramItems,
                 $param->getRealType(),
                 $service->uses,
                 $param->getAttributesCollection()->getAttribute(DTO::class)
