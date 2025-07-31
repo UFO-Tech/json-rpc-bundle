@@ -243,7 +243,7 @@ class OpenRpcAdapter
                 $this->schemaFromDto($dto->getFormat());
             }
         }
-        if (!$jsonValue && TypeHintResolver::isEnum($type)) {
+        if (!$jsonValue && $this->getEnumFQCN($type)) {
             $jsonValue = $this->schemaFromEnum($type);
         } elseif (!$jsonValue && TypeHintResolver::isRealClass($type)) {
             $newDtoResponse = new DTO($type);
@@ -256,11 +256,18 @@ class OpenRpcAdapter
         return $jsonValue;
     }
 
-    protected function schemaFromEnum(string $enumFQCN): array
+    protected function schemaFromEnum(string $enumFQCN, bool $generateEnum = true): array
     {
         $refEnum = new \ReflectionEnum($enumFQCN);
+
+        $result = [];
+
+        if ($generateEnum) {
+            $result['enum'] = array_column($enumFQCN::cases(), 'value');
+        }
+
         return [
-            'enum' => array_column($enumFQCN::cases(), 'value'),
+            ...$result,
             'type' => TypeHintResolver::phpToJsonSchema($refEnum->getBackingType()->getName()),
             ...UfoEnumsHelper::generateEnumSchema($enumFQCN),
         ];
@@ -334,12 +341,10 @@ class OpenRpcAdapter
     {
         $schema = $service->getSchema()['properties'] ?? [];
 
-        if (is_string($param->getType())
-            && TypeHintResolver::isEnum($param->getRealType())
-        ) {
+        if ($enumFQCN = $this->getEnumFQCN($param->getRealType())) {
             $schema[$param->name] = [
                 ...$schema[$param->name] ?? [],
-                ...$this->schemaFromEnum($param->getRealType())
+                ...$this->schemaFromEnum($enumFQCN, !isset($schema[$param->name]['enum']))
             ];
         } elseif ($param->getType() === TypeHintResolver::OBJECT->value
             && $dto = $this->checkParamHasDTO(
@@ -381,6 +386,19 @@ class OpenRpcAdapter
             $schema[$param->name] ?? [],
             $service->getUfoAssertion($param->name)
         );
+    }
+
+    protected function getEnumFQCN(string|array $type): ?string
+    {
+        if (is_array($type)) {
+            foreach ($type as $value) {
+                if ($res = $this->getEnumFQCN($value)) {
+                    return $res;
+                }
+            }
+        }
+
+        return (is_string($type) && TypeHintResolver::isEnum($type)) ? $type : null;
     }
 
     protected function checkAndGetSchemaFromDesc(array $objSchema, ?DTO $dtoAttr = null): array
