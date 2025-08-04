@@ -66,6 +66,7 @@ class ParamDefinition implements IArrayConvertible, IArrayConstructible
         if (
             $default === null
             && !$this->optional
+            && !(($type = $this->realType) && is_string($type) && $type === TypeHintResolver::MIXED->value)
             && (
                 (is_string($this->realType) && !str_contains($this->realType, TypeHintResolver::NULL->value))
                 || (is_array($this->realType) && !in_array(TypeHintResolver::NULL->value, $this->realType, true))

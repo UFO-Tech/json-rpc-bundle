@@ -5,6 +5,7 @@ namespace Ufo\JsonRpcBundle\Validations\JsonSchema\Generate;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\Constraints\NotNull;
+use Ufo\DTO\Helpers\TypeHintResolver;
 use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Interfaces\IConstraintGenerator;
 
 #[AutoconfigureTag('rpc.constraint')]
@@ -15,7 +16,7 @@ class IsNotNull implements IConstraintGenerator
         /**
          * @var NotNull $constraint
          */
-        $rules['not'] = ['type' => 'null'];
+        $rules['not'] = ['type' => TypeHintResolver::NULL->value];
     }
 
     public function getSupportedClass(): string

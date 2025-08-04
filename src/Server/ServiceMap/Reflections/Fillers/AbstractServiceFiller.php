@@ -7,6 +7,7 @@ use ReflectionNamedType;
 use ReflectionType;
 use ReflectionUnionType;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
+use Ufo\DTO\Helpers\TypeHintResolver;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\RpcObject\RPC\CacheRelation;
 
@@ -24,13 +25,13 @@ abstract class AbstractServiceFiller implements IServiceFiller
 
     protected function getTypes(?ReflectionType $reflection): array|string
     {
-        $return = 'any';
+        $return = TypeHintResolver::ANY->value;
         $returns = [];
         if ($reflection instanceof ReflectionNamedType) {
             $return = $reflection->getName();
-            if ($reflection->allowsNull() && $return !== 'null') {
+            if ($return !== TypeHintResolver::MIXED->value && $reflection->allowsNull() && $return !== TypeHintResolver::NULL->value) {
                 $returns[] = $return;
-                $returns[] = 'null';
+                $returns[] = TypeHintResolver::NULL->value;
             }
         } elseif ($reflection instanceof ReflectionUnionType) {
             foreach ($reflection->getTypes() as $type) {

@@ -2,6 +2,7 @@
 
 namespace Ufo\JsonRpcBundle\DocAdapters\Outputs\Postman\Blocks;
 
+use Ufo\DTO\Helpers\TypeHintResolver;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
 
 use function array_map;
@@ -70,10 +71,10 @@ final class Method implements IPostmanBlock
     protected function exampleValueByType(string $type): mixed
     {
         return match ($type) {
-            'int', 'float' => 0,
-            'bool' => true,
-            'string' => '',
-            'array' => [],
+            TypeHintResolver::INT->value, TypeHintResolver::FLOAT->value => 0,
+            TypeHintResolver::BOOL->value => true,
+            TypeHintResolver::STRING->value => '',
+            TypeHintResolver::ARRAY->value => [],
             default => null,
         };
     }
