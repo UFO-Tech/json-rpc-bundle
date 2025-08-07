@@ -78,7 +78,7 @@ class ParamFiller extends AbstractServiceFiller
                             ->addAttribute($assertionsAttr)
             ;
         }
-        $this->checkDTO($paramDefinition->getType(), $paramDefinition->name, $service);
+        $this->checkDTO($paramDefinition->getRealType(), $paramDefinition->name, $service);
         return $paramDefinition;
     }
 
@@ -92,7 +92,8 @@ class ParamFiller extends AbstractServiceFiller
             return;
         }
         $nType = TypeHintResolver::normalize($type);
-        if ($nType === TypeHintResolver::OBJECT->value && class_exists($type)) {
+        // TODO: find a better solution, problem, enam are perceived as DTO
+        if ($nType === TypeHintResolver::OBJECT->value && class_exists($type) && !enum_exists($type)) {
             $service->addParamsDto($paramName, new DtoReflector(new DTO($type), $this->paramConvertor));
         }
     }

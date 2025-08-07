@@ -371,6 +371,9 @@ class OpenRpcAdapter
                 $schema[$param->name] = $this->checkAndGetSchemaFromDesc($newSchema, null);
             } else {
                 foreach ($param->getType() as $i => $type) {
+                    if ($type === TypeHintResolver::OBJECT->value && ($param->getRealType()[$i] ?? false)) {
+                        $type = $param->getRealType()[$i];
+                    }
                     $newSchema = TypeHintResolver::typeDescriptionToJsonSchema($type, $service->uses);
                     $schema[$param->name][TypeHintResolver::ONE_OFF][$i] = $this->checkAndGetSchemaFromDesc($newSchema, null);
                 }
