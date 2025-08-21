@@ -18,10 +18,14 @@ use Ufo\RpcObject\RPC\DTO;
 use Ufo\RpcObject\RPC\ResultAsDTO;
 use Ufo\RpcObject\RpcTransport;
 
+use function array_column;
 use function array_map;
+use function class_exists;
 use function explode;
 use function implode;
+use function is_array;
 use function is_null;
+use function is_string;
 use function str_contains;
 use function str_starts_with;
 use function substr;
@@ -105,7 +109,7 @@ class OpenRpcAdapter
                 $items = $this->checkAndGetSchemaFromDesc($items);
             }
         }
-        
+
         $schema = $this->rpcResponseInfoToSchema($service->getResponseInfo()) ?? $this->formatFromResponse($service);
 
         if ($objSchema) {
@@ -121,10 +125,10 @@ class OpenRpcAdapter
             $schema
         );
         $this->rpcSpecBuilder->buildTag($method, $service->getProcedureFQCN());
-//        $this->rpcSpecBuilder->buildError($method);
+        //        $this->rpcSpecBuilder->buildError($method);
     }
 
-   
+
 
     /**
      * @throws RpcInternalException
@@ -347,8 +351,8 @@ class OpenRpcAdapter
                 ...$this->schemaFromEnum($enumFQCN, !isset($schema[$param->name]['enum']))
             ];
         } elseif ($param->getType() === TypeHintResolver::OBJECT->value
-            && $dto = $this->checkParamHasDTO(
-                $param->paramItems,
+                  && $dto = $this->checkParamHasDTO(
+                $param->paramItems ?? '',
                 $param->getRealType(),
                 $service->uses,
                 $param->getAttributesCollection()->getAttribute(DTO::class)
@@ -363,8 +367,17 @@ class OpenRpcAdapter
                     $types[$i] = $this->checkAndGetSchemaFromDesc($objSchema, $param->getAttributesCollection()->getAttribute(DTO::class));
                 }
             }
-            
             $schema[$param->name] = $newSchema;
+            if ($classFQCN = $newSchema[TypeHintResolver::ITEMS]['classFQCN']  ?? false) {
+                $dto = $this->checkParamHasDTO(
+                    $param->paramItems ?? '',
+                    $classFQCN,
+                    $service->uses,
+                    $param->getAttributesCollection()->getAttribute(DTO::class)
+                );
+                $schema[$param->name][TypeHintResolver::ITEMS] = $this->schemaFromDto($dto->getFormat());
+            }
+
         } elseif (is_array($param->getType())) {
             if ($param->paramItems) {
                 $newSchema = TypeHintResolver::typeDescriptionToJsonSchema($param->paramItems, $service->uses);
