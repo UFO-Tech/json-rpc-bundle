@@ -15,6 +15,7 @@ use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\RpcObject\RPC\Param;
 use Ufo\RpcObject\RpcResponse;
 
+use function array_map;
 use function class_exists;
 use function count;
 use function interface_exists;
@@ -65,7 +66,13 @@ class ParamsConverterEventListener
         if (count($service->getParamsDto()) > 0) {
             foreach ($service->getParamsDto() as $paramName => $paramDto) {
                 $dtoClass = $paramDto->dto->dtoFQCN;
-                $dto = DTOTransformer::fromArray($dtoClass, $event->params[$paramName] ?? []);
+                if ($paramDto->dto->collection) {
+                    $dto = array_map(
+                        fn($item) => DTOTransformer::fromArray($dtoClass, $item), $event->params[$paramName] ?? []
+                    );
+                } else {
+                    $dto = DTOTransformer::fromArray($dtoClass, $event->params[$paramName] ?? []);
+                }
                 $event->params[$paramName] = $dto;
             }
         }

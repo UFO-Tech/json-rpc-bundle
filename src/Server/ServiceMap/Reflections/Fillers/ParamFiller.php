@@ -78,23 +78,35 @@ class ParamFiller extends AbstractServiceFiller
                             ->addAttribute($assertionsAttr)
             ;
         }
-        $this->checkDTO($paramDefinition->getRealType(), $paramDefinition->name, $service);
+        $this->checkDTO($paramDefinition->getRealType(), $paramDefinition, $service);
         return $paramDefinition;
     }
 
     /**
      * @throws RpcInternalException
      */
-    protected function checkDTO(string|array $type, string $paramName, Service $service): void
+    protected function checkDTO(string|array $type, ParamDefinition $paramDefinition, Service $service): void
     {
         if (is_array($type)) {
-            array_map(fn(string $type) => $this->checkDTO($type, $paramName, $service), $type);
+            array_map(fn(string $type) => $this->checkDTO($type, $paramDefinition, $service), $type);
             return;
         }
         $nType = TypeHintResolver::normalize($type);
+
+        $collection = false;
+        if ($nType === TypeHintResolver::ARRAY->value) {
+            $tmpSchema = TypeHintResolver::typeDescriptionToJsonSchema(
+                $paramDefinition->paramItems ?? $type, 
+                $service->uses
+            );
+            $collection = true;
+            $nType = TypeHintResolver::OBJECT->value;
+            $type = $tmpSchema[TypeHintResolver::ITEMS]['classFQCN'] ?? $type;
+        }
+
         // TODO: find a better solution, problem, enam are perceived as DTO
         if ($nType === TypeHintResolver::OBJECT->value && class_exists($type) && !enum_exists($type)) {
-            $service->addParamsDto($paramName, new DtoReflector(new DTO($type), $this->paramConvertor));
+            $service->addParamsDto($paramDefinition->name, new DtoReflector(new DTO($type, $collection), $this->paramConvertor));
         }
     }
 
