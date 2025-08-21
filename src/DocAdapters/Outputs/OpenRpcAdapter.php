@@ -419,9 +419,9 @@ class OpenRpcAdapter
 
     protected function checkAndGetSchemaFromDesc(array $objSchema, ?DTO $dtoAttr = null): array
     {
-        if (($objSchema[TypeHintResolver::TYPE] ?? '') === TypeHintResolver::OBJECT->value) {
-            $class = $objSchema['classFQCN'] ?? null;
-            $dto = $this->createDTO($class, $dtoAttr);
+        if (($objSchema[TypeHintResolver::TYPE] ?? '') === TypeHintResolver::OBJECT->value
+            && ($objSchema['classFQCN'] ?? false)) {
+            $dto = $this->createDTO($objSchema['classFQCN'], $dtoAttr);
             return $this->schemaFromDto($dto->getFormat());
         }
         return $objSchema;
