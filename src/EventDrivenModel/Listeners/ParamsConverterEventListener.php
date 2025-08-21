@@ -65,6 +65,7 @@ class ParamsConverterEventListener
         $this->convertParams($service, $event->params);
         if (count($service->getParamsDto()) > 0) {
             foreach ($service->getParamsDto() as $paramName => $paramDto) {
+                if (!is_array($event->params[$paramName])) continue;
                 $dtoClass = $paramDto->dto->dtoFQCN;
                 if ($paramDto->dto->collection) {
                     $dto = array_map(
