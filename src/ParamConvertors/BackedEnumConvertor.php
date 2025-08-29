@@ -31,6 +31,13 @@ class BackedEnumConvertor implements IParamConvertor
         }
 
         $enum = $fqcn::tryFrom($value);
+
+        if (!$enum && method_exists($fqcn, 'tryFromValue')) {
+            try {
+                $enum = $fqcn::tryFromValue($value);
+            } catch (\Throwable) {}
+        }
+
         if (!$enum) {
             throw new RuntimeException("Invalid value '{$value}' for enum {$fqcn}");
         }
