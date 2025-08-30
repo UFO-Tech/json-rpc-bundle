@@ -12,12 +12,12 @@ trait ConfigHolderTrait
     protected function setConfig(array $config = []): void
     {
         $requestStack = $this->createMock(RequestStack::class);
-        $this->rpcMainConfig = new RpcMainConfig($config,'test', $requestStack);
+        $this->rpcMainConfig = new RpcMainConfig($config,'test', $requestStack, []);
     }
 
     protected function setUpConfig(array $config = []): void
     {
         $requestStack = $this->createMock(RequestStack::class);
-        $this->rpcMainConfig = new RpcMainConfig($config,'test', $requestStack);
+        $this->rpcMainConfig = new RpcMainConfig($config,'test', $requestStack, []);
     }
 }

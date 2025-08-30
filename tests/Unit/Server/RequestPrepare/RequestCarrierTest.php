@@ -15,7 +15,7 @@ class RequestCarrierTest extends TestCase
         // Arrange
         $expectedParams = ['key' => 'value'];
         $mockRpcRequest = $this->createMock(RpcRequest::class);
-        $mockRpcRequest->method('getParams')->willReturn($expectedParams);
+        $mockRpcRequest->method('getSpecialParams')->willReturn($expectedParams);
         $mockCarrier = $this->createMock(IRpcRequestCarrier::class);
         $mockCarrier->method('getRequestObject')->willReturn($mockRpcRequest);
         $requestCarrier = new RequestCarrier();
