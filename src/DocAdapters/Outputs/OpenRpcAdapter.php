@@ -341,6 +341,7 @@ class OpenRpcAdapter
         return $type;
     }
 
+    // todo refactoring update schema for enum
     protected function buildParam(Method $method, ParamDefinition $param, Service $service): void
     {
         $schema = $service->getSchema()['properties'] ?? [];
@@ -351,7 +352,7 @@ class OpenRpcAdapter
                 ...$this->schemaFromEnum($enumFQCN, !isset($schema[$param->name]['enum']))
             ];
         } elseif ($param->getType() === TypeHintResolver::OBJECT->value
-                  && $dto = $this->checkParamHasDTO(
+            && $dto = $this->checkParamHasDTO(
                 $param->paramItems ?? '',
                 $param->getRealType(),
                 $service->uses,
@@ -445,5 +446,3 @@ class OpenRpcAdapter
         return $objSchema;
     }
 }
-
-

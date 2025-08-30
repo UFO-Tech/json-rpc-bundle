@@ -6,6 +6,7 @@ use ReflectionException;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\Constraints\Choice;
+use Ufo\DTO\Helpers\TypeHintResolver;
 use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Interfaces\IConstraintGenerator;
 
 use function implode;
@@ -29,7 +30,16 @@ class IsChoice implements IConstraintGenerator
             }
         }
 
-        $rules['enum'] = $choices;
+        if (isset($rules[TypeHintResolver::ONE_OFF])) {
+            foreach ($rules[TypeHintResolver::ONE_OFF] as $i => $schema) {
+                if (($schema[TypeHintResolver::TYPE] ?? '') === gettype($choices[0])) {
+                    $rules[TypeHintResolver::ONE_OFF][$i]['enum'] = $choices;
+                    break;
+                }
+            }
+        } else {
+            $rules['enum'] = $choices;
+        }
     }
 
     public function getSupportedClass(): string
