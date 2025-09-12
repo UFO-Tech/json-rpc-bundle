@@ -34,10 +34,14 @@ class IsChoice implements IConstraintGenerator
             foreach ($rules[TypeHintResolver::ONE_OFF] as $i => $schema) {
                 if (($schema[TypeHintResolver::TYPE] ?? '') === gettype($choices[0])) {
                     $rules[TypeHintResolver::ONE_OFF][$i]['enum'] = $choices;
+                    $rules[TypeHintResolver::ONE_OFF][$i][TypeHintResolver::TYPE] = is_string($choices[0])
+                        ? TypeHintResolver::STRING->value : TypeHintResolver::INTEGER->value;
                     break;
                 }
             }
         } else {
+            $rules[TypeHintResolver::TYPE] = is_string($choices[0])
+                ? TypeHintResolver::STRING->value : TypeHintResolver::INTEGER->value;
             $rules['enum'] = $choices;
         }
     }

@@ -2,6 +2,7 @@
 namespace Ufo\JsonRpcBundle\DocAdapters\Outputs;
 
 use PSX\OpenRPC\Method;
+use Ufo\DTO\Helpers\EnumsHelper;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\DocAdapters\Outputs\OpenRpc\OpenRpcSpecBuilder;
 use Ufo\JsonRpcBundle\Package;
@@ -11,9 +12,8 @@ use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMap;
 use Ufo\RpcError\RpcInternalException;
-use Ufo\DTO\Helpers\TypeHintResolver;
+use Ufo\DTO\Helpers\TypeHintResolver as T;
 use Ufo\RpcError\WrongWayException;
-use Ufo\RpcObject\DocsHelper\UfoEnumsHelper;
 use Ufo\RpcObject\RPC\DTO;
 use Ufo\RpcObject\RPC\ResultAsDTO;
 use Ufo\RpcObject\RpcTransport;
@@ -104,8 +104,8 @@ class OpenRpcAdapter
         $objSchema = null;
         if ($items = $service->getReturnItems() ?? implode('|', $service->getReturn())) {
             $objSchema = $this->toJsonSchema($items, $service);
-            if ($objSchema[TypeHintResolver::ITEMS] ?? false) {
-                $items = &$objSchema[TypeHintResolver::ITEMS];
+            if ($objSchema[T::ITEMS] ?? false) {
+                $items = &$objSchema[T::ITEMS];
                 $items = $this->checkAndGetSchemaFromDesc($items);
             }
         }
@@ -153,8 +153,8 @@ class OpenRpcAdapter
             $format = $responseInfo->getFormat();
         }
         if ($responseInfo->collection) {
-            $schema[TypeHintResolver::TYPE] = TypeHintResolver::ARRAY->value;
-            $schema[TypeHintResolver::ITEMS] = $this->schemaFromDto($format);
+            $schema[T::TYPE] = T::ARRAY->value;
+            $schema[T::ITEMS] = $this->schemaFromDto($format);
         } else {
             $schema = $this->schemaFromDto($format);
         }
@@ -164,7 +164,7 @@ class OpenRpcAdapter
     protected function formatFromResponse(Service $service): ?array
     {
         $res = $this->detectArrayOfType(implode('|', $service->getReturn()));
-        return [TypeHintResolver::TYPE => ($res[TypeHintResolver::TYPE] ?? $res)];
+        return [T::TYPE => ($res[T::TYPE] ?? $res)];
     }
 
     protected function createSchemaLink(string $dtoName): array
@@ -197,7 +197,7 @@ class OpenRpcAdapter
         if (!isset($this->schemas[$dtoName])) {
             $this->schemas[$dtoName] = [];
             $schema = [
-                TypeHintResolver::TYPE => TypeHintResolver::OBJECT->value,
+                T::TYPE => T::OBJECT->value,
                 'properties' => [],
                 'required' => []
             ];
@@ -228,7 +228,7 @@ class OpenRpcAdapter
      */
     protected function detectArrayOfType(string $type, array $uses = []): array
     {
-        return TypeHintResolver::typeDescriptionToJsonSchema($type, $uses);
+        return T::typeDescriptionToJsonSchema($type, $uses);
     }
 
     /**
@@ -239,8 +239,8 @@ class OpenRpcAdapter
         $jsonValue = null;
         if ($type === 'collection' && !empty($refCollection)) {
             $jsonValue = [
-                TypeHintResolver::TYPE => TypeHintResolver::ARRAY->value,
-                TypeHintResolver::ITEMS => $refCollection['schema'] ?? []
+                T::TYPE => T::ARRAY->value,
+                T::ITEMS => $refCollection['schema'] ?? []
             ];
             $dto = $refCollection['format'] ?? null;
             if ($dto instanceof DTO && !isset($this->schemas[$dto?->getFormat()['$dto']])) {
@@ -248,8 +248,8 @@ class OpenRpcAdapter
             }
         }
         if (!$jsonValue && $this->getEnumFQCN($type)) {
-            $jsonValue = $this->schemaFromEnum($type);
-        } elseif (!$jsonValue && TypeHintResolver::isRealClass($type)) {
+            $jsonValue = EnumsHelper::generateEnumSchema($type);
+        } elseif (!$jsonValue && T::isRealClass($type)) {
             $newDtoResponse = new DTO($type);
             new DtoReflector($newDtoResponse, $this->paramConvertor);
             if (isset($this->schemas[$newDtoResponse->getFormat()['$dto']])) {
@@ -260,30 +260,13 @@ class OpenRpcAdapter
         return $jsonValue;
     }
 
-    protected function schemaFromEnum(string $enumFQCN, bool $generateEnum = true): array
-    {
-        $refEnum = new \ReflectionEnum($enumFQCN);
-
-        $result = [];
-
-        if ($generateEnum) {
-            $result['enum'] = array_column($enumFQCN::cases(), 'value');
-        }
-
-        return [
-            ...$result,
-            'type' => TypeHintResolver::phpToJsonSchema($refEnum->getBackingType()->getName()),
-            ...UfoEnumsHelper::generateEnumSchema($enumFQCN),
-        ];
-    }
-
     protected function checkParamHasDTO(string $type, string|array $realType, array $uses = [], ?DTO $dtoAttr = null): ?DTO
     {
         $dto = null;
         $class = null;
         if ($type) {
-            $objSchema = TypeHintResolver::typeDescriptionToJsonSchema($type, $uses);
-            if ($objSchema[TypeHintResolver::TYPE] ?? '' === TypeHintResolver::OBJECT->value) {
+            $objSchema = T::typeDescriptionToJsonSchema($type, $uses);
+            if ($objSchema[T::TYPE] ?? '' === T::OBJECT->value) {
                 $class = $objSchema['classFQCN'] ?? null;
             }
         }
@@ -298,16 +281,16 @@ class OpenRpcAdapter
 
     protected function replaceClassNameToDTO(array &$objSchema, array $uses = []): void
     {
-        $type = $objSchema[TypeHintResolver::TYPE] ?? '';
-        if ($type === TypeHintResolver::OBJECT->value && $class = ($objSchema['classFQCN'] ?? false)) {
+        $type = $objSchema[T::TYPE] ?? '';
+        if ($type === T::OBJECT->value && $class = ($objSchema['classFQCN'] ?? false)) {
             $dto = $this->createDTO($class, null);
             $objSchema = $this->schemaFromDto($dto->getFormat());
 
 
-        } elseif ($type === TypeHintResolver::ARRAY->value && ($objSchema[TypeHintResolver::ITEMS] ?? false)) {
-            $this->replaceClassNameToDTO($objSchema[TypeHintResolver::ITEMS], $uses);
-        } elseif ($objSchema[TypeHintResolver::ONE_OFF] ?? false) {
-            foreach ($objSchema[TypeHintResolver::ONE_OFF] as &$objSchema_) {
+        } elseif ($type === T::ARRAY->value && ($objSchema[T::ITEMS] ?? false)) {
+            $this->replaceClassNameToDTO($objSchema[T::ITEMS], $uses);
+        } elseif ($objSchema[T::ONE_OFF] ?? false) {
+            foreach ($objSchema[T::ONE_OFF] as &$objSchema_) {
                 $this->replaceClassNameToDTO($objSchema_);
             }
         }
@@ -347,11 +330,8 @@ class OpenRpcAdapter
         $schema = $service->getSchema()['properties'] ?? [];
 
         if ($enumFQCN = $this->getEnumFQCN($param->getRealType())) {
-            $schema[$param->name] = [
-                ...$schema[$param->name] ?? [],
-                ...$this->schemaFromEnum($enumFQCN, !isset($schema[$param->name]['enum']))
-            ];
-        } elseif ($param->getType() === TypeHintResolver::OBJECT->value
+            $schema[$param->name] = EnumsHelper::generateEnumSchema($enumFQCN);
+        } elseif ($param->getType() === T::OBJECT->value
             && $dto = $this->checkParamHasDTO(
                 $param->paramItems ?? '',
                 $param->getRealType(),
@@ -360,36 +340,65 @@ class OpenRpcAdapter
             )
         ) {
             $schema[$param->name] = $this->schemaFromDto($dto->getFormat());
-        } elseif ($param->getType() === TypeHintResolver::ARRAY->value) {
-            $newSchema = TypeHintResolver::typeDescriptionToJsonSchema($param->paramItems ?? $param->getType(), $service->uses);
-            if ($newSchema[TypeHintResolver::ONE_OFF] ?? false) {
-                $types = &$newSchema[TypeHintResolver::ONE_OFF];
+        } elseif ($param->getType() === T::ARRAY->value) {
+            $newSchema = T::typeDescriptionToJsonSchema($param->paramItems ?? $param->getType(), $service->uses);
+
+
+            if ($newSchema[T::ONE_OFF] ?? false) {
+                $types = &$newSchema[T::ONE_OFF];
                 foreach ($types as $i => $objSchema) {
                     $types[$i] = $this->checkAndGetSchemaFromDesc($objSchema, $param->getAttributesCollection()->getAttribute(DTO::class));
                 }
             }
-            $schema[$param->name] = $newSchema;
-            if ($classFQCN = $newSchema[TypeHintResolver::ITEMS]['classFQCN']  ?? false) {
+            
+            if ($schema[$param->name][T::ITEMS][EnumsHelper::ENUM_KEY] ?? false) {
+                $newSchema[T::ITEMS][EnumsHelper::ENUM_KEY] = $schema[$param->name][T::ITEMS][EnumsHelper::ENUM_KEY];
+            }
+
+            if (($newSchema[T::ITEMS][T::ONE_OFF] ?? false) && ($newSchema[T::ITEMS][EnumsHelper::ENUM_KEY] ?? false)) {
+                $type = gettype($newSchema[T::ITEMS][EnumsHelper::ENUM_KEY][0]);
+
+
+                foreach ($newSchema[T::ITEMS][T::ONE_OFF] as $i => $objSchema) {
+                    if ($objSchema[T::TYPE] === $type) {
+                        $newSchema[T::ITEMS][T::ONE_OFF][$i][EnumsHelper::ENUM_KEY] = $newSchema[T::ITEMS][EnumsHelper::ENUM_KEY];
+                        unset($newSchema[T::ITEMS][EnumsHelper::ENUM_KEY]);
+                        break;
+                    }
+                }
+            }
+            
+            if (($newSchema[T::ITEMS] ?? false) && ($newSchema[T::ONE_OFF] ?? false)) {
+                unset($schema[$param->name][T::ITEMS]);
+                unset($newSchema[T::ITEMS]);
+            }
+
+            $schema[$param->name] = [
+                ...$schema[$param->name],
+                ...$newSchema,
+            ];
+
+            if ($classFQCN = $newSchema[T::ITEMS]['classFQCN']  ?? false) {
                 $dto = $this->checkParamHasDTO(
                     $param->paramItems ?? '',
                     $classFQCN,
                     $service->uses,
                     $param->getAttributesCollection()->getAttribute(DTO::class)
                 );
-                $schema[$param->name][TypeHintResolver::ITEMS] = $this->schemaFromDto($dto->getFormat());
+                $schema[$param->name][T::ITEMS] = $this->schemaFromDto($dto->getFormat());
             }
 
         } elseif (is_array($param->getType())) {
             if ($param->paramItems) {
-                $newSchema = TypeHintResolver::typeDescriptionToJsonSchema($param->paramItems, $service->uses);
+                $newSchema = T::typeDescriptionToJsonSchema($param->paramItems, $service->uses);
                 $schema[$param->name] = $this->checkAndGetSchemaFromDesc($newSchema, null);
             } else {
                 foreach ($param->getType() as $i => $type) {
-                    if ($type === TypeHintResolver::OBJECT->value && ($param->getRealType()[$i] ?? false)) {
+                    if ($type === T::OBJECT->value && ($param->getRealType()[$i] ?? false)) {
                         $type = $param->getRealType()[$i];
                     }
-                    $newSchema = TypeHintResolver::typeDescriptionToJsonSchema($type, $service->uses);
-                    $schema[$param->name][TypeHintResolver::ONE_OFF][$i] = $this->checkAndGetSchemaFromDesc($newSchema, null);
+                    $newSchema = T::typeDescriptionToJsonSchema($type, $service->uses);
+                    $schema[$param->name][T::ONE_OFF][$i] = $this->checkAndGetSchemaFromDesc($newSchema, null);
                 }
             }
         }
@@ -415,12 +424,12 @@ class OpenRpcAdapter
             }
         }
 
-        return (is_string($type) && TypeHintResolver::isEnum($type)) ? $type : null;
+        return (is_string($type) && T::isEnum($type)) ? $type : null;
     }
 
     protected function checkAndGetSchemaFromDesc(array $objSchema, ?DTO $dtoAttr = null): array
     {
-        if (($objSchema[TypeHintResolver::TYPE] ?? '') === TypeHintResolver::OBJECT->value
+        if (($objSchema[T::TYPE] ?? '') === T::OBJECT->value
             && ($objSchema['classFQCN'] ?? false)) {
             $dto = $this->createDTO($objSchema['classFQCN'], $dtoAttr);
             return $this->schemaFromDto($dto->getFormat());
@@ -430,16 +439,16 @@ class OpenRpcAdapter
 
     protected function toJsonSchema(string $data, Service $service): ?array
     {
-        $objSchema = TypeHintResolver::typeDescriptionToJsonSchema($data, $service->uses);
+        $objSchema = T::typeDescriptionToJsonSchema($data, $service->uses);
         if ($objSchema['classFQCN'] ?? false) {
             $service->setResponseInfo(
                 new ResultAsDTO(
                     $objSchema['classFQCN'],
-                    $objSchema[TypeHintResolver::TYPE] === TypeHintResolver::ARRAY->value
+                    $objSchema[T::TYPE] === T::ARRAY->value
                 )
             );
             new DtoReflector($service->getResponseInfo(), $this->paramConvertor);
-            unset($objSchema[TypeHintResolver::TYPE]);
+            unset($objSchema[T::TYPE]);
             unset($objSchema['classFQCN']);
             unset($objSchema['additionalProperties']);
         }
