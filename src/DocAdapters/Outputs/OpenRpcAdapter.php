@@ -328,10 +328,9 @@ class OpenRpcAdapter
     protected function buildParam(Method $method, ParamDefinition $param, Service $service): void
     {
         $schema = $service->getSchema()['properties'] ?? [];
+        $paramSchema = $schema[$param->name] ?? [];
 
-        if ($enumFQCN = $this->getEnumFQCN($param->getRealType())) {
-            $schema[$param->name] = EnumsHelper::generateEnumSchema($enumFQCN);
-        } elseif ($param->getType() === T::OBJECT->value
+        if ($param->getType() === T::OBJECT->value
             && $dto = $this->checkParamHasDTO(
                 $param->paramItems ?? '',
                 $param->getRealType(),
@@ -339,69 +338,61 @@ class OpenRpcAdapter
                 $param->getAttributesCollection()->getAttribute(DTO::class)
             )
         ) {
-            $schema[$param->name] = $this->schemaFromDto($dto->getFormat());
-        } elseif ($param->getType() === T::ARRAY->value) {
+            $paramSchema = $this->schemaFromDto($dto->getFormat());
+        }
+        elseif ($param->getType() === T::ARRAY->value) {
             $newSchema = T::typeDescriptionToJsonSchema($param->paramItems ?? $param->getType(), $service->uses);
 
+            $newSchema = $this->normalizeOneOf($newSchema, $param->getAttributesCollection()->getAttribute(DTO::class));
 
-            if ($newSchema[T::ONE_OFF] ?? false) {
-                $types = &$newSchema[T::ONE_OFF];
-                foreach ($types as $i => $objSchema) {
-                    $types[$i] = $this->checkAndGetSchemaFromDesc($objSchema, $param->getAttributesCollection()->getAttribute(DTO::class));
-                }
-            }
-            
-            if ($schema[$param->name][T::ITEMS][EnumsHelper::ENUM_KEY] ?? false) {
-                $newSchema[T::ITEMS][EnumsHelper::ENUM_KEY] = $schema[$param->name][T::ITEMS][EnumsHelper::ENUM_KEY];
+            if (($paramSchema[T::ITEMS][EnumsHelper::ENUM_KEY] ?? false)) {
+                $newSchema[T::ITEMS][EnumsHelper::ENUM_KEY] = $paramSchema[T::ITEMS][EnumsHelper::ENUM_KEY];
             }
 
             if (($newSchema[T::ITEMS][T::ONE_OFF] ?? false) && ($newSchema[T::ITEMS][EnumsHelper::ENUM_KEY] ?? false)) {
-                $type = gettype($newSchema[T::ITEMS][EnumsHelper::ENUM_KEY][0]);
-
-
-                foreach ($newSchema[T::ITEMS][T::ONE_OFF] as $i => $objSchema) {
-                    if ($objSchema[T::TYPE] === $type) {
-                        $newSchema[T::ITEMS][T::ONE_OFF][$i][EnumsHelper::ENUM_KEY] = $newSchema[T::ITEMS][EnumsHelper::ENUM_KEY];
-                        unset($newSchema[T::ITEMS][EnumsHelper::ENUM_KEY]);
-                        break;
-                    }
-                }
+                $this->moveEnumIntoMatchingOneOf($newSchema[T::ITEMS], $newSchema[T::ITEMS][EnumsHelper::ENUM_KEY]);
+                unset($newSchema[T::ITEMS][EnumsHelper::ENUM_KEY]);
             }
             
             if (($newSchema[T::ITEMS] ?? false) && ($newSchema[T::ONE_OFF] ?? false)) {
-                unset($schema[$param->name][T::ITEMS]);
-                unset($newSchema[T::ITEMS]);
+                unset($paramSchema[T::ITEMS], $newSchema[T::ITEMS]);
             }
 
-            $schema[$param->name] = [
-                ...$schema[$param->name],
-                ...$newSchema,
-            ];
+            $paramSchema = [...$paramSchema, ...$newSchema];
 
-            if ($classFQCN = $newSchema[T::ITEMS]['classFQCN']  ?? false) {
-                $dto = $this->checkParamHasDTO(
+            if (
+                ($classFQCN = $newSchema[T::ITEMS]['classFQCN']  ?? false)
+                && $dto = $this->checkParamHasDTO(
                     $param->paramItems ?? '',
                     $classFQCN,
                     $service->uses,
                     $param->getAttributesCollection()->getAttribute(DTO::class)
-                );
+                )
+            ) {
                 $schema[$param->name][T::ITEMS] = $this->schemaFromDto($dto->getFormat());
             }
 
         } elseif (is_array($param->getType())) {
             if ($param->paramItems) {
                 $newSchema = T::typeDescriptionToJsonSchema($param->paramItems, $service->uses);
-                $schema[$param->name] = $this->checkAndGetSchemaFromDesc($newSchema, null);
+                $paramSchema = $this->checkAndGetSchemaFromDesc($newSchema, null);
             } else {
                 foreach ($param->getType() as $i => $type) {
                     if ($type === T::OBJECT->value && ($param->getRealType()[$i] ?? false)) {
                         $type = $param->getRealType()[$i];
                     }
                     $newSchema = T::typeDescriptionToJsonSchema($type, $service->uses);
-                    $schema[$param->name][T::ONE_OFF][$i] = $this->checkAndGetSchemaFromDesc($newSchema, null);
+                    $paramSchema[T::ONE_OFF][$i] = $this->checkAndGetSchemaFromDesc($newSchema, null);
                 }
             }
         }
+
+        if ($enumFQCN = $this->getEnumFQCN($param->getRealType())) {
+            $enumSchema  = EnumsHelper::generateEnumSchema($enumFQCN);
+            $paramSchema = $this->applyEnum($paramSchema, $param->getType(), $enumSchema);
+        }
+
+        $schema[$param->name] = $paramSchema;
 
         $this->rpcSpecBuilder->buildParam(
             $method,
@@ -412,6 +403,87 @@ class OpenRpcAdapter
             $schema[$param->name] ?? [],
             $service->getUfoAssertion($param->name)
         );
+    }
+
+    protected function normalizeOneOf(array $schema, ?DTO $dtoAttr): array
+    {
+        if ($schema[T::ONE_OFF] ?? false) {
+            foreach ($schema[T::ONE_OFF] as $i => $desc) {
+                $schema[T::ONE_OFF][$i] = $this->checkAndGetSchemaFromDesc($desc, $dtoAttr);
+            }
+        }
+
+        if ($schema[T::ITEMS][T::ONE_OFF] ?? false) {
+            foreach ($schema[T::ITEMS][T::ONE_OFF] as $i => $desc) {
+                $schema[T::ITEMS][T::ONE_OFF][$i] = $this->checkAndGetSchemaFromDesc($desc, $dtoAttr);
+            }
+        }
+
+        return $schema;
+    }
+
+
+    protected function moveEnumIntoMatchingOneOf(array &$itemsSchema, array $enumValues): void
+    {
+        if (!isset($itemsSchema[T::ONE_OFF]) || empty($enumValues)) return;
+
+        $type = gettype($enumValues[0]);
+        foreach ($itemsSchema[T::ONE_OFF] as $i => $one) {
+            if (($one[T::TYPE] ?? null) === $type) {
+                $itemsSchema[T::ONE_OFF][$i][EnumsHelper::ENUM_KEY] = $enumValues;
+                return;
+            }
+        }
+    }
+
+    protected function applyEnum(array $paramSchema, string|array $paramType, array $enumSchema): array
+    {
+        $enumType = $enumSchema[T::TYPE] ?? null;
+        $enumVals = $enumSchema[EnumsHelper::ENUM_KEY] ?? null;
+
+        if ($paramType === T::ARRAY->value || (($paramSchema[T::TYPE] ?? null) === T::ARRAY->value)) {
+            $items = $paramSchema[T::ITEMS] ?? [];
+
+            if (!isset($items[T::ONE_OFF]) || !$this->injectEnumIntoOneOf($items[T::ONE_OFF], $enumType, $enumVals)) {
+                $items = array_replace($items, $enumSchema);
+            }
+
+            $paramSchema[T::TYPE]  = T::ARRAY->value;
+            $paramSchema[T::ITEMS] = $items;
+            return $paramSchema;
+        }
+
+        if (
+            (isset($paramSchema[T::ONE_OFF]) || is_array($paramType))
+            && (isset($paramSchema[T::ONE_OFF]) && $this->injectEnumIntoOneOf(
+                $paramSchema[T::ONE_OFF],
+                $enumType,
+                $enumVals
+            ))
+        ) {
+            return $paramSchema;
+        }
+
+        return array_replace($paramSchema, $enumSchema);
+    }
+
+    /**
+     * @param array<int,array<string,mixed>> $oneOf
+     * @param string|null $baseType
+     * @param array|null $enumValues
+     * @return bool
+     */
+    protected function injectEnumIntoOneOf(array &$oneOf, ?string $baseType, ?array $enumValues): bool
+    {
+        if (!$baseType || !$enumValues) return false;
+
+        foreach ($oneOf as &$schema) {
+            if (($schema[T::TYPE] ?? null) === $baseType) {
+                $schema[EnumsHelper::ENUM_KEY] = $enumValues;
+                return true;
+            }
+        }
+        return false;
     }
 
     protected function getEnumFQCN(string|array $type): ?string
