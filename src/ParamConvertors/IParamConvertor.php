@@ -3,6 +3,7 @@
 namespace Ufo\JsonRpcBundle\ParamConvertors;
 
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
+use Ufo\RpcObject\RPC\Param;
 
 #[AutoconfigureTag(IParamConvertor::TAG)]
 interface IParamConvertor
@@ -14,14 +15,14 @@ interface IParamConvertor
      *
      * @param object $object The object to convert.
      * @param array{
-     *     param?: \Ufo\RpcObject\RPC\Param,   // Optional metadata from the Param attribute.
+     *     param?: Param,   // Optional metadata from the Param attribute.
      *     classFQCN?: class-string,           // Optional fully-qualified class name for validation.
      *     extra?: mixed                       // Optional extra data for custom convertors.
      * } $context Additional context for conversion.
      * @param callable|null $callback Optional callback: function ($scalar, $object): mixed.
-     * @return string|int|float|null
+     * @return array|string|int|float|null
      */
-    public function toScalar(object $object, array $context = [], ?callable $callback = null): string|int|float|null;
+    public function toScalar(object $object, array $context = [], ?callable $callback = null): array|string|int|float|null;
 
     /**
      * Converts a scalar value (string, int, float, or null) back to an object.

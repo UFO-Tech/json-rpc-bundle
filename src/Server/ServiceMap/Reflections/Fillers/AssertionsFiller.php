@@ -4,6 +4,7 @@ namespace Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\Fillers;
 
 use phpDocumentor\Reflection\DocBlock;
 use ReflectionMethod;
+use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 use Symfony\Component\Serializer\SerializerInterface;
 use Throwable;
 use Ufo\JsonRpcBundle\ConfigService\RpcDocsConfig;
@@ -11,8 +12,10 @@ use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\RpcObject\RPC\AssertionsCollection;
 
+use Ufo\RpcObject\RPC\Param;
 use function in_array;
 
+#[AutoconfigureTag(IServiceFiller::TAG, ['priority' => 99])]
 class AssertionsFiller extends AbstractServiceFiller
 {
     protected RpcDocsConfig $rpcDocsConfig;
@@ -72,5 +75,4 @@ class AssertionsFiller extends AbstractServiceFiller
             $service->setSchema($data);
         } catch (Throwable $e) {}
     }
-
 }

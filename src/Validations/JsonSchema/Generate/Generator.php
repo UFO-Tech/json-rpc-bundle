@@ -12,16 +12,13 @@ use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Interfaces\IConstraintGene
 use function spl_object_hash;
 use function array_merge;
 
-class Genearator
+class Generator
 {
     /**
-     * @param iterable|IConstraintGenerator[] $constraints
+     * @var array<string, IConstraintGenerator> $constraints
      */
     protected iterable $constraints = [];
 
-    /**
-     * @param iterable|IConstraintGenerator[] $constraints
-     */
     public function __construct(
         #[AutowireIterator('rpc.constraint')]
         iterable $constraints = [],
@@ -52,40 +49,9 @@ class Genearator
                 return;
             }
 
-            $this->constraints[$constraint::class]->generate($constraint, $rules);
-            $this->processNestedConstraints($constraint, $rules);
-        } catch (Throwable) {
-        }
+            $this->constraints[$constraint::class]->generate($constraint, $rules, $this);
+        } catch (Throwable $exception) {}
 
         unset($processed[$hash]);
-    }
-
-    private function processNestedConstraints(Constraint $constraint, array &$rules): void
-    {
-        if ($compositeType = CompositeConstraintType::fromConstraint($constraint)) {
-
-            $nestedRules = $this->getNestedRules($constraint);
-
-            $ruleKey = match ($compositeType) {
-                CompositeConstraintType::ALL => 'items',
-                CompositeConstraintType::COLLECTION => 'properties',
-                CompositeConstraintType::OPTIONAL => null,
-            };
-
-            if ($ruleKey) {
-                $rules[$ruleKey] = $nestedRules;
-            } else {
-                $rules = array_merge($rules, $nestedRules);
-            }
-        }
-    }
-
-    private function getNestedRules(Constraint $constraint): array
-    {
-        $nestedRules = [];
-        foreach ($constraint->constraints as $inner) {
-            $this->dispatch($inner, $nestedRules);
-        }
-        return $nestedRules;
     }
 }

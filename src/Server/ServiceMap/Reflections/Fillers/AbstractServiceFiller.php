@@ -29,6 +29,7 @@ abstract class AbstractServiceFiller implements IServiceFiller
         $returns = [];
         if ($reflection instanceof ReflectionNamedType) {
             $return = $reflection->getName();
+
             if ($return !== TypeHintResolver::MIXED->value && $reflection->allowsNull() && $return !== TypeHintResolver::NULL->value) {
                 $returns[] = $return;
                 $returns[] = TypeHintResolver::NULL->value;

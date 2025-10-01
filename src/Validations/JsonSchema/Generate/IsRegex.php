@@ -5,12 +5,22 @@ namespace Ufo\JsonRpcBundle\Validations\JsonSchema\Generate;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\Constraints\Regex;
+use Ufo\DTO\Helpers\TypeHintResolver;
 use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Interfaces\IConstraintGenerator;
+use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Traits\ConstraintApplier;
 
 #[AutoconfigureTag('rpc.constraint')]
 class IsRegex implements IConstraintGenerator
 {
-    public function generate(Constraint $constraint, array &$rules): void
+    use ConstraintApplier;
+
+    public function getSupportedClass(): string
+    {
+
+        return Regex::class;
+    }
+
+    protected function apply(Constraint $constraint, array &$rules, ?Generator $generator = null): void
     {
         /**
          * @var Regex $constraint
@@ -18,8 +28,12 @@ class IsRegex implements IConstraintGenerator
         $rules['pattern'] = $constraint->pattern;
     }
 
-    public function getSupportedClass(): string
+    protected function getSupportedTypes(): array
     {
-        return Regex::class;
+        return [
+            TypeHintResolver::STRING->value,
+            TypeHintResolver::INT->value
+        ];
     }
+
 }

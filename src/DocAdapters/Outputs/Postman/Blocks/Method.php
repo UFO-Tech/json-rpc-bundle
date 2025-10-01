@@ -60,9 +60,10 @@ final class Method implements IPostmanBlock
     protected function paramConvert(ParamDefinition $param): array
     {
         $type = $param->getType();
-        if (is_array($type)) {
-            $type = $type[0];
-        }
+//        if (is_array($type)) {
+//            $type = $type[0];
+//        }
+        $type = TypeHintResolver::jsonSchemaToPhp($type[0] ?? $type);
         return [
             $param->name => $param->isOptional() ? $param->getDefault() : $this->exampleValueByType($type),
         ];

@@ -6,6 +6,7 @@ namespace Ufo\JsonRpcBundle\Server\ServiceMap;
 use Ufo\DTO\Interfaces\IArrayConstructible;
 use Ufo\RpcObject\RPC\DTO;
 
+use Ufo\RpcObject\RPC\DTOCollection;
 use function array_filter;
 use function array_values;
 
@@ -14,7 +15,7 @@ class AttributesCollection
     /**
      * @var object[]
      */
-    #[DTO(IArrayConstructible::class, collection: true)]
+    #[DTOCollection(IArrayConstructible::class)]
     protected array $attributes = [];
 
     public function getAttribute(string $attrFQCN, int $position = 0): ?object

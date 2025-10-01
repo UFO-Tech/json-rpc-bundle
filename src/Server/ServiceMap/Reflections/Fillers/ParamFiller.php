@@ -6,107 +6,36 @@ use phpDocumentor\Reflection\DocBlock;
 use ReflectionException;
 use ReflectionMethod;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
-use Ufo\JsonRpcBundle\ParamConvertors\ChainParamConvertor;
-use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\DtoReflector;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
-use Ufo\JsonRpcBundle\Validations\JsonSchema\JsonSchemaPropertyNormalizer;
-use Ufo\RpcError\RpcInternalException;
-use Ufo\DTO\Helpers\TypeHintResolver;
-use Ufo\RpcObject\RPC\Assertions;
-use Ufo\RpcObject\RPC\DTO;
-use Ufo\RpcObject\RPC\Param;
+use Ufo\DTO\Helpers\TypeHintResolver as T;
 
-use function array_map;
-use function class_exists;
-
-#[AutoconfigureTag(IServiceFiller::TAG, ['priority' => 100])]
+#[AutoconfigureTag(IServiceFiller::TAG, ['priority' => 101])]
 class ParamFiller extends AbstractServiceFiller
 {
-
-    public function __construct(
-        protected ChainParamConvertor $paramConvertor,
-        protected JsonSchemaPropertyNormalizer $jsonSchemaPropertyNormalizer
-    ) {}
 
     public function fill(ReflectionMethod $method, Service $service, DocBlock $methodDoc): void
     {
         $paramsReflection = $method->getParameters();
         if (!empty($paramsReflection)) {
             foreach ($paramsReflection as $paramRef) {
+                $descType = $this->getParamType($methodDoc, $paramRef->getName());
 
-                $type = $this->getTypes($paramRef->getType());
+                $type =  (string) $paramRef->getType();
+                $schema = T::typeDescriptionToJsonSchema($descType ?? $type, $service->uses);
+
                 $paramDefinition = ParamDefinition::fromParamReflection(
                     $paramRef,
-                    $type,
+                    $schema,
+                    $this->getTypes($paramRef->getType()),
                     $this->getParamDescription($methodDoc, $paramRef->getName()),
-                    $this->getParamType($methodDoc, $paramRef->getName()),
+                    $descType
                 );
                 try {
                     $paramDefinition->setDefault($paramRef->getDefaultValue());
                 } catch (ReflectionException) {}
-                $paramDefinition = $this->checkAttributes($paramDefinition, $service);
                 $service->addParam($paramDefinition);
             }
-        }
-    }
-
-    /**
-     * @throws RpcInternalException
-     */
-    protected function checkAttributes(ParamDefinition $paramDefinition, Service $service): ParamDefinition
-    {
-        /**
-         * @var Param $paramAttr
-         */
-        $paramAttr = $paramDefinition->getAttributesCollection()->getAttribute(Param::class);
-        $assertionsAttr = $paramDefinition->getAttributesCollection()->getAttribute(Assertions::class);
-
-        if ($paramAttr) {
-            $assertionsAttr = $assertionsAttr ?? new Assertions([]);
-
-            $paramDefinition->setSchema(
-                $this->jsonSchemaPropertyNormalizer->normalize(
-                    $assertionsAttr,
-                    context: ['type' => $paramAttr->getType()]
-                )
-            )->setDefault($paramAttr->default);
-
-            $paramDefinition = $paramDefinition->changeType($paramAttr->getType());
-            $paramDefinition->getAttributesCollection()
-                            ->addAttribute($paramAttr)
-                            ->addAttribute($assertionsAttr)
-            ;
-        }
-        $this->checkDTO($paramDefinition->getRealType(), $paramDefinition, $service);
-        return $paramDefinition;
-    }
-
-    /**
-     * @throws RpcInternalException
-     */
-    protected function checkDTO(string|array $type, ParamDefinition $paramDefinition, Service $service): void
-    {
-        if (is_array($type)) {
-            array_map(fn(string $type) => $this->checkDTO($type, $paramDefinition, $service), $type);
-            return;
-        }
-        $nType = TypeHintResolver::normalize($type);
-
-        $collection = false;
-        if ($nType === TypeHintResolver::ARRAY->value) {
-            $tmpSchema = TypeHintResolver::typeDescriptionToJsonSchema(
-                $paramDefinition->paramItems ?? $type, 
-                $service->uses
-            );
-            $collection = true;
-            $nType = TypeHintResolver::OBJECT->value;
-            $type = $tmpSchema[TypeHintResolver::ITEMS]['classFQCN'] ?? $type;
-        }
-
-        // TODO: find a better solution, problem, enam are perceived as DTO
-        if ($nType === TypeHintResolver::OBJECT->value && class_exists($type) && !enum_exists($type)) {
-            $service->addParamsDto($paramDefinition->name, new DtoReflector(new DTO($type, $collection), $this->paramConvertor));
         }
     }
 
@@ -117,9 +46,8 @@ class ParamFiller extends AbstractServiceFiller
          * @var DocBlock\Tags\Param $param
          */
         foreach ($docBlock->getTagsByName('param') as $param) {
-            if (!($param->getVariableName() === $paramName)) {
-                continue;
-            }
+            if (!($param->getVariableName() === $paramName)) continue;
+
             if ($param->getDescription()) {
                 $desc = $param->getDescription()->getBodyTemplate();
             }

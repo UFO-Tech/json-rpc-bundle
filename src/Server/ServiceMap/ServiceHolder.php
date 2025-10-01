@@ -52,6 +52,5 @@ class ServiceHolder implements IServiceHolder
     public static function generateServiceCacheName(string $serviceName): string
     {
         return static::SERVICE_CACHE_PREFIX . $serviceName;
-
     }
 }

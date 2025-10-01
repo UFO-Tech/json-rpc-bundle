@@ -5,7 +5,7 @@ namespace Ufo\JsonRpcBundle\Validations\JsonSchema;
 use InvalidArgumentException;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
-use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Genearator;
+use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Generator;
 use Ufo\DTO\Helpers\TypeHintResolver;
 use Ufo\RpcObject\RPC\Assertions;
 
@@ -20,7 +20,7 @@ class JsonSchemaPropertyNormalizer implements NormalizerInterface
     protected array $schema = [];
 
     public function __construct(
-        private readonly Genearator $generator
+        private readonly Generator $generator
     ) {}
 
     /**
@@ -31,42 +31,45 @@ class JsonSchemaPropertyNormalizer implements NormalizerInterface
      */
     public function normalize(mixed $data, ?string $format = null, array $context = []): array|string|int|float|bool|\ArrayObject|null
     {
-        $type = $context['type'] ?? '';
-        $this->checkTheType($type);
-        foreach ($data->assertions as $assertion) {
-            $this->generator->dispatch($assertion, $this->schema);
-        }
-        $schema = $this->schema;
         $this->schema = [];
+        $type = $context['realType'] ?? $context['type'] ?? '';
+        $this->checkTheType($type, ($context['service']?->uses) ?? []);
 
-        return $schema;
-    }
+        $targetType = $context['targetType'] ?? TypeHintResolver::ANY->value;
 
-    protected function checkTheType(array|string $type): void
-    {
-        try {
-            if (is_array($type)) {
-                $this->schema['oneOf'] = $this->convertArrayOfTypes($type);
-            } else {
-                $this->schema = $this->convertSingleType($type);
+        return TypeHintResolver::applyToSchema(
+            $this->schema,
+            function (array $itemSchema) use ($data, $context, $targetType) {
+                $type = ($itemSchema[TypeHintResolver::TYPE] ?? false);
+                if ($type && ($targetType === $type || $targetType === TypeHintResolver::ANY->value)) {
+                    foreach ($data->assertions as $assertion) {
+                        $this->generator->dispatch($assertion, $itemSchema);
+                    }
+                }
+                return $itemSchema;
             }
-        } catch (InvalidArgumentException) {
-            $this->schema['oneOf'] = TypeHintResolver::mixedForJsonSchema();
-        }
+        );
     }
 
-    public function convertSingleType(string $type): array
+    protected function checkTheType(array|string $type, array $classes = []): void
+    {
+        if (is_array($type)) {
+            $type = implode('|', $type);
+        }
+        $this->schema = TypeHintResolver::typeDescriptionToJsonSchema($type, $classes);
+    }
+
+    public function convertSingleType(string $type, array $classes = []): array
     {
         if (empty($type)) throw new InvalidArgumentException('Parameter type is empty');
-        $result = TypeHintResolver::phpToJsonSchema($type);
-        return [TypeHintResolver::TYPE => $result];
+        return TypeHintResolver::typeDescriptionToJsonSchema($type, $classes);
     }
 
-    protected function convertArrayOfTypes(array $types): array
+    protected function convertArrayOfTypes(array $types, array $classes = []): array
     {
         $result = [];
         foreach ($types as $type) {
-            $result[] = $this->convertSingleType($type);
+            $result[] = $this->convertSingleType($type, $classes);
         }
         return $result;
     }

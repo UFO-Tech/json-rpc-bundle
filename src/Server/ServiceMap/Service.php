@@ -16,6 +16,7 @@ use Ufo\RpcObject\RPC\AssertionsCollection;
 use Ufo\RpcObject\RPC\DTO;
 use Ufo\RpcObject\RPC\Info;
 use Ufo\RpcObject\RPC\ResultAsDTO;
+use Ufo\DTO\JsonSerializableTrait;
 
 use function array_key_exists;
 use function count;
@@ -26,6 +27,7 @@ use function json_encode;
 
 class Service implements IArrayConvertible, IArrayConstructible
 {
+    use JsonSerializableTrait;
 
     protected string $description = '';
 
@@ -34,7 +36,9 @@ class Service implements IArrayConvertible, IArrayConstructible
     protected string $returnDescription = '';
     protected ?string $returnItems = null;
 
-    #[DTO(ResultAsDTO::class, renameKeys: ['dtoFormat' => 'format'])]
+    #[DTO(ResultAsDTO::class, context: [
+        ResultAsDTO::C_RENAME_KEYS => ['dtoFormat' => 'format'],
+    ])]
     protected ?ResultAsDTO $responseInfo = null;
 
     protected array $schema = [];
@@ -46,7 +50,7 @@ class Service implements IArrayConvertible, IArrayConstructible
     protected array $ufoAssertions = [];
 
     /**
-     * @var array<string,DtoReflector>
+     * @var array<string,array<DtoReflector>
      */
     protected array $paramsDto = [];
 
@@ -73,11 +77,9 @@ class Service implements IArrayConvertible, IArrayConstructible
         $this->attrCollection = new AttributesCollection();
     }
 
-    public function getParamDto(string $param): ?DtoReflector
-    {
-        return $this->paramsDto[$param] ?? null;
-    }
-
+    /**
+     * @return array<string,array<DtoReflector>>
+     */
     public function getParamsDto(): array
     {
         return $this->paramsDto;
@@ -85,7 +87,7 @@ class Service implements IArrayConvertible, IArrayConstructible
 
     public function addParamsDto(string $param, DtoReflector $dtoReflector): static
     {
-        $this->paramsDto[$param] = $dtoReflector;
+        $this->paramsDto[$param][] = $dtoReflector;
         return $this;
     }
 
@@ -221,14 +223,25 @@ class Service implements IArrayConvertible, IArrayConstructible
     }
 
     /**
-     * @param array $types
+     * @param array|string $types
+     * @param string|null $docType
+     * @param string|null $docs
      * @return $this
      * @throws RpcInternalException
      */
-    public function setReturn(array $types): static
+    public function setReturn(array|string $types, ?string $docType = null, ?string $docs = null): static
     {
-        foreach ($types as $key => $returnType) {
-            $this->return[$key] = $this->addReturn($returnType);
+        if ($docType) {
+            $this->returnDescription = $docs ?? '';
+            $this->return = TypeHintResolver::typeDescriptionToJsonSchema($docType, $this->uses);
+        } else {
+            if (is_array($types)) {
+                foreach ($types as $returnType) {
+                    $this->addReturn($returnType);
+                }
+            } else {
+                $this->return = TypeHintResolver::typeDescriptionToJsonSchema($types, $this->uses);
+            }
         }
 
         return $this;
@@ -289,11 +302,13 @@ class Service implements IArrayConvertible, IArrayConstructible
     {
         $array = [
             'name'           => $this->getName(),
+            'procedureFQCN'  => $this->getProcedureFQCN(),
+            'methodName'     => $this->getMethodName(),
             'description'    => $this->getDescription(),
-            'parameters'     => $this->getParams(),
+            'parameters'     => array_map(fn(ParamDefinition $param) => $param->toArray(), $this->getParams()),
             'returns'        => (count($this->getReturn()) > 1) ? $this->getReturn() : $this->getReturn()[0],
             'returnItems'    => $this->returnItems,
-            'responseFormat' => $this->responseInfo->getResponseFormat() ?? $return,
+            'responseFormat' => $this->responseInfo?->getResponseFormat() ?? $this->return,
             'attrCollection' => DTOTransformer::toArray($this->attrCollection),
             'uses'           => $this->uses,
         ];
@@ -350,9 +365,14 @@ class Service implements IArrayConvertible, IArrayConstructible
     public static function validateParamType(array|string $type): array|string
     {
         try {
-            return TypeHintResolver::phpToJsonSchema(TypeHintResolver::normalize($type));
-        } catch (TypeError) {
-            return TypeHintResolver::normalizeArray($type);
+            return TypeHintResolver::typeDescriptionToJsonSchema($type);
+        } catch (TypeError $e) {
+            if (is_array($type)) {
+                foreach ($type as $key => $value) {
+                    $type[$key] = TypeHintResolver::typeDescriptionToJsonSchema($value);
+                }
+            }
+            return $type;
         }
     }
 
