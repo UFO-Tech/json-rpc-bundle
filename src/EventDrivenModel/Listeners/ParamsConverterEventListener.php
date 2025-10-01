@@ -6,6 +6,9 @@ namespace Ufo\JsonRpcBundle\EventDrivenModel\Listeners;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Ufo\DTO\DTOTransformer;
 use Ufo\DTO\Exceptions\BadParamException;
+use Ufo\DTO\Helpers\EnumResolver;
+use Ufo\DTO\Helpers\TypeHintResolver;
+use Ufo\DTO\Tests\TypeHintResolverTest;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcEvent;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcPostExecuteEvent;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcPreExecuteEvent;
@@ -34,8 +37,7 @@ class ParamsConverterEventListener
     {
         $result = $event->rpcRequest->getResponseObject()->getResult(true);
         $service = $event->service;
-        if (!$result || !$service) return;
-        if (!$responseInfo = $service->getResponseInfo()) return;
+        if (!$result || !$service || !$responseInfo = $service->getResponseInfo()) return;
 
         $replacementParams = [];
         foreach ($responseInfo->getFormat() as $paramName => $type) {
@@ -64,17 +66,35 @@ class ParamsConverterEventListener
         $service = $event->service;
         $this->convertParams($service, $event->params);
         if (count($service->getParamsDto()) > 0) {
-            foreach ($service->getParamsDto() as $paramName => $paramDto) {
-                if (!is_array($event->params[$paramName])) continue;
-                $dtoClass = $paramDto->dto->dtoFQCN;
-                if ($paramDto->dto->collection) {
-                    $dto = array_map(
-                        fn($item) => DTOTransformer::fromArray($dtoClass, $item), $event->params[$paramName] ?? []
-                    );
-                } else {
-                    $dto = DTOTransformer::fromArray($dtoClass, $event->params[$paramName] ?? []);
+            foreach ($service->getParamsDto() as $paramName => $paramDtoCollection) {
+                $result = $event->params[$paramName] ?? null;
+
+                foreach ($paramDtoCollection as $paramDto) {
+                    try {
+                        if (!is_array($event->params[$paramName])) continue;
+                        $dtoClass = $paramDto->dto->dtoFQCN;
+
+                        if (!$paramDto->dto->isCollection()) {
+                            $result = DTOTransformer::fromArray($dtoClass, $event->params[$paramName] ?? []);
+                            break;
+                        }
+
+                        foreach ($event->params[$paramName] ?? [] as $key => $item) {
+                            if (is_object($result[$key] ?? null)) continue;
+
+                            try {
+                                $result[$key] = DTOTransformer::fromArray($dtoClass, $item);
+                            } catch (\Throwable) {
+                                $result[$key] = $item;
+                            }
+                        }
+                    } catch (\Throwable $exception) {
+                        continue;
+                    }
+
                 }
-                $event->params[$paramName] = $dto;
+
+                $event->params[$paramName] = $result;
             }
         }
     }
@@ -82,15 +102,42 @@ class ParamsConverterEventListener
     protected function convertParams(Service $service, array &$params): void
     {
         foreach ($service->getParams() as $paramName => $paramDefinition) {
+            /** @var Param $paramAttribute */
             if ($paramAttribute = $paramDefinition->getAttributesCollection()->getAttribute(Param::class)) {
 
-                $params[$paramName] = $this->paramConvertor->toObject(
-                    $params[$paramName],
-                    [
-                        'param' => $paramAttribute,
-                        'classFQCN' => $this->resolveParamTypeClassFQCN($paramDefinition->getRealType()),
-                    ]
-                );
+                $process = function ($value) use ($paramAttribute, $paramDefinition, $service) {
+                    $classFQCN = null;
+
+                    TypeHintResolver::filterSchema(
+                        $paramDefinition->getType(),
+                        function (array $schemaItem) use ($paramDefinition, &$classFQCN, $service) {
+                            if (
+                                $classFQCN
+                                || !($name = $schemaItem[EnumResolver::ENUM][EnumResolver::ENUM_NAME] ?? false)
+                            ) return;
+
+                            $classFQCN = EnumResolver::getEnumFQCN(
+                                TypeHintResolver::typeWithNamespaceOrDefault(
+                                    $name, $service->uses
+                                ) ?? ''
+                            );
+                        }
+                    );
+
+
+                    return $this->paramConvertor->toObject(
+                        $value,
+                        [
+                            'param' => $paramAttribute,
+                            'classFQCN' => $classFQCN ?? $this->resolveParamTypeClassFQCN($paramDefinition->getRealType()),
+                        ]
+                    );
+                };
+
+                $params[$paramName] = match (true) {
+                    $paramAttribute->isCollection() => array_map($process, $params[$paramName]),
+                    default => $process($params[$paramName]),
+                };
             }
         }
     }

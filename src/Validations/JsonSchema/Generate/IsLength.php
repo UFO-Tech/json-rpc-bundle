@@ -5,14 +5,23 @@ namespace Ufo\JsonRpcBundle\Validations\JsonSchema\Generate;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\Constraints\Length;
+use Ufo\DTO\Helpers\TypeHintResolver;
 use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Interfaces\IConstraintGenerator;
 
+use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Traits\ConstraintApplier;
 use function is_null;
 
 #[AutoconfigureTag('rpc.constraint')]
 class IsLength implements IConstraintGenerator
 {
-    public function generate(Constraint $constraint, array &$rules): void
+    use ConstraintApplier;
+
+    public function getSupportedClass(): string
+    {
+        return Length::class;
+    }
+
+    protected function apply(Constraint $constraint, array &$rules, ?Generator $generator = null): void
     {
         /**
          * @var Length $constraint
@@ -25,8 +34,8 @@ class IsLength implements IConstraintGenerator
         }
     }
 
-    public function getSupportedClass(): string
+    protected function getSupportedTypes(): array
     {
-        return Length::class;
+        return [TypeHintResolver::STRING->value];
     }
 }

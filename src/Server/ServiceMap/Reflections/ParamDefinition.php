@@ -19,28 +19,26 @@ class ParamDefinition implements IArrayConvertible, IArrayConstructible
 {
     use ArrayConvertibleTrait, ArrayConstructibleTrait;
 
-    protected string|array $type;
     protected bool $optional = false;
     protected mixed $default = null;
-    protected string|array $realType;
     protected AttributesCollection $attributesCollection;
 
     public function __construct(
         readonly public string $name,
-        string|array $type,
+        protected array $type,
+        protected string|array $realType,
         readonly public string $description = '',
         protected array $schema = [],
         readonly public ?string $paramItems = null
     )
     {
-        $this->type = Service::validateParamType($type);
-        $this->realType = $type;
         $this->attributesCollection = new AttributesCollection();
     }
 
     public static function fromParamReflection(
         ReflectionParameter $paramRef,
-        string|array $type, 
+        array $type,
+        array|string $realType,
         string $description = '',
         ?string $paramItems = null
     ): static
@@ -48,6 +46,7 @@ class ParamDefinition implements IArrayConvertible, IArrayConstructible
         $paramDef = new static(
             $paramRef->getName(),
             $type,
+            $realType,
             $description,
             paramItems: $paramItems
         );
@@ -55,9 +54,9 @@ class ParamDefinition implements IArrayConvertible, IArrayConstructible
         return $paramDef;
     }
 
-    public function changeType(string|array $type): static
+    public function changeType(array $type): static
     {
-        $this->type = Service::validateParamType($type);
+        $this->type = $type;
         return $this;
     }
 
@@ -68,7 +67,9 @@ class ParamDefinition implements IArrayConvertible, IArrayConstructible
             && !$this->optional
             && !(($type = $this->realType) && is_string($type) && $type === TypeHintResolver::MIXED->value)
             && (
-                (is_string($this->realType) && !str_contains($this->realType, TypeHintResolver::NULL->value))
+                (is_string($this->realType)
+                    && !str_starts_with($this->realType, '?')
+                    && !str_contains($this->realType, TypeHintResolver::NULL->value))
                 || (is_array($this->realType) && !in_array(TypeHintResolver::NULL->value, $this->realType, true))
             )
         ) return $this;

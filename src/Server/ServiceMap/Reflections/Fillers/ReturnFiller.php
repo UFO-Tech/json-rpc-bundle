@@ -4,13 +4,9 @@ namespace Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\Fillers;
 
 use phpDocumentor\Reflection\DocBlock;
 use ReflectionMethod;
-use Ufo\DTO\Helpers\TypeHintResolver;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
-use phpDocumentor\Reflection\TypeResolver;
 
 use function is_array;
-use function is_null;
-use function is_string;
 
 class ReturnFiller extends AbstractServiceFiller
 {
@@ -18,24 +14,8 @@ class ReturnFiller extends AbstractServiceFiller
     public function fill(ReflectionMethod $method, Service $service, DocBlock $methodDoc): void
     {
         $returnReflection = $method->getReturnType();
-        $returns = [];
-        if (is_null($returnReflection) && is_string($method->getDocComment())) {
-            foreach ($methodDoc->getTagsByName('return') as $return) {
-                $returns[] = (string)$return->getType();
-            }
-        } else {
-            $returns = $this->getTypes($returnReflection);
-        }
-        $returnDesc = $this->getReturnDescription($methodDoc);
-        if (is_array($returns)) {
-            foreach ($returns as $type) {
-                $typeString = $this->getReturnType($methodDoc, $this->typeFrom($type));
-                $service->addReturn($this->typeFrom($type), $returnDesc, $typeString);
-            }
-        } else {
-            $typeString = $this->getReturnType($methodDoc, $this->typeFrom($returns));
-            $service->addReturn($this->typeFrom($returns), $returnDesc, $typeString);
-        }
+        $returns = $this->getTypes($returnReflection);
+        $service->setReturn($returns, $this->getReturnType($methodDoc), $this->getReturnDescription($methodDoc));
     }
 
     protected function getReturnDescription(DocBlock $docBlock): string
@@ -51,7 +31,7 @@ class ReturnFiller extends AbstractServiceFiller
 
     }
 
-    protected function getReturnType(DocBlock $docBlock, string $type): ?string
+    protected function getReturnType(DocBlock $docBlock): ?string
     {
         $tags = $docBlock->getTagsByName('return');
         if (empty($tags)) {

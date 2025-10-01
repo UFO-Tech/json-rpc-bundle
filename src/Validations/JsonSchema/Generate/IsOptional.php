@@ -5,12 +5,23 @@ namespace Ufo\JsonRpcBundle\Validations\JsonSchema\Generate;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\Constraints\Optional;
+use Ufo\DTO\Helpers\TypeHintResolver;
 use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Interfaces\IConstraintGenerator;
+use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Traits\ConstraintApplier;
 
-#[AutoconfigureTag('rpc.constraint')]
+#[AutoconfigureTag('rpc.constraint', attributes: [
+    'priority' => 101,
+])]
 class IsOptional implements IConstraintGenerator
 {
-    public function generate(Constraint $constraint, array &$rules): void
+    use ConstraintApplier;
+
+    public function getSupportedClass(): string
+    {
+        return Optional::class;
+    }
+
+    protected function apply(Constraint $constraint, array &$rules, ?Generator $generator = null): void
     {
         /**
          * @var Optional $constraint
@@ -18,8 +29,8 @@ class IsOptional implements IConstraintGenerator
         $rules['optional'] = true;
     }
 
-    public function getSupportedClass(): string
+    protected function getSupportedTypes(): array
     {
-        return Optional::class;
+        return [TypeHintResolver::ANY->value];
     }
 }

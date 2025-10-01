@@ -65,12 +65,9 @@ class DtoReflector
     {
         if ($depth >= static::DEPTH_SIZE) return;
 
-        $ref = $this->refDTO;
-        $context = (new ContextFactory())->createFromReflector($this->refDTO);
-
-        $this->responseFormat['$dto'] = $ref->getShortName();
+        $this->responseFormat['$dto'] = $this->refDTO->getShortName();
         $this->responseFormat['$uses'] = TypeHintResolver::getUsesNamespaces($this->dto->dtoFQCN);
-        foreach ($ref->getProperties(\ReflectionProperty::IS_PUBLIC) as $property) {
+        foreach ($this->refDTO->getProperties(\ReflectionProperty::IS_PUBLIC) as $property) {
 
             $nullable = ($property->getType()->allowsNull()) ? '?' : '';
             try {
@@ -96,19 +93,19 @@ class DtoReflector
         if (count($property->getAttributes(DTO::class)) > 0) {
             $dto = $property->getAttributes(DTO::class)[0]->newInstance();
             new static($dto, $this->paramConvertor, $this->depth + 1);
-            if ($typeName === TypeHintResolver::ARRAY->value && $dto->collection) {
+            if ($typeName === TypeHintResolver::ARRAY->value && $dto->isCollection()) {
                 $typeName = TypeHintResolver::COLLECTION->value;
                 $this->responseFormat['$collections'][$property->getName()] = $dto;
             }
         } else {
             try {
-                $typeName = $this->getDecriptionType($property) ?? $typeName;
+                $typeName = $this->getDescriptionType($property) ?? $typeName;
             } catch (\Throwable) {}
         }
         return $typeName;
     }
 
-    protected function getDecriptionType(ReflectionProperty $property): ?string
+    protected function getDescriptionType(ReflectionProperty $property): ?string
     {
         $descType = null;
         $docProperty = $property->getDocComment();

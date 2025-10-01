@@ -5,12 +5,21 @@ namespace Ufo\JsonRpcBundle\Validations\JsonSchema\Generate;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\Constraints\GreaterThanOrEqual;
+use Ufo\DTO\Helpers\TypeHintResolver;
 use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Interfaces\IConstraintGenerator;
+use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Traits\ConstraintApplier;
 
 #[AutoconfigureTag('rpc.constraint')]
 class IsGreaterThanOrEqual implements IConstraintGenerator
 {
-    public function generate(Constraint $constraint, array &$rules): void
+    use ConstraintApplier;
+
+    public function getSupportedClass(): string
+    {
+        return GreaterThanOrEqual::class;
+    }
+
+    protected function apply(Constraint $constraint, array &$rules, ?Generator $generator = null): void
     {
         /**
          * @var GreaterThanOrEqual $constraint
@@ -18,8 +27,11 @@ class IsGreaterThanOrEqual implements IConstraintGenerator
         $rules['minimum'] = $constraint->value;
     }
 
-    public function getSupportedClass(): string
+    protected function getSupportedTypes(): array
     {
-        return GreaterThanOrEqual::class;
+        return [
+            TypeHintResolver::INT->value,
+            TypeHintResolver::FLOAT->value
+        ];
     }
 }
