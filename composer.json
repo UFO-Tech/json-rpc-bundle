@@ -1,7 +1,7 @@
 {
   "name": "ufo-tech/json-rpc-bundle",
   "description": "The bundle for easy using json-rpc api on your project",
-  "version": "9.0.0",
+  "version": "9.0.1",
   "license": "MIT",
   "authors": [
     {

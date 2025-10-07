@@ -19,9 +19,11 @@ use Ufo\RpcObject\RPC\ResultAsDTO;
 use Ufo\DTO\JsonSerializableTrait;
 
 use function array_key_exists;
+use function array_map;
 use function count;
 use function end;
 use function explode;
+use function implode;
 use function is_array;
 use function json_encode;
 
@@ -212,17 +214,6 @@ class Service implements IArrayConvertible, IArrayConstructible
     }
 
     /**
-     * @throws RpcInternalException
-     */
-    public function addReturn(string $type, ?string $desc = null, ?string $items = null): static
-    {
-        $this->return[] = static::validateParamType($type);
-        $this->returnDescription = $desc ?? '';
-        $this->returnItems = $items;
-        return $this;
-    }
-
-    /**
      * @param array|string $types
      * @param string|null $docType
      * @param string|null $docs
@@ -236,12 +227,9 @@ class Service implements IArrayConvertible, IArrayConstructible
             $this->return = TypeHintResolver::typeDescriptionToJsonSchema($docType, $this->uses);
         } else {
             if (is_array($types)) {
-                foreach ($types as $returnType) {
-                    $this->addReturn($returnType);
-                }
-            } else {
-                $this->return = TypeHintResolver::typeDescriptionToJsonSchema($types, $this->uses);
+                $types = implode('|', $types);
             }
+            $this->return = TypeHintResolver::typeDescriptionToJsonSchema($types, $this->uses);
         }
 
         return $this;
