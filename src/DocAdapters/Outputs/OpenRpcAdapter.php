@@ -338,14 +338,6 @@ class OpenRpcAdapter
             }
 
             $paramSchema = [...$paramSchema, ...$newSchema];
-//            $paramSchema = array_merge_recursive($paramSchema, $newSchema);
-
-            if (($paramSchema[T::TYPE] ?? false)
-                && ($paramSchema[T::TYPE] == T::OBJECT->value)
-                && ($paramSchema['additionalProperties'] ?? false)
-            ) {
-                unset($paramSchema[T::ITEMS]);
-            }
 
             if (($paramSchema[T::TYPE] ?? false)
                 && ($paramSchema[T::TYPE] == T::OBJECT->value)
