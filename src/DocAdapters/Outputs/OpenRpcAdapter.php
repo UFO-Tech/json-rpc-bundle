@@ -347,6 +347,13 @@ class OpenRpcAdapter
                 unset($paramSchema[T::ITEMS]);
             }
 
+            if (($paramSchema[T::TYPE] ?? false)
+                && ($paramSchema[T::TYPE] == T::OBJECT->value)
+                && ($paramSchema['additionalProperties'] ?? false)
+            ) {
+                unset($paramSchema[T::ITEMS]);
+            }
+
             if (
                 ($classFQCN = $newSchema[T::ITEMS]['classFQCN']  ?? false)
                 && $dto = $this->checkParamHasDTO(
@@ -360,24 +367,10 @@ class OpenRpcAdapter
             }
 
         } elseif (is_array($param->getType())) {
-
             $paramSchema = T::applyToSchema(
                 $param->getSchema(),
                 fn(array $itemSchema) => $this->checkAndGetSchemaFromDesc($itemSchema)
             );
-
-//            if ($param->paramItems) {
-//                $newSchema = T::typeDescriptionToJsonSchema($param->paramItems, $service->uses);
-//                $paramSchema = T::applyToSchema($param->getType(), fn(array $schema) => $this->checkAndGetSchemaFromDesc($schema));
-//            } else {
-//                foreach ($param->getType() as $i => $type) {
-//                    if ($type === T::OBJECT->value && ($param->getRealType()[$i] ?? false)) {
-//                        $type = $param->getRealType()[$i];
-//                    }
-////                    $newSchema = T::typeDescriptionToJsonSchema($type, $service->uses);
-//                    $paramSchema[T::ONE_OFF][$i] = $this->checkAndGetSchemaFromDesc($param->getType());
-//                }
-//            }
         }
 
         if ($enumFQCN = EnumResolver::getEnumFQCN($param->getRealType())) {

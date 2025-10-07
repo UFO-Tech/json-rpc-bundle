@@ -98,6 +98,8 @@ class JsonSchemaNormalizer implements NormalizerInterface
         if ($paramAttr) {
             $assertionsAttr = $assertionsAttr ?? new Assertions([]);
 
+            if ($paramAttr->isCollection()) return;
+
             $paramDefinition->setSchema(
                 $this->paramNormalizer->normalize(
                     $assertionsAttr,

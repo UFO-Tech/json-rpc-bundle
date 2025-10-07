@@ -2,11 +2,13 @@
 
 namespace Ufo\JsonRpcBundle\Server\ServiceMap\Reflections;
 
+use LogicException;
 use phpDocumentor\Reflection\DocBlockFactory;
-use phpDocumentor\Reflection\Types\ContextFactory;
+use ReflectionClass;
 use ReflectionException;
 use ReflectionProperty;
 use ReflectionType;
+use Ufo\DTO\DTOTransformer;
 use Ufo\DTO\Helpers\TypeHintResolver;
 use Ufo\JsonRpcBundle\ParamConvertors\ChainParamConvertor;
 use Ufo\RpcError\RpcInternalException;
@@ -17,14 +19,13 @@ use Ufo\RpcObject\RPC\Param;
 use function class_exists;
 use function count;
 use function current;
-use function get_class;
 use function implode;
 
 class DtoReflector
 {
     const int DEPTH_SIZE = 3;
 
-    protected \ReflectionClass $refDTO;
+    protected ReflectionClass $refDTO;
 
     protected array $responseFormat = [];
     protected array $realFormat = [];
@@ -34,12 +35,12 @@ class DtoReflector
      */
     public function __construct(
         public readonly DTO $dto,
-        protected ChainParamConvertor $paramConvertor,
+        ChainParamConvertor $paramConvertor,
         protected int $depth = 0
     )
     {
         $this->reflect();
-        $this->parse($this->depth);
+        $this->parse($this->depth, $paramConvertor);
         $this->setResult();
     }
 
@@ -58,10 +59,10 @@ class DtoReflector
         if (!class_exists($this->dto->dtoFQCN)) {
             throw new RpcInternalException('Class "' . $this->dto->dtoFQCN.'" is not found');
         }
-        $this->refDTO = new \ReflectionClass($this->dto->dtoFQCN);
+        $this->refDTO = new ReflectionClass($this->dto->dtoFQCN);
     }
 
-    protected function parse(int $depth): void
+    protected function parse(int $depth, ChainParamConvertor $paramConvertor): void
     {
         if ($depth >= static::DEPTH_SIZE) return;
 
@@ -71,11 +72,11 @@ class DtoReflector
 
             $nullable = ($property->getType()->allowsNull()) ? '?' : '';
             try {
-                $this->responseFormat[$property->getName()] = $nullable . $this->getType($property, $property->getType());
+                $this->responseFormat[$property->getName()] = $nullable . $this->getType($property, $property->getType(), $paramConvertor);
             } catch (\Throwable $t) {
                 $t = [];
                 foreach ($property->getType()?->getTypes() as $type) {
-                    $t[] = $this->getType($property, $type);
+                    $t[] = $this->getType($property, $type, $paramConvertor);
                 }
                 $this->responseFormat[$property->getName()] = implode('|', $t);
             }
@@ -85,14 +86,14 @@ class DtoReflector
     /**
      * @throws RpcInternalException
      */
-    protected function getType(ReflectionProperty $property, ReflectionType $type): string
+    protected function getType(ReflectionProperty $property, ReflectionType $type, ChainParamConvertor $paramConvertor): string
     {
         /** @var DTO $dto */
         $typeName = $type->getName();
-        $this->checkParamConverter($property, $typeName);
+        $this->checkParamConverter($property, $typeName, $paramConvertor);
         if (count($property->getAttributes(DTO::class)) > 0) {
             $dto = $property->getAttributes(DTO::class)[0]->newInstance();
-            new static($dto, $this->paramConvertor, $this->depth + 1);
+            new static($dto, $paramConvertor, $this->depth + 1);
             if ($typeName === TypeHintResolver::ARRAY->value && $dto->isCollection()) {
                 $typeName = TypeHintResolver::COLLECTION->value;
                 $this->responseFormat['$collections'][$property->getName()] = $dto;
@@ -109,7 +110,7 @@ class DtoReflector
     {
         $descType = null;
         $docProperty = $property->getDocComment();
-        $ctor = (new \ReflectionClass($property->getDeclaringClass()->getName()))->getConstructor();
+        $ctor = (new ReflectionClass($property->getDeclaringClass()->getName()))->getConstructor();
         $docConstructor = $ctor?->getDocComment();
 
         if (!$docProperty && $property->isPromoted() && $docConstructor) {
@@ -133,7 +134,30 @@ class DtoReflector
         return $descType;
     }
 
-    protected function checkParamConverter(ReflectionProperty $property, string &$typeName): void
+    public function __serialize(): array
+    {
+        return DTOTransformer::toArray($this);
+    }
+
+    /**
+     * @throws ReflectionException|LogicException
+     */
+    public function __unserialize(array $data): void
+    {
+        $dtoArray = $data['dto'] ?? [];
+
+        if (empty($dtoArray)) {
+            throw new LogicException('Corrupted serialization payload: dto missing.');
+        }
+
+        $this->dto = DTOTransformer::fromArray(DTO::class, $dtoArray);
+        $this->refDTO = new ReflectionClass($this->dto->dtoFQCN);
+        $this->responseFormat = (array)($data['responseFormat'] ?? []);
+        $this->realFormat     = (array)($data['realFormat']     ?? []);
+        $this->depth          = (int)  ($data['depth']          ?? 0);
+    }
+
+    protected function checkParamConverter(ReflectionProperty $property, string &$typeName, ChainParamConvertor $paramConvertor): void
     {
         if ($paramAttrDef = current($property->getAttributes(Param::class))) {
             /**
@@ -143,7 +167,7 @@ class DtoReflector
             $assertionsAttr = new Assertions([]);
             $responseFormat = [
                 ...$this->responseFormat,
-                ...$this->paramConvertor->jsonSchemaPropertyNormalizer->normalize(
+                ...$paramConvertor->jsonSchemaPropertyNormalizer->normalize(
                     $assertionsAttr,
                     context: ['type' => $paramAttr->getType()]
 

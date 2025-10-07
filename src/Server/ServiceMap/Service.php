@@ -302,11 +302,13 @@ class Service implements IArrayConvertible, IArrayConstructible
     {
         $array = [
             'name'           => $this->getName(),
+            'procedureFQCN'  => $this->getProcedureFQCN(),
+            'methodName'     => $this->getMethodName(),
             'description'    => $this->getDescription(),
-            'parameters'     => $this->getParams(),
+            'parameters'     => array_map(fn(ParamDefinition $param) => $param->toArray(), $this->getParams()),
             'returns'        => (count($this->getReturn()) > 1) ? $this->getReturn() : $this->getReturn()[0],
             'returnItems'    => $this->returnItems,
-            'responseFormat' => $this->responseInfo->getResponseFormat() ?? $this->return,
+            'responseFormat' => $this->responseInfo?->getResponseFormat() ?? $this->return,
             'attrCollection' => DTOTransformer::toArray($this->attrCollection),
             'uses'           => $this->uses,
         ];
