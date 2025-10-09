@@ -4,6 +4,7 @@ namespace Ufo\JsonRpcBundle\ParamConvertors;
 
 use BackedEnum;
 use RuntimeException;
+use Ufo\DTO\Helpers\TypeHintResolver;
 
 class BackedEnumConvertor implements IParamConvertor
 {
@@ -24,7 +25,7 @@ class BackedEnumConvertor implements IParamConvertor
 
     public function toObject(int|string|float|null $value, array $context = [], ?callable $callback = null): ?object
     {
-        $fqcn = $context['classFQCN'] ?? throw new RuntimeException('classFQCN is required in context');
+        $fqcn = $context[TypeHintResolver::CLASS_FQCN] ?? throw new RuntimeException('classFQCN is required in context');
 
         if (!is_subclass_of($fqcn, BackedEnum::class)) {
             throw new RuntimeException("{$fqcn} is not a BackedEnum");

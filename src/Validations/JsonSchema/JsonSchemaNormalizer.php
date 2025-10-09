@@ -160,11 +160,11 @@ class JsonSchemaNormalizer implements NormalizerInterface
 
             T::filterSchema($tmpSchema, function (array $schema) use ($service, $paramDefinition) {
                 if (($schema[T::TYPE] ?? null) === T::OBJECT->value
-                    && class_exists($schema['classFQCN'] ?? null)
-                    && !enum_exists($schema['classFQCN'] ?? null)
+                    && class_exists($schema[T::CLASS_FQCN] ?? null)
+                    && !enum_exists($schema[T::CLASS_FQCN] ?? null)
                 ) {
                     $service->addParamsDto($paramDefinition->name, new DtoReflector(
-                            new DTO($schema['classFQCN'], context: [DTO::C_COLLECTION => true]
+                            new DTO($schema[T::CLASS_FQCN], context: [DTO::C_COLLECTION => true]
                             ), $this->paramConvertor)
                     );
                 }

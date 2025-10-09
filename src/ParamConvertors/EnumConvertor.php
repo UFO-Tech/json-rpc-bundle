@@ -5,6 +5,7 @@ namespace Ufo\JsonRpcBundle\ParamConvertors;
 use BackedEnum;
 use RuntimeException;
 use Ufo\DTO\DTOTransformer;
+use Ufo\DTO\Helpers\TypeHintResolver;
 use UnitEnum;
 
 class EnumConvertor implements IParamConvertor
@@ -26,7 +27,7 @@ class EnumConvertor implements IParamConvertor
 
     public function toObject(int|string|float|null $value, array $context = [], ?callable $callback = null): ?object
     {
-        $fqcn = $context['classFQCN'] ?? throw new RuntimeException('classFQCN is required in context');
+        $fqcn = $context[TypeHintResolver::CLASS_FQCN] ?? throw new RuntimeException('classFQCN is required in context');
 
         if (!is_subclass_of($fqcn, UnitEnum::class)) {
             throw new RuntimeException("{$fqcn} is not a UnitEnum or BackedEnum");

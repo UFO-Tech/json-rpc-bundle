@@ -3,6 +3,7 @@
 namespace Ufo\JsonRpcBundle\ParamConvertors;
 
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
+use Ufo\DTO\Helpers\TypeHintResolver;
 use Ufo\JsonRpcBundle\Validations\JsonSchema\JsonSchemaPropertyNormalizer;
 
 class ChainParamConvertor
@@ -28,7 +29,7 @@ class ChainParamConvertor
 
     public function toObject(float|int|string|null $value, array $context = [], ?callable $callback = null): ?object
     {
-        $classFQCN = $context['classFQCN'] ?? throw new \RuntimeException('No "classFQCN" provided to convertor context');
+        $classFQCN = $context[TypeHintResolver::CLASS_FQCN] ?? throw new \RuntimeException('No "classFQCN" provided to convertor context');
         $needConvertor = $context['param']?->convertorFQCN ?? null;
         foreach ($this->convertors as $convertor) {
             if ($needConvertor && $convertor::class !== $needConvertor) continue;

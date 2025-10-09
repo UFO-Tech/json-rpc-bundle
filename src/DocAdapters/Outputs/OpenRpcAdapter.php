@@ -255,7 +255,7 @@ class OpenRpcAdapter
         if ($type) {
             $objSchema = T::typeDescriptionToJsonSchema($type, $uses);
             if ($objSchema[T::TYPE] ?? '' === T::OBJECT->value) {
-                $class = $objSchema['classFQCN'] ?? null;
+                $class = $objSchema[T::CLASS_FQCN] ?? null;
             }
         }
 
@@ -270,7 +270,7 @@ class OpenRpcAdapter
     protected function replaceClassNameToDTO(array &$objSchema, array $uses = []): void
     {
         $type = $objSchema[T::TYPE] ?? '';
-        if ($type === T::OBJECT->value && $class = ($objSchema['classFQCN'] ?? false)) {
+        if ($type === T::OBJECT->value && $class = ($objSchema[T::CLASS_FQCN] ?? false)) {
             $dto = $this->createDTO($class, null);
             $objSchema = $this->schemaFromDto($dto->getFormat());
 
@@ -341,13 +341,13 @@ class OpenRpcAdapter
 
             if (($paramSchema[T::TYPE] ?? false)
                 && ($paramSchema[T::TYPE] == T::OBJECT->value)
-                && ($paramSchema['additionalProperties'] ?? false)
+                && ($paramSchema[T::ADDITIONAL_PROPERTIES] ?? false)
             ) {
                 unset($paramSchema[T::ITEMS]);
             }
 
             if (
-                ($classFQCN = $newSchema[T::ITEMS]['classFQCN']  ?? false)
+                ($classFQCN = $newSchema[T::ITEMS][T::CLASS_FQCN]  ?? false)
                 && $dto = $this->checkParamHasDTO(
                     $param->paramItems ?? '',
                     $classFQCN,
@@ -385,8 +385,8 @@ class OpenRpcAdapter
     protected function checkAndGetSchemaFromDesc(array $objSchema, ?DTO $dtoAttr = null): array
     {
         if (($objSchema[T::TYPE] ?? '') === T::OBJECT->value
-            && ($objSchema['classFQCN'] ?? false)) {
-            $dto = $this->createDTO($objSchema['classFQCN'], $dtoAttr);
+            && ($objSchema[T::CLASS_FQCN] ?? false)) {
+            $dto = $this->createDTO($objSchema[T::CLASS_FQCN], $dtoAttr);
             return $this->schemaFromDto($dto->getFormat());
         }
         return $objSchema;

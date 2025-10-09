@@ -11,6 +11,7 @@ use Ramsey\Uuid\Uuid;
 use Ramsey\Uuid\UuidInterface;
 use Stringable;
 
+use Ufo\DTO\Helpers\TypeHintResolver;
 use function class_exists;
 use function in_array;
 
@@ -63,7 +64,7 @@ class UuidConverter implements IParamConvertor
 
     public function toObject(int|string|float|null $value, array $context = [], ?callable $callback = null): ?object
     {
-        $classFQCN = $context['classFQCN'] ?? null;
+        $classFQCN = $context[TypeHintResolver::CLASS_FQCN] ?? null;
         if (in_array($classFQCN, static::SUPPORTS_MAP) && class_exists($classFQCN)) {
             return $classFQCN::fromString($value);
         }

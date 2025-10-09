@@ -45,7 +45,7 @@ class ParamsConverterEventListener
             if (!$realFormatFQCN = $responseInfo->getRealFormat($paramName)) continue;
             try {
                 $replacementParams[$paramName] = $this->paramConvertor->toScalar(
-                    $result->{$paramName}, ['classFQCN' => $realFormatFQCN]
+                    $result->{$paramName}, [TypeHintResolver::CLASS_FQCN => $realFormatFQCN]
                 );
             } catch (BadParamException $e) {}
         }
@@ -129,7 +129,7 @@ class ParamsConverterEventListener
                         $value,
                         [
                             'param' => $paramAttribute,
-                            'classFQCN' => $classFQCN ?? $this->resolveParamTypeClassFQCN($paramDefinition->getRealType()),
+                            TypeHintResolver::CLASS_FQCN => $classFQCN ?? $this->resolveParamTypeClassFQCN($paramDefinition->getRealType()),
                         ]
                     );
                 };

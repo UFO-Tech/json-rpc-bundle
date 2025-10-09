@@ -5,6 +5,7 @@
 
 namespace Ufo\JsonRpcBundle\ParamConvertors;
 
+use Ufo\DTO\Helpers\TypeHintResolver;
 use function in_array;
 
 class DateTimeConverter implements IParamConvertor
@@ -38,7 +39,7 @@ class DateTimeConverter implements IParamConvertor
 
     public function toObject(int|string|float|null $value, array $context = [], ?callable $callback = null): ?object
     {
-        $classFQCN = $context['classFQCN'] ?? null;
+        $classFQCN = $context[TypeHintResolver::CLASS_FQCN] ?? null;
         try {
             $object = new $classFQCN($value);
         } catch (\Throwable) {
