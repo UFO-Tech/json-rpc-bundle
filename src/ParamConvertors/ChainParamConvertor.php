@@ -13,9 +13,9 @@ class ChainParamConvertor
      * @param IParamConvertor[] $convertors
      */
     public function __construct(
+        readonly public JsonSchemaPropertyNormalizer $jsonSchemaPropertyNormalizer,
         #[AutowireIterator(IParamConvertor::TAG)]
         protected iterable $convertors = [],
-        readonly public JsonSchemaPropertyNormalizer $jsonSchemaPropertyNormalizer
     ) {}
 
     public function toScalar(object $object, array $context = [], ?callable $callback = null): string|int|float|null
