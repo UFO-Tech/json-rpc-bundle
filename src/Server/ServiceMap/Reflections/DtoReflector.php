@@ -16,6 +16,7 @@ use Ufo\RpcObject\RPC\Assertions;
 use Ufo\RpcObject\RPC\DTO;
 use Ufo\RpcObject\RPC\Param;
 
+use function array_key_exists;
 use function class_exists;
 use function count;
 use function current;
@@ -68,12 +69,31 @@ class DtoReflector
 
         $this->responseFormat['$dto'] = $this->refDTO->getShortName();
         $this->responseFormat['$uses'] = TypeHintResolver::getUsesNamespaces($this->dto->dtoFQCN);
-        foreach ($this->refDTO->getProperties(\ReflectionProperty::IS_PUBLIC) as $property) {
+        $refConstructor = $this->refDTO->getConstructor();
+        $defaultParams = [];
+        $requiredParams = [];
+        if ($refConstructor) {
+            foreach ($refConstructor->getParameters() as $param) {
+                if (!$param->isPromoted()) continue;
+                try {
+                    $defaultParams[$param->getName()] = $param->getDefaultValue();
+                } catch (\Throwable) {
+                    $requiredParams[$param->getName()] = $param->getName();
+                }
+            }
+        }
 
+        foreach ($this->refDTO->getProperties(\ReflectionProperty::IS_PUBLIC) as $property) {
+            if (!isset($requiredParams[$property->getName()]) && $property->hasDefaultValue()) {
+                $defaultParams[$property->getName()] = $property->getDefaultValue() ?? $defaultParams[$property->getName()] ?? null;
+            }
+            if (!array_key_exists($property->getName(), $defaultParams)) {
+                $requiredParams[$property->getName()] = $property->getName();
+            }
             $nullable = ($property->getType()->allowsNull()) ? '?' : '';
             try {
                 $this->responseFormat[$property->getName()] = $nullable . $this->getType($property, $property->getType(), $paramConvertor);
-            } catch (\Throwable $t) {
+            } catch (\Throwable ) {
                 $t = [];
                 foreach ($property->getType()?->getTypes() as $type) {
                     $t[] = $this->getType($property, $type, $paramConvertor);
@@ -81,6 +101,8 @@ class DtoReflector
                 $this->responseFormat[$property->getName()] = implode('|', $t);
             }
         }
+        $this->responseFormat['$defaultParams'] = $defaultParams;
+        $this->responseFormat['$requiredParams'] = $requiredParams;
     }
 
     /**

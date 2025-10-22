@@ -18,6 +18,7 @@ use Ufo\RpcObject\RPC\DTO;
 use Ufo\RpcObject\RPC\ResultAsDTO;
 use Ufo\RpcObject\RpcTransport;
 
+use function array_key_exists;
 use function array_map;
 use function class_exists;
 use function implode;
@@ -180,6 +181,10 @@ class OpenRpcAdapter
         unset($format['$dto']);
         unset($format['$collections']);
         unset($format['$uses']);
+        $defaultParams = $format['$defaultParams'] ?? [];
+        $requiredParams = $format['$requiredParams'] ?? [];
+        unset($format['$defaultParams']);
+        unset($format['$requiredParams']);
 
         $schemaLink = $this->createSchemaLink($dtoName);
         if (!isset($this->schemas[$dtoName])) {
@@ -190,10 +195,12 @@ class OpenRpcAdapter
                 'required' => []
             ];
             foreach ($format as $name => $value) {
+                if ($requiredParams[$name] ?? false) {
+                    $schema['required'][] = $name;
+                }
+
                 if (str_starts_with($value, '?')) {
                     $value = substr($value, 1) . '|null';
-                } else {
-                    $schema['required'][] = $name;
                 }
 
                 if (!$jsonValue = $this->detectDtoOnType($value, $collections[$name] ?? [])) {
@@ -203,6 +210,9 @@ class OpenRpcAdapter
                     $jsonValue,
                     $uses,
                 );
+                if (array_key_exists($name, $defaultParams)) {
+                    $jsonValue['default'] = $defaultParams[$name];
+                }
 
                 $schema['properties'][$name] = $jsonValue;
             }
