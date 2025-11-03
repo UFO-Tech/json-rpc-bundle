@@ -291,6 +291,8 @@ class OpenRpcAdapter
             foreach ($objSchema[T::ONE_OFF] as &$objSchema_) {
                 $this->replaceClassNameToDTO($objSchema_);
             }
+        } elseif ($objSchema[T::ADDITIONAL_PROPERTIES] ?? false) {
+            $this->replaceClassNameToDTO($objSchema[T::ADDITIONAL_PROPERTIES]);
         }
     }
 
