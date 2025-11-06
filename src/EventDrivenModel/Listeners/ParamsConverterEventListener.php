@@ -106,6 +106,10 @@ class ParamsConverterEventListener
             if ($paramAttribute = $paramDefinition->getAttributesCollection()->getAttribute(Param::class)) {
 
                 $process = function ($value) use ($paramAttribute, $paramDefinition, $service) {
+                    if (!is_scalar($value)) {
+                        return $value;
+                    }
+
                     $classFQCN = null;
 
                     TypeHintResolver::filterSchema(
