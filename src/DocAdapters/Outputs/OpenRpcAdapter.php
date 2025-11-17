@@ -15,7 +15,6 @@ use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMap;
 use Ufo\RpcError\RpcInternalException;
 use Ufo\RpcError\WrongWayException;
 use Ufo\RpcObject\RPC\DTO;
-use Ufo\RpcObject\RPC\ResultAsDTO;
 use Ufo\RpcObject\RpcTransport;
 
 use function array_key_exists;
@@ -24,7 +23,6 @@ use function class_exists;
 use function implode;
 use function is_array;
 use function is_null;
-use function is_string;
 use function str_starts_with;
 use function substr;
 
@@ -246,7 +244,10 @@ class OpenRpcAdapter
             }
         }
         if (!$jsonValue && EnumResolver::getEnumFQCN($type)) {
-            $jsonValue = EnumResolver::generateEnumSchema($type);
+            $enumData = EnumResolver::generateEnumSchema($type);
+            $enumName = $enumData[EnumResolver::ENUM][EnumResolver::ENUM_NAME];
+            $this->schemas[$enumName] = $enumData;
+            $jsonValue = [T::REF => '#/components/schemas/' . $enumName];
         } elseif (!$jsonValue && T::isRealClass($type)) {
             $newDtoResponse = new DTO($type);
             new DtoReflector($newDtoResponse, $this->paramConvertor);
@@ -376,7 +377,11 @@ class OpenRpcAdapter
         }
 
         if ($enumFQCN = EnumResolver::getEnumFQCN($param->getRealType())) {
-            $paramSchema = EnumResolver::applyEnumFqcnToJsonSchema($enumFQCN, $paramSchema);
+            $enumData = EnumResolver::generateEnumSchema($enumFQCN);
+            $enumName = $enumData[EnumResolver::ENUM][EnumResolver::ENUM_NAME] ?? throw new \RuntimeException('Undefined enum name');
+            $this->schemas[$enumName] = $enumData;
+            $paramSchema = $this->applyEnumRefToSchema($paramSchema, $enumName, $enumData);
+
         }
 
         $schema[$param->name] = $paramSchema;
@@ -400,6 +405,20 @@ class OpenRpcAdapter
             return $this->schemaFromDto($dto->getFormat());
         }
         return $objSchema;
+    }
+
+    protected function applyEnumRefToSchema(array $paramSchema, string $enumName, array $enumData): array
+    {
+        return T::applyToSchema(
+            $paramSchema,
+            function (array $schema) use ($enumName, $enumData): array
+            {
+                if (($schema[T::TYPE] ?? '') === ($enumData[T::TYPE] ?? null)) {
+                    $schema = [T::REF => '#/components/schemas/' . $enumName];
+                }
+                return $schema;
+            }
+        );
     }
 
 }

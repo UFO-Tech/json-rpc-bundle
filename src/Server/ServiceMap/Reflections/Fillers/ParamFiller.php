@@ -6,6 +6,7 @@ use phpDocumentor\Reflection\DocBlock;
 use ReflectionException;
 use ReflectionMethod;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
+use Ufo\DTO\Helpers\EnumResolver;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\DTO\Helpers\TypeHintResolver as T;
@@ -21,9 +22,9 @@ class ParamFiller extends AbstractServiceFiller
             foreach ($paramsReflection as $paramRef) {
                 $descType = $this->getParamType($methodDoc, $paramRef->getName());
 
-                $type =  (string) $paramRef->getType();
+                $type = (string) $paramRef->getType();
                 $schema = T::typeDescriptionToJsonSchema($descType ?? $type, $service->uses);
-
+                $t = EnumResolver::getEnumFQCN($descType ?? $type);
                 $paramDefinition = ParamDefinition::fromParamReflection(
                     $paramRef,
                     $schema,
