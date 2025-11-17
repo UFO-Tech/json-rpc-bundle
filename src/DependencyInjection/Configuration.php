@@ -73,14 +73,44 @@ class Configuration implements ConfigurationInterface
 
                     ->end()
                 ->end()
-                ->arrayNode(RpcAsyncConfig::NAME)->ignoreExtraKeys(false)
-                    ->addDefaultsIfNotSet()
-                    ->children()
-                        ->scalarNode(RpcAsyncConfig::RPC_ASYNC)
-                            ->defaultNull()
-                        ->end()
-                        ->scalarNode(RpcAsyncConfig::FAILED)
-                            ->defaultNull()
+                ->arrayNode(RpcAsyncConfig::NAME)
+                    ->beforeNormalization()
+                        ->ifString()
+                        ->then(fn($v) => [
+                            RpcAsyncConfig::K_TYPE => RpcAsyncConfig::DEFAULT_TYPE,
+                            RpcAsyncConfig::K_CONFIG => [
+                                'name' => RpcAsyncConfig::RPC_ASYNC,
+                                'dsn' => $v
+                            ]
+                        ])
+                    ->end()
+                    ->beforeNormalization()
+                        ->ifArray()
+                        ->then(function ($v) {
+                            // якщо це асоціативний масив без type → це скалярна форма з config
+                            if (array_is_list($v)) return $v; // це список джерел вже
+
+                            [$name, $dsn] = [array_key_first($v), reset($v)];
+                            return [
+                                [
+                                    RpcAsyncConfig::K_TYPE => RpcAsyncConfig::DEFAULT_TYPE,
+                                    RpcAsyncConfig::K_CONFIG => [
+                                        'name' => $name,
+                                        'dsn' => $dsn
+                                    ]
+                                ]
+                            ];
+                        })
+                    ->end()
+                    ->arrayPrototype()
+                        ->children()
+                            ->scalarNode(RpcAsyncConfig::K_TYPE)
+                                ->defaultValue('default')
+                            ->end()
+                            ->arrayNode(RpcAsyncConfig::K_CONFIG)
+                                ->normalizeKeys(false)
+                                ->variablePrototype()->end()
+                            ->end()
                         ->end()
                     ->end()
                 ->end()

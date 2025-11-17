@@ -1,4 +1,4 @@
-.PHONY: up up-d up-b up-r down composer composer-install composer-update run cache-clear setup
+.PHONY: up up-d up-b up-r down composer composer-install composer-update run cache-clear setup commit-a
 
 setup:
 	@test -f .env || cp .env.dist .env
@@ -43,6 +43,20 @@ composer-update: composer
 
 composer-i: composer-install
 composer-u: composer-update
+
+commit-a:
+	@printf "\033[33mПідтвердити push з amend? (y/N): \033[0m"; \
+	read CONF && [ "$$CONF" = "y" ] || exit 1; \
+	git add .; \
+	git commit --no-edit --amend; \
+	git push --force; \
+	printf "\033[33mTag (enter щоб пропустити): \033[0m"; \
+	read TAG; \
+	[ -z "$$TAG" ] && exit 0; \
+	git tag -d $$TAG 2>/dev/null || true; \
+	git push origin :refs/tags/$$TAG; \
+	git tag $$TAG; \
+	git push origin $$TAG
 
 # Application Specific Commands
 console: setup

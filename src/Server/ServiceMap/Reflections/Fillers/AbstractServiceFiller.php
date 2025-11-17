@@ -2,6 +2,7 @@
 
 namespace Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\Fillers;
 
+use Deprecated;
 use ReflectionMethod;
 use ReflectionNamedType;
 use ReflectionType;
@@ -70,6 +71,9 @@ abstract class AbstractServiceFiller implements IServiceFiller
             $attrInstance = $attr->newInstance();
             if ($attrInstance instanceof CacheRelation && !isset($attrInstance->serviceFQCN)) {
                 $attrInstance = $attrInstance->cloneToClass($service->getProcedureFQCN());
+            }
+            if ($attrInstance instanceof Deprecated) {
+                $service->setDeprecated();
             }
             $service->setAttribute($attrInstance);
         }
