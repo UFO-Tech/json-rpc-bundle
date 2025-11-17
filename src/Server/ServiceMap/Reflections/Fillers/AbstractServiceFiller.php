@@ -9,7 +9,6 @@ use ReflectionUnionType;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 use Ufo\DTO\Helpers\TypeHintResolver;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
-use Ufo\RpcObject\RPC\CacheRelation;
 
 use function call_user_func;
 use function count;
@@ -60,19 +59,4 @@ abstract class AbstractServiceFiller implements IServiceFiller
         }
         return null;
     }
-
-    protected function getAttributes(
-        ReflectionMethod $method,
-        Service $service,
-    ): void
-    {
-        foreach ($method->getAttributes() as $attr) {
-            $attrInstance = $attr->newInstance();
-            if ($attrInstance instanceof CacheRelation && !isset($attrInstance->serviceFQCN)) {
-                $attrInstance = $attrInstance->cloneToClass($service->getProcedureFQCN());
-            }
-            $service->setAttribute($attrInstance);
-        }
-    }
-
 }

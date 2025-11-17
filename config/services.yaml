@@ -1,42 +1,53 @@
 parameters:
-    json_rpc_sdk: []
+  json_rpc_sdk: []
 
 services:
-    # default configuration for services in *this* file
-    _defaults:
-        autowire:      true      # Automatically injects dependencies in your services.
-        autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
-        bind:
-            $serviceHolder: '@Ufo\JsonRpcBundle\Server\ServiceMap\ServiceHolder'
-            $serviceMap: '@Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMap'
+  # default configuration for services in *this* file
+  _defaults:
+    autowire: true      # Automatically injects dependencies in your services.
+    autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+    bind:
+      $serviceHolder: '@Ufo\JsonRpcBundle\Server\ServiceMap\ServiceHolder'
+      $serviceMap: '@Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMap'
 
-    Ufo\JsonRpcBundle\:
-        resource: '../src/'
-        exclude:
-            - '../src/DependencyInjection/'
-            - '../src/UfoJsonRpcBundle.php'
-    
-    Ufo\JsonRpcBundle\ConfigService\RpcMainConfig:
-        $rpcConfigs:  '%ufo_json_rpc%'
-        $sdkConfigs: '%json_rpc_sdk%'
-        $environment: '%kernel.environment%'
-    
-    
-    Ufo\RpcObject\Rules\Validator\RpcValidator:
-        class: Ufo\RpcObject\Rules\Validator\RpcValidator
-    
-    Ufo\RpcObject\Transformer\RpcErrorNormalizer:
-        arguments:
-            $environment: '%kernel.environment%'
-    
-    Ufo\RpcObject\Transformer\RpcResponseContextBuilder:
-        class: Ufo\RpcObject\Transformer\RpcResponseContextBuilder
-    
-    Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity:
-        class: Ufo\JsonRpcBundle\Security\TokenRpcSecurity
-    
-    Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMap:
-        factory: ['@Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMapFactory', 'getServiceMap']
+  Ufo\JsonRpcBundle\:
+    resource: '../src/'
+    exclude:
+      - '../src/DependencyInjection/'
+      - '../src/UfoJsonRpcBundle.php'
 
-    Ufo\JsonRpcBundle\Locker\UfoLockerStore:
-        class: Ufo\JsonRpcBundle\Locker\UfoLockerStore
+  Ufo\JsonRpcBundle\ConfigService\RpcMainConfig:
+    $rpcConfigs: '%ufo_json_rpc%'
+    $sdkConfigs: '%json_rpc_sdk%'
+    $environment: '%kernel.environment%'
+
+  Ufo\RpcObject\Rules\Validator\RpcValidator:
+    class: Ufo\RpcObject\Rules\Validator\RpcValidator
+
+  Ufo\RpcObject\Transformer\RpcErrorNormalizer:
+    arguments:
+      $environment: '%kernel.environment%'
+
+  Ufo\RpcObject\Transformer\RpcResponseContextBuilder:
+    class: Ufo\RpcObject\Transformer\RpcResponseContextBuilder
+
+  Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity:
+    class: Ufo\JsonRpcBundle\Security\TokenRpcSecurity
+
+  Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMap:
+    factory: ['@Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMapFactory', 'getServiceMap']
+
+  Ufo\JsonRpcBundle\Locker\UfoLockerStore:
+    class: Ufo\JsonRpcBundle\Locker\UfoLockerStore
+
+  rpc.cache.pool:
+    class: Symfony\Component\Cache\Adapter\FilesystemAdapter
+    arguments:
+      $namespace: '%ufo_json_rpc.cache.prefix%'
+      $defaultLifetime: '%ufo_json_rpc.cache.ttl%'
+      $directory: '%kernel.cache_dir%'
+
+  Ufo\JsonRpcBundle\Server\RpcCache\RpcCacheService:
+    arguments:
+      $cache: '@rpc.cache.pool'
+

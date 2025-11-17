@@ -15,7 +15,6 @@ use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMap;
 use Ufo\RpcError\RpcInternalException;
 use Ufo\RpcError\WrongWayException;
 use Ufo\RpcObject\RPC\DTO;
-use Ufo\RpcObject\RPC\ResultAsDTO;
 use Ufo\RpcObject\RpcTransport;
 
 use function array_key_exists;
@@ -24,7 +23,6 @@ use function class_exists;
 use function implode;
 use function is_array;
 use function is_null;
-use function is_string;
 use function str_starts_with;
 use function substr;
 
@@ -93,7 +91,8 @@ class OpenRpcAdapter
     {
         $method = $this->rpcSpecBuilder->buildMethod(
             $service->getName(),
-            $service->getDescription()
+            $service->getDescription(),
+            $service->isDeprecated()
         );
         array_map(
             fn(ParamDefinition $param) => $this->buildParam($method, $param, $service),

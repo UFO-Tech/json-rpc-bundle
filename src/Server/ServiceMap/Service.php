@@ -68,6 +68,8 @@ class Service implements IArrayConvertible, IArrayConstructible
 
     protected string $methodName;
 
+    protected bool $deprecated = false;
+
     public function __construct(
         protected string $name,
         protected string $procedureFQCN,
@@ -405,5 +407,16 @@ class Service implements IArrayConvertible, IArrayConstructible
          */
         $self = ServiceTransformer::fromArray(static::class, $data, $renameKey);
         return $self;
+    }
+
+    public function isDeprecated(): bool
+    {
+        return $this->deprecated;
+    }
+
+    public function setDeprecated(): static
+    {
+        $this->deprecated = true;
+        return $this;
     }
 }

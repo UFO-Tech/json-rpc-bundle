@@ -20,7 +20,7 @@ class CacheRelationsEventListener
     {
         $this->cacheService->getCacheRelationDefinition($event->service);
 
-        $this->cacheService->invalidateRelationsCache(
+        $this->cacheService->addRelationsRequestToCache(
             $event->rpcRequest->getParams(),
             $event->rpcRequest->getId() ?? 'not_id'
         );

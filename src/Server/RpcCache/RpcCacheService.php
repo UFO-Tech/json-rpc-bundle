@@ -2,6 +2,7 @@
 
 namespace Ufo\JsonRpcBundle\Server\RpcCache;
 
+use Deprecated;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
@@ -23,6 +24,7 @@ use function array_intersect_key;
 use function array_keys;
 use function array_map;
 use function in_array;
+use function is_int;
 use function is_null;
 use function sprintf;
 
@@ -32,13 +34,30 @@ class RpcCacheService
 
     protected ?RelationCacheDefinitionDTO $definitionDTO = null;
 
+    /**
+     * @var UfoReflectionProcedure[]
+     */
+    protected array $reflections = [];
+
+    protected ServiceMap $localServiceMap;
+    protected RpcServer $localRpcServer;
+
     public function __construct(
         protected CacheItemPoolInterface $cache,
         protected RpcMainConfig $rpcConfig,
         protected ServiceLocator $serviceLocator,
         protected ChainServiceFiller $chainServiceFiller,
         protected RpcEventFactory $eventFactory,
-    ) {}
+    )
+    {
+        $this->localServiceMap = new ServiceMap('local', $this->rpcConfig);
+        $this->localRpcServer = new RpcServer(
+            $this->localServiceMap,
+            $this->eventFactory,
+            $this
+        );
+
+    }
 
     public function getCacheResponse(RpcRequest $singleRequest): RpcResponse
     {
@@ -74,7 +93,7 @@ class RpcCacheService
 
     public function hashArrayData(array $data): string
     {
-        ksort($data);
+        $this->sortRecursive($data);
         $paramString = json_encode($data);
 
         return hash('md5', $paramString);
@@ -116,7 +135,7 @@ class RpcCacheService
         return $dto;
     }
 
-    public function invalidateRelationsCache(array $params, string $id): void
+    public function addRelationsRequestToCache(array $params, string $id, bool $deleteCache = true): void
     {
         if (!$this->definitionDTO) return;
         foreach ($this->definitionDTO->getServices() as $i => $relatedService) {
@@ -131,32 +150,78 @@ class RpcCacheService
                 );
                 $this->definitionDTO->checkWarmUpsMethod($relatedService, $request);
 
-                $cacheKey = $this->getCacheKey($request);
-                $this->cache->delete($cacheKey);
+                if ($deleteCache) {
+                    $cacheKey = $this->getCacheKey($request);
+                    $this->cache->delete($cacheKey);
+                }
             } catch (\Throwable) {}
         }
+    }
+
+    /**
+     * @deprecated Use addRelationsRequestToCache instead
+     */
+    public function invalidateRelationsCache(array $params, string $id): void
+    {
+        $this->addRelationsRequestToCache($params, $id);
     }
 
     public function warmupCache(): void
     {
         if (!$this->definitionDTO) return;
-        $serviceMap = new ServiceMap('local', $this->rpcConfig);
         foreach ($this->definitionDTO->getServices() as $service) {
             try {
-                $serviceMap->addService($service);
+                $this->localServiceMap->addService($service);
             } catch (\Throwable) {}
         }
-
-        $server = new RpcServer(
-            $serviceMap,
-            $this->eventFactory,
-            $this
-        );
 
         foreach ($this->definitionDTO->getWarmupRequests() as $warmupRequest) {
             try {
-                $server->handle($warmupRequest);
+                $this->localRpcServer->handle($warmupRequest);
             } catch (\Throwable) {}
         }
+    }
+
+    public function sortRecursive(array &$arr): void {
+        if (array_all($arr, fn ($item, $key) => !is_int($key))) {
+            ksort($arr);
+        } else {
+            sort($arr);
+        }
+
+        foreach ($arr as &$value) {
+            if (is_array($value)) {
+                $this->sortRecursive($value);
+            }
+        }
+    }
+
+    public function warmCache(string $class, array $methods, array $params, bool $deleteCache = true): RelationCacheDefinitionDTO
+    {
+        $dto = new RelationCacheDefinitionDTO();
+        try {
+            if (!($reflection = $this->reflections[$class] ?? false)) {
+                $procedure = $this->serviceLocator->get($class);
+                $this->reflections[$class] = $procedure;
+
+                $reflection = new UfoReflectionProcedure(
+                    $procedure,
+                    $this->rpcConfig->docsConfig,
+                    $this->chainServiceFiller
+                );
+            }
+            $dto->addServices($reflection->getMethods($methods));
+            array_map(fn(Service $service) => $dto->addWarmUpsMethod($service->getName()), $reflection->getMethods($methods));
+        } catch (\Throwable) {}
+        $this->definitionDTO = $dto;
+
+        $this->addRelationsRequestToCache(
+            $params,
+            'not_id',
+            $deleteCache
+        );
+        $this->warmupCache();
+
+        return $dto;
     }
 }

@@ -5,9 +5,11 @@ namespace Ufo\JsonRpcBundle\DependencyInjection;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 use Ufo\JsonRpcBundle\ConfigService\RpcAsyncConfig;
+use Ufo\JsonRpcBundle\ConfigService\RpcCacheConfig;
 use Ufo\JsonRpcBundle\ConfigService\RpcDocsConfig;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\ConfigService\RpcSecurityConfig;
+use Ufo\RpcObject\RPC\Cache;
 
 /**
  * This is the class that validates and merges configuration from your app/config files.
@@ -32,6 +34,16 @@ class Configuration implements ConfigurationInterface
 
         $rootNode
             ->children()
+                ->arrayNode(RpcCacheConfig::NAME)->ignoreExtraKeys(false)
+                    ->children()
+                        ->integerNode(RpcCacheConfig::TTL)
+                            ->defaultValue(Cache::T_MINUTE)
+                        ->end()
+                        ->scalarNode(RpcCacheConfig::PREFIX)
+                            ->defaultValue(RpcCacheConfig::P_PREFIX)
+                        ->end()
+                    ->end()
+                ->end()
                 ->arrayNode(RpcSecurityConfig::NAME)->ignoreExtraKeys(false)
                     ->children()
                         ->booleanNode(RpcSecurityConfig::PROTECTED_API)
@@ -73,14 +85,44 @@ class Configuration implements ConfigurationInterface
 
                     ->end()
                 ->end()
-                ->arrayNode(RpcAsyncConfig::NAME)->ignoreExtraKeys(false)
-                    ->addDefaultsIfNotSet()
-                    ->children()
-                        ->scalarNode(RpcAsyncConfig::RPC_ASYNC)
-                            ->defaultNull()
-                        ->end()
-                        ->scalarNode(RpcAsyncConfig::FAILED)
-                            ->defaultNull()
+                ->arrayNode(RpcAsyncConfig::NAME)
+                    ->beforeNormalization()
+                        ->ifString()
+                        ->then(fn($v) => [
+                            RpcAsyncConfig::K_TYPE => RpcAsyncConfig::DEFAULT_TYPE,
+                            RpcAsyncConfig::K_CONFIG => [
+                                'name' => RpcAsyncConfig::RPC_ASYNC,
+                                'dsn' => $v
+                            ]
+                        ])
+                    ->end()
+                    ->beforeNormalization()
+                        ->ifArray()
+                        ->then(function ($v) {
+                            // якщо це асоціативний масив без type → це скалярна форма з config
+                            if (array_is_list($v)) return $v; // це список джерел вже
+
+                            [$name, $dsn] = [array_key_first($v), reset($v)];
+                            return [
+                                [
+                                    RpcAsyncConfig::K_TYPE => RpcAsyncConfig::DEFAULT_TYPE,
+                                    RpcAsyncConfig::K_CONFIG => [
+                                        'name' => $name,
+                                        'dsn' => $dsn
+                                    ]
+                                ]
+                            ];
+                        })
+                    ->end()
+                    ->arrayPrototype()
+                        ->children()
+                            ->scalarNode(RpcAsyncConfig::K_TYPE)
+                                ->defaultValue('default')
+                            ->end()
+                            ->arrayNode(RpcAsyncConfig::K_CONFIG)
+                                ->normalizeKeys(false)
+                                ->variablePrototype()->end()
+                            ->end()
                         ->end()
                     ->end()
                 ->end()

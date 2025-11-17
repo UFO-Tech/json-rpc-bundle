@@ -29,6 +29,7 @@ class UfoRpcServer extends Server
             'environment' => $this->rpcEnv,
             'transport' => $this->transports,
             'documentation' =>  [
+                'postman' => $this->url . '/postman',
                 'json-rpc' => Package::protocolSpecification(),
                 Package::bundleName() => Package::bundleDocumentation(),
             ],

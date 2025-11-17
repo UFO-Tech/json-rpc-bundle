@@ -75,9 +75,14 @@ class OpenRpcSpecBuilder
     public function buildMethod(
         string $name,
         string $summary,
+        bool $deprecated = false
     ): Method {
         $method = new Method();
         $method->setName($name);
+        if ($deprecated) {
+            $method->setDeprecated($deprecated);
+        }
+        $method->setDeprecated($deprecated);
         $method->setSummary($summary);
         $method->setParams([]);
 

@@ -13,6 +13,7 @@ use Ufo\RpcObject\RpcRequest;
 
 use function array_filter;
 use function current;
+use function is_string;
 
 class RpcEventFactory
 {
@@ -25,10 +26,12 @@ class RpcEventFactory
         protected EventDispatcherInterface $eventDispatcher
     ) {}
 
-    public function fire(string $eventName, mixed ...$data): BaseRpcEvent
+    public function fire(string|BaseRpcEvent $event, mixed ...$data): BaseRpcEvent
     {
-        $event = RpcEvent::create($eventName, $data);
-        $this->processEvent($event, $eventName);
+        if (is_string($event)) {
+            $event = RpcEvent::create($event, $data);
+        }
+        $this->processEvent($event, $event->getEventName());
         return $event;
     }
 

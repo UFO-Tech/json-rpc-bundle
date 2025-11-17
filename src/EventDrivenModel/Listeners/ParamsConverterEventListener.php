@@ -106,7 +106,7 @@ class ParamsConverterEventListener
             if ($paramAttribute = $paramDefinition->getAttributesCollection()->getAttribute(Param::class)) {
 
                 $process = function ($value) use ($paramAttribute, $paramDefinition, $service) {
-                    if (!is_scalar($value)) {
+                    if (!is_scalar($value) && !is_null($value)) {
                         return $value;
                     }
 

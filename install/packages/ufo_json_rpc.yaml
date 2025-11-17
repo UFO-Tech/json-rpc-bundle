@@ -1,23 +1,37 @@
 # config/packages/ufo_json_rpc.yaml
 ufo_json_rpc:
-    security:
-        protected_api: true               # Protection API requests
-        protected_doc: false              # Protection API documentation
+  cache:
+    ttl: 60
+    prefix: 'rpc_cache'
 
-        token_name: 'Ufo-RPC-Token'      # Name of the key in the header
-        clients_tokens:
-            - '%env(resolve:UFO_API_TOKEN)%'      # Token example from .env.local
-    
-    # Configuration for API documentation
-    docs:
-        project_name: 'My Project'
-        project_description: ''
-        project_version: null
-        # Optional response details
-        async_dsn_info:  false          # Provide information about API that work asynchronously
-            
-        validations:
-            symfony_asserts: false      # Indicates if an array of Symfony validation constraints is used
-    
-    async:
-#        rpc_async: '%env(resolve:RPC_TRANSPORT_DSN)%'
+  security:
+    protected_api: true               # Protection API requests
+    protected_doc: false              # Protection API documentation
+
+    token_name: 'Ufo-RPC-Token'      # Name of the key in the header
+    clients_tokens:
+      - '%env(resolve:UFO_API_TOKEN)%'      # Token example from .env.local
+
+  # Configuration for API documentation
+  docs:
+    project_name: 'My Project'
+    project_description: ''
+    project_version: null
+    # Optional response details
+    async_dsn_info: false          # Provide information about API that work asynchronously
+
+    validations:
+      symfony_asserts: false      # Indicates if an array of Symfony validation constraints is used
+
+  async:
+    - #      - type: 'amqp'
+      #        config:
+      #          name: 'rpc_async'
+      #          dsn: '%env(resolve:RPC_TRANSPORT_DSN)%'
+
+      #      - type: 'mercure'
+      #        config:
+      #          name: 'rpc_socket'
+      #          dsn: '%env(resolve:MERCURE_PUBLIC_URL)%'
+      #          topics_prefix: 'rpc.event.'
+

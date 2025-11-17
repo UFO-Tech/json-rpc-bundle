@@ -42,9 +42,19 @@ class ServiceMap implements IServiceHolder
         $transport['sync'] += [
             'method' => self::POST,
         ];
-        if ($this->mainConfig->docsConfig->asyncDsnInfo && !is_null($this->mainConfig->asyncConfig->rpcAsync)) {
-            $async = RpcTransport::fromDsn($this->mainConfig->asyncConfig->rpcAsync);
-            $transport['async'] = $async->toArray();
+        if ($this->mainConfig->docsConfig->asyncDsnInfo && !empty($this->mainConfig->asyncConfig->rpcAsync)) {
+            foreach ($this->mainConfig->asyncConfig->rpcAsync as $asyncInfo) {
+                $config = $asyncInfo->config;
+                if ($dsn = $asyncInfo->config['dsn'] ?? false) {
+                    unset($config['dsn']);
+                    $dsnConfig = RpcTransport::fromDsn($dsn)->toArray();
+                    $config = [
+                        ...$dsnConfig,
+                        ...$config,
+                    ];
+                }
+                $transport[$asyncInfo->name] = $config;
+            }
         }
 
         return $transport;

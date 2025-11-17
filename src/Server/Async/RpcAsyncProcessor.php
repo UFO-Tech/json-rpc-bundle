@@ -4,11 +4,15 @@ namespace Ufo\JsonRpcBundle\Server\Async;
 
 use Closure;
 use DateTime;
+use Symfony\Component\Console\Output\Output;
+use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Serializer\SerializerInterface;
 use Throwable;
 use Ufo\JsonRpcBundle\CliCommand\UfoRpcProcessCommand;
+use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcEvent;
 use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
 use Ufo\JsonRpcBundle\Security\TokenHolders\RpcAsyncTokenHolder;
 use Ufo\JsonRpcBundle\Server\RpcServer;
@@ -65,7 +69,8 @@ class RpcAsyncProcessor
         ?array $env = null,
         mixed $input = null,
         ?float $timeout = 3600
-    ): Process {
+    ): Process
+    {
         $console = ($_SERVER['SCRIPT_NAME']) === static::CONSOLE ? static::CONSOLE : '../'.static::CONSOLE;
         $start = [
             $console,
@@ -145,25 +150,29 @@ class RpcAsyncProcessor
 
     public function __invoke(RpcAsyncRequest $message): void
     {
+        $this->rpcSecurity->setTokenHolder(new RpcAsyncTokenHolder($message));
+        $this->rpcSecurity->isValidApiRequest();
+        $this->processAsync($message->getRpcRequest());
+    }
+
+    public function processAsync(RpcRequest $request): void
+    {
         echo PHP_EOL;
         echo (new DateTime())->format('Y-m-d H:i:s') . ':';
         echo PHP_EOL;
         echo '>>> ' . $this->serializer->serialize(
-                $message->getRpcRequest()->toArray(),
+                $request->toArray(),
                 'json',
                 ['json_encode_options' => JSON_UNESCAPED_UNICODE]
             );
         echo PHP_EOL;
 
-        $this->rpcSecurity->setTokenHolder(new RpcAsyncTokenHolder($message));
-        $this->rpcSecurity->isValidApiRequest();
-
-        $response = $this->rpcServer->handle($message->getRpcRequest());
+        $response = $this->rpcServer->handle($request);
         try {
-            if ($message->getRpcRequest()->isAsync()) {
-                $this->callbackProcessor->process($message->getRpcRequest());
+            if ($request->isAsync()) {
+                $this->callbackProcessor->process($request);
             }
-            $group = $message->getRpcRequest()->hasError() ? RpcResponse::IS_ERROR : RpcResponse::IS_RESULT;
+            $group = $request->hasError() ? RpcResponse::IS_ERROR : RpcResponse::IS_RESULT;
         } catch (Throwable $e) {
             $group = RpcResponse::IS_ERROR;
         }
