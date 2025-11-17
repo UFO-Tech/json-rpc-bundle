@@ -65,7 +65,8 @@ class RpcAsyncProcessor
         ?array $env = null,
         mixed $input = null,
         ?float $timeout = 3600
-    ): Process {
+    ): Process
+    {
         $console = ($_SERVER['SCRIPT_NAME']) === static::CONSOLE ? static::CONSOLE : '../'.static::CONSOLE;
         $start = [
             $console,
