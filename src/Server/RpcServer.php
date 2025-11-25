@@ -74,10 +74,11 @@ class RpcServer
      * @return RpcResponse
      * @throws RpcMethodNotFoundExceptionRpc
      */
-    public function handle(RpcRequest $singleRequest): RpcResponse
+    public function handle(RpcRequest $singleRequest, bool $ignoreCache = false): RpcResponse
     {
         $this->newRequest($singleRequest);
         try {
+            if ($ignoreCache) throw new WrongWayException();
             $response = $this->cache->getCacheResponse($singleRequest);
         } catch (WrongWayException) {
             $response = $this->handleRpcRequest($singleRequest);

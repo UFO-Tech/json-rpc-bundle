@@ -177,7 +177,7 @@ class RpcCacheService
 
         foreach ($this->definitionDTO->getWarmupRequests() as $warmupRequest) {
             try {
-                $this->localRpcServer->handle($warmupRequest);
+                $this->localRpcServer->handle($warmupRequest, ignoreCache: true);
             } catch (\Throwable) {}
         }
     }
@@ -202,9 +202,7 @@ class RpcCacheService
         try {
             if (!($reflection = $this->reflections[$class] ?? false)) {
                 $procedure = $this->serviceLocator->get($class);
-                $this->reflections[$class] = $procedure;
-
-                $reflection = new UfoReflectionProcedure(
+                $this->reflections[$class] = new UfoReflectionProcedure(
                     $procedure,
                     $this->rpcConfig->docsConfig,
                     $this->chainServiceFiller
