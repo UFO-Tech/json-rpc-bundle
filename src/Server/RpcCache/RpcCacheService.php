@@ -202,11 +202,12 @@ class RpcCacheService
         try {
             if (!($reflection = $this->reflections[$class] ?? false)) {
                 $procedure = $this->serviceLocator->get($class);
-                $this->reflections[$class] = new UfoReflectionProcedure(
+                $reflection = new UfoReflectionProcedure(
                     $procedure,
                     $this->rpcConfig->docsConfig,
                     $this->chainServiceFiller
                 );
+                $this->reflections[$class] = $reflection;
             }
             $dto->addServices($reflection->getMethods($methods));
             array_map(fn(Service $service) => $dto->addWarmUpsMethod($service->getName()), $reflection->getMethods($methods));
