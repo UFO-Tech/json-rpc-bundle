@@ -18,6 +18,7 @@ use Ufo\RpcObject\RPC\CacheRelation;
 use Ufo\RpcObject\RpcCachedResponse;
 use Ufo\RpcObject\RpcRequest;
 use Ufo\RpcObject\RpcResponse;
+use Ufo\RpcObject\SpecialRpcParamsEnum;
 
 use function array_flip;
 use function array_intersect_key;
@@ -146,7 +147,10 @@ class RpcCacheService
                 $request = new RpcRequest(
                     static::RELATED_CACHE . '.' . $id . '.' . $i,
                     $relatedService->getName(),
-                    $refreshParams
+                    [
+                        ...$refreshParams,
+                        ...[SpecialRpcParamsEnum::PREFIX => [SpecialRpcParamsEnum::IGNORE_CACHE->value => true]]
+                    ]
                 );
                 $this->definitionDTO->checkWarmUpsMethod($relatedService, $request);
 
@@ -177,7 +181,7 @@ class RpcCacheService
 
         foreach ($this->definitionDTO->getWarmupRequests() as $warmupRequest) {
             try {
-                $this->localRpcServer->handle($warmupRequest, ignoreCache: true);
+                $this->localRpcServer->handle($warmupRequest);
             } catch (\Throwable) {}
         }
     }
