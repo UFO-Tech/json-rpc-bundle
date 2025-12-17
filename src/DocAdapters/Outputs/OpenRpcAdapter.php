@@ -2,6 +2,7 @@
 namespace Ufo\JsonRpcBundle\DocAdapters\Outputs;
 
 use PSX\OpenRPC\Method;
+use Throwable;
 use Ufo\DTO\Helpers\EnumResolver;
 use Ufo\DTO\Helpers\TypeHintResolver as T;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
@@ -175,7 +176,7 @@ class OpenRpcAdapter
                     ];
                 }, $format['$collections'] ?? []
             );
-        } catch (\Throwable) {}
+        } catch (Throwable) {}
         $uses = $format['$uses'] ?? [];
         unset($format['$dto']);
         unset($format['$collections']);
@@ -337,8 +338,7 @@ class OpenRpcAdapter
             )
         ) {
             $paramSchema = $this->schemaFromDto($dto->getFormat());
-        }
-        elseif ($param->getRealType() === T::ARRAY->value) {
+        } elseif ($param->getRealType() === T::ARRAY->value) {
             $newSchema = T::applyToSchema($paramSchema, fn(array $schema) => $this->checkAndGetSchemaFromDesc(
                 $schema,
                 $param->getAttributesCollection()->getAttribute(DTO::class)

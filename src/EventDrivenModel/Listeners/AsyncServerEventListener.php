@@ -58,7 +58,7 @@ class AsyncServerEventListener
         $event->stopPropagation();
     }
 
-    protected function responseFromError(\Throwable $error, RpcAsyncOutputEvent $event): RpcResponse
+    protected function responseFromError(Throwable $error, RpcAsyncOutputEvent $event): RpcResponse
     {
         return new RpcResponse(
             id: $event->rpcRequest->getId() ?? 'not_processed',

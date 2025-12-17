@@ -14,6 +14,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\Routing\RouterInterface;
+use Throwable;
 use Ufo\JsonRpcBundle\CliCommand\UfoRpcProcessCommand;
 use Ufo\JsonRpcBundle\Controller\ApiController;
 use Ufo\JsonRpcBundle\EventDrivenModel\RpcEventFactory;
@@ -65,7 +66,7 @@ class SymfonyErrorListener
 
         $result = $this->createResponse(static::INVALID_JSON_FORMAT, $exception);
 
-        $this->sendResponse($event, $this->requestHandler->responseToArray($result));;
+        $this->sendResponse($event, $this->requestHandler->responseToArray($result));
     }
 
     public function cliJsonParseError(ConsoleErrorEvent $event): void
@@ -109,7 +110,7 @@ class SymfonyErrorListener
                 $resp = $rpcObject->getResponseObject() ?? $this->createResponse($rpcObject->getId(), $exception);
                 $result[] = $this->requestHandler->responseToArray($resp);
             }
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $rpcObject = $this->requestCarrier->getRequestObject();
             $resp = $rpcObject->getResponseObject() ?? $this->createResponse($rpcObject->getId(), $exception);
             $result = $this->requestHandler->responseToArray($resp);
@@ -132,7 +133,7 @@ class SymfonyErrorListener
             foreach ($this->requestCarrier->getBatchRequestObject()->getCollection() as $rpcObject) {
                 $result[] = $this->requestHandler->responseToArray($rpcObject->getResponseObject());
             }
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $result = $this->requestHandler->responseToArray($this->requestCarrier->getRequestObject()->getResponseObject());
         }
 
@@ -141,7 +142,7 @@ class SymfonyErrorListener
     }
 
 
-    protected function getHttpCodeFromException(\Throwable $e): int
+    protected function getHttpCodeFromException(Throwable $e): int
     {
         return match ($e::class) {
             RpcJsonParseException::class => Response::HTTP_INTERNAL_SERVER_ERROR,
@@ -165,7 +166,7 @@ class SymfonyErrorListener
         $event->stopPropagation();
     }
 
-    protected function createResponse(string|int $id, \Throwable $e, array $data = []): RpcResponse
+    protected function createResponse(string|int $id, Throwable $e, array $data = []): RpcResponse
     {
         $exceptionToArray = new ExceptionToArrayTransformer($e, $this->environment);
 

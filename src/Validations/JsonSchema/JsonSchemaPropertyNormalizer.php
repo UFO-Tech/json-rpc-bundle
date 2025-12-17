@@ -2,6 +2,7 @@
 
 namespace Ufo\JsonRpcBundle\Validations\JsonSchema;
 
+use ArrayObject;
 use InvalidArgumentException;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
@@ -29,7 +30,7 @@ class JsonSchemaPropertyNormalizer implements NormalizerInterface
      * @param array $context
      * @return array
      */
-    public function normalize(mixed $data, ?string $format = null, array $context = []): array|string|int|float|bool|\ArrayObject|null
+    public function normalize(mixed $data, ?string $format = null, array $context = []): array|string|int|float|bool|ArrayObject|null
     {
         $this->schema = [];
         $type = $context['realType'] ?? $context['type'] ?? '';

@@ -3,6 +3,7 @@
 namespace Ufo\JsonRpcBundle\Validations\JsonSchema;
 
 
+use ArrayObject;
 use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
 use Ufo\DTO\Helpers\EnumResolver;
 use Ufo\JsonRpcBundle\ParamConvertors\ChainParamConvertor;
@@ -37,7 +38,7 @@ class JsonSchemaNormalizer implements NormalizerInterface
      * @param array $context
      * @return array
      */
-    public function normalize(mixed $data, ?string $format = null, array $context = []): array|string|int|float|bool|\ArrayObject|null
+    public function normalize(mixed $data, ?string $format = null, array $context = []): array|string|int|float|bool|ArrayObject|null
     {
         /**
          * @var ?Service $service

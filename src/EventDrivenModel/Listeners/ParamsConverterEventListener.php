@@ -3,7 +3,9 @@
 namespace Ufo\JsonRpcBundle\EventDrivenModel\Listeners;
 
 
+use ReflectionClass;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
+use Throwable;
 use Ufo\DTO\DTOTransformer;
 use Ufo\DTO\Exceptions\BadParamException;
 use Ufo\DTO\Helpers\EnumResolver;
@@ -14,7 +16,9 @@ use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcPostExecuteEvent;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcPreExecuteEvent;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcPreResponseEvent;
 use Ufo\JsonRpcBundle\ParamConvertors\ChainParamConvertor;
+use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\DtoReflector;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
+use Ufo\RpcObject\RPC\DTO;
 use Ufo\RpcObject\RPC\Param;
 use Ufo\RpcObject\RpcResponse;
 
@@ -23,6 +27,8 @@ use function class_exists;
 use function count;
 use function interface_exists;
 use function is_array;
+use function is_object;
+use function str_starts_with;
 
 #[AsEventListener(RpcEvent::PRE_EXECUTE, method: 'arrayToDTOTransform', priority: 1000)]
 #[AsEventListener(RpcEvent::PRE_RESPONSE, method: 'objectToScalar', priority: 1000)]
@@ -37,12 +43,21 @@ class ParamsConverterEventListener
     {
         $result = $event->rpcRequest->getResponseObject()->getResult(true);
         $service = $event->service;
-        if (!$result || !$service || !$responseInfo = $service->getResponseInfo()) return;
+        if (!$result || !$service || !is_object($result)) return;
+        if (!$responseInfo = $service->getResponseInfo()) {
+            $responseInfo = new DTO($result::class);
+            new DtoReflector($responseInfo, $this->paramConvertor);
+        }
 
         $replacementParams = [];
         foreach ($responseInfo->getFormat() as $paramName => $type) {
-            if ($paramName === '$dto') continue;
-            if (!$realFormatFQCN = $responseInfo->getRealFormat($paramName)) continue;
+            if (str_starts_with($paramName, '$')) continue;
+            try {
+                if (!$realFormatFQCN = $responseInfo->getRealFormat($paramName)) continue;
+
+            } catch (\Throwable $e) {
+                continue;
+            }
             try {
                 $replacementParams[$paramName] = $this->paramConvertor->toScalar(
                     $result->{$paramName}, [TypeHintResolver::CLASS_FQCN => $realFormatFQCN]
@@ -84,11 +99,11 @@ class ParamsConverterEventListener
 
                             try {
                                 $result[$key] = DTOTransformer::fromArray($dtoClass, $item);
-                            } catch (\Throwable) {
+                            } catch (Throwable) {
                                 $result[$key] = $item;
                             }
                         }
-                    } catch (\Throwable $exception) {
+                    } catch (Throwable $exception) {
                         continue;
                     }
 

@@ -4,6 +4,7 @@ namespace Ufo\JsonRpcBundle\EventDrivenModel;
 
 use Symfony\Component\HttpClient\Exception\EventSourceException;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
+use Throwable;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\BaseRpcEvent;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcAsyncRequestEvent;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcErrorEvent;
@@ -65,7 +66,7 @@ class RpcEventFactory
         return $event;
     }
 
-    public function fireError(RpcRequest $request, \Throwable $throwable): RpcErrorEvent
+    public function fireError(RpcRequest $request, Throwable $throwable): RpcErrorEvent
     {
         $event = new RpcErrorEvent($request, $throwable);
         $this->processEvent($event, $event->getEventName());

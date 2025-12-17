@@ -4,6 +4,7 @@ namespace Ufo\JsonRpcBundle\ParamConvertors;
 
 use BackedEnum;
 use RuntimeException;
+use Throwable;
 use Ufo\DTO\Helpers\TypeHintResolver;
 
 class BackedEnumConvertor implements IParamConvertor
@@ -36,7 +37,7 @@ class BackedEnumConvertor implements IParamConvertor
         if (!$enum && method_exists($fqcn, 'tryFromValue')) {
             try {
                 $enum = $fqcn::tryFromValue($value);
-            } catch (\Throwable) {}
+            } catch (Throwable) {}
         }
 
         if (!$enum) {

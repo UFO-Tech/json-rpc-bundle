@@ -15,6 +15,7 @@ use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\Event\TerminateEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\Routing\RouterInterface;
+use Throwable;
 use Ufo\JsonRpcBundle\CliCommand\UfoRpcProcessCommand;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\Controller\ApiController;
@@ -157,7 +158,7 @@ class SymfonyFlowListener
             );
             $event->stopPropagation();
 
-        } catch (\Throwable $e) {}
+        } catch (Throwable $e) {}
     }
 
 }

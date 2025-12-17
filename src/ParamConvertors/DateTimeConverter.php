@@ -5,15 +5,19 @@
 
 namespace Ufo\JsonRpcBundle\ParamConvertors;
 
+use DateTime;
+use DateTimeImmutable;
+use DateTimeInterface;
+use Throwable;
 use Ufo\DTO\Helpers\TypeHintResolver;
 use function in_array;
 
 class DateTimeConverter implements IParamConvertor
 {
     protected const array SUPPORTS_MAP = [
-        \DateTime::class,
-        \DateTimeImmutable::class,
-        \DateTimeInterface::class,
+        DateTime::class,
+        DateTimeImmutable::class,
+        DateTimeInterface::class,
     ];
 
     /**
@@ -26,7 +30,7 @@ class DateTimeConverter implements IParamConvertor
     public function toScalar(object $object, array $context = [], ?callable $callback = null): string|int|float|null
     {
         /**
-         * @var \DateTimeInterface $object
+         * @var DateTimeInterface $object
          */
         $format = $context['format'] ?? 'Y-m-d H:i:s';
         $value = $object->format($format);
@@ -42,11 +46,11 @@ class DateTimeConverter implements IParamConvertor
         $classFQCN = $context[TypeHintResolver::CLASS_FQCN] ?? null;
         try {
             $object = new $classFQCN($value);
-        } catch (\Throwable) {
+        } catch (Throwable) {
             try {
-                $object = new \DateTime($value ?? 'now');
-            } catch (\Throwable) {
-                $object = new \DateTime();
+                $object = new DateTime($value ?? 'now');
+            } catch (Throwable) {
+                $object = new DateTime();
             }
         }
 

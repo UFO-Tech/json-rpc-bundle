@@ -8,6 +8,7 @@ use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Contracts\Cache\ItemInterface;
+use Throwable;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\Controller\ApiController;
@@ -91,7 +92,7 @@ class ServiceMapFactory
                     }
                     $item->set($states);
                     return $states;
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     return [];
                 }
             });

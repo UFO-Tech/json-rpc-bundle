@@ -2,6 +2,8 @@
 
 namespace Ufo\JsonRpcBundle\EventDrivenModel\Events;
 
+use InvalidArgumentException;
+use ReflectionClass;
 use ReflectionException;
 
 class RpcEvent extends BaseRpcEvent
@@ -26,9 +28,9 @@ class RpcEvent extends BaseRpcEvent
     {
         try {
             $eventClass = static::getEventFQSN($eventName);
-            $reflectionClass = new \ReflectionClass($eventClass);
+            $reflectionClass = new ReflectionClass($eventClass);
             $event = $reflectionClass->newInstanceArgs($data);
-        } catch (\InvalidArgumentException) {
+        } catch (InvalidArgumentException) {
             $event = new static($data);
         }
 
@@ -51,7 +53,7 @@ class RpcEvent extends BaseRpcEvent
             static::PRE_RESPONSE => RpcPreResponseEvent::class,
             static::POST_RESPONSE => RpcPostResponseEvent::class,
             static::ERROR => RpcErrorEvent::class,
-            default => throw new \InvalidArgumentException()
+            default => throw new InvalidArgumentException()
         };
     }
 }

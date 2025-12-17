@@ -15,16 +15,17 @@ use Ufo\DTO\Helpers\TypeHintResolver;
 use Ufo\RpcObject\RPC\AssertionsCollection;
 use Ufo\RpcObject\RPC\DTO;
 use Ufo\RpcObject\RPC\Info;
-use Ufo\RpcObject\RPC\ResultAsDTO;
 use Ufo\DTO\JsonSerializableTrait;
 
 use function array_key_exists;
 use function array_map;
+use function class_exists;
 use function count;
 use function end;
 use function explode;
 use function implode;
 use function is_array;
+use function is_object;
 use function json_encode;
 
 class Service implements IArrayConvertible, IArrayConstructible
@@ -38,10 +39,10 @@ class Service implements IArrayConvertible, IArrayConstructible
     protected string $returnDescription = '';
     protected ?string $returnItems = null;
 
-    #[DTO(ResultAsDTO::class, context: [
-        ResultAsDTO::C_RENAME_KEYS => ['dtoFormat' => 'format'],
+    #[DTO(DTO::class, context: [
+        DTO::C_RENAME_KEYS => ['dtoFormat' => 'format'],
     ])]
-    protected ?ResultAsDTO $responseInfo = null;
+    protected ?DTO $responseInfo = null;
 
     protected array $schema = [];
 
@@ -96,17 +97,17 @@ class Service implements IArrayConvertible, IArrayConstructible
     }
 
     /**
-     * @return ?ResultAsDTO
+     * @return ?DTO
      */
-    public function getResponseInfo(): ?ResultAsDTO
+    public function getResponseInfo(): ?DTO
     {
         return $this->responseInfo;
     }
 
     /**
-     * @param ?ResultAsDTO $responseInfo
+     * @param ?DTO $responseInfo
      */
-    public function setResponseInfo(?ResultAsDTO $responseInfo): void
+    public function setResponseInfo(?DTO $responseInfo): void
     {
         $this->responseInfo = $responseInfo;
     }
@@ -233,7 +234,6 @@ class Service implements IArrayConvertible, IArrayConstructible
             }
             $this->return = TypeHintResolver::typeDescriptionToJsonSchema($types, $this->uses);
         }
-
         return $this;
     }
 

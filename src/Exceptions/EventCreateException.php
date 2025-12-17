@@ -2,7 +2,9 @@
 
 namespace Ufo\JsonRpcBundle\Exceptions;
 
-class EventCreateException extends \Exception
+use Exception;
+
+class EventCreateException extends Exception
 {
     protected $message = 'Event creation failed';
 
