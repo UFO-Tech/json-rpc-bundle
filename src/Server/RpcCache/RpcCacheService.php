@@ -138,36 +138,14 @@ class RpcCacheService
 
     public function addRelationsRequestToCache(array $params, string $id, bool $deleteCache = true): void
     {
-        if (!$this->definitionDTO) return;
-        foreach ($this->definitionDTO->getServices() as $i => $relatedService) {
-            try {
-                $relatedParamsKeys = array_keys($relatedService->getParams());
-                $refreshParams = array_intersect_key($params, array_flip($relatedParamsKeys));
+        $this->iterateRelationsRequest($params, $id, function (RpcRequest $request, Service $relatedService) use ($deleteCache) {
+            $this->definitionDTO->checkWarmUpsMethod($relatedService, $request);
 
-                $request = new RpcRequest(
-                    static::RELATED_CACHE . '.' . $id . '.' . $i,
-                    $relatedService->getName(),
-                    [
-                        ...$refreshParams,
-                        ...[SpecialRpcParamsEnum::PREFIX => [SpecialRpcParamsEnum::IGNORE_CACHE->value => true]]
-                    ]
-                );
-                $this->definitionDTO->checkWarmUpsMethod($relatedService, $request);
-
-                if ($deleteCache) {
-                    $cacheKey = $this->getCacheKey($request);
-                    $this->cache->delete($cacheKey);
-                }
-            } catch (\Throwable) {}
-        }
-    }
-
-    /**
-     * @deprecated Use addRelationsRequestToCache instead
-     */
-    public function invalidateRelationsCache(array $params, string $id): void
-    {
-        $this->addRelationsRequestToCache($params, $id);
+            if ($deleteCache) {
+                $cacheKey = $this->getCacheKey($request);
+                $this->cache->delete($cacheKey);
+            }
+        });
     }
 
     public function warmupCache(): void
@@ -202,6 +180,27 @@ class RpcCacheService
 
     public function warmCache(string $class, array $methods, array $params, bool $deleteCache = true): RelationCacheDefinitionDTO
     {
+        $dto = $this->addReflectionServices($class, $methods);
+        $this->addRelationsRequestToCache(
+            $params,
+            'not_id',
+            $deleteCache
+        );
+        $this->warmupCache();
+
+        return $dto;
+    }
+
+    public function deleteRelationCache(string $class, array $methods, array $params): void
+    {
+        $this->addReflectionServices($class, $methods);
+        $this->iterateRelationsRequest($params, 'not_id', function (RpcRequest $request) {
+            $this->deleteRequestCache($request);
+        });
+    }
+
+    protected function addReflectionServices(string $class, array $methods): RelationCacheDefinitionDTO
+    {
         $dto = new RelationCacheDefinitionDTO();
         try {
             if (!($reflection = $this->reflections[$class] ?? false)) {
@@ -217,14 +216,37 @@ class RpcCacheService
             array_map(fn(Service $service) => $dto->addWarmUpsMethod($service->getName()), $reflection->getMethods($methods));
         } catch (\Throwable) {}
         $this->definitionDTO = $dto;
-
-        $this->addRelationsRequestToCache(
-            $params,
-            'not_id',
-            $deleteCache
-        );
-        $this->warmupCache();
-
         return $dto;
+    }
+
+    public function deleteRequestCache(RpcRequest $request): void
+    {
+        $cacheKey = $this->getCacheKey($request);
+        $this->cache->delete($cacheKey);
+    }
+
+    /**
+     * @param callable{RpcRequest, Service} $callback
+     */
+    protected function iterateRelationsRequest(array $params, string $id, callable $callback): void
+    {
+        if (!$this->definitionDTO) return;
+        foreach ($this->definitionDTO->getServices() as $i => $relatedService) {
+            try {
+                $relatedParamsKeys = array_keys($relatedService->getParams());
+                $refreshParams = array_intersect_key($params, array_flip($relatedParamsKeys));
+
+                $request = new RpcRequest(
+                    static::RELATED_CACHE . '.' . $id . '.' . $i,
+                    $relatedService->getName(),
+                    [
+                        ...$refreshParams,
+                        ...[SpecialRpcParamsEnum::PREFIX => [SpecialRpcParamsEnum::IGNORE_CACHE->value => true]]
+                    ]
+                );
+
+                $callback($request, $relatedService);
+            } catch (\Throwable) {}
+        }
     }
 }
