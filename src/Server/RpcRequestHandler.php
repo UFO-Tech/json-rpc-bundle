@@ -126,30 +126,31 @@ class RpcRequestHandler
     public function provideSingleRequestToResponse(RpcRequest $singleRequest): RpcResponse
     {
         $event = $this->eventFactory->fireRequest($singleRequest);
-        $result = $this->rpcServer->handle($event->rpcRequest);
 
         if ($singleRequest->isAsync()) {
-            try {
-                $status = true;
-                $data = [];
-                $this->callbackProcessor->process($singleRequest);
-            } catch (RpcAsyncRequestException $e) {
-                $status = false;
-                $data = $e;
-            }
+
             $result = new RpcResponse(
                 $singleRequest->getId(),
                 [
-                    'callback' => [
-                        'url'    => (string)$singleRequest->getRpcParams()->getCallbackObject(),
-                        'status' => $status,
-                        'data'   => $data,
-                    ],
+                    'async' => true,
+                    'callback' => (string)$singleRequest->getRpcParams()->getCallbackObject(),
                 ],
                 version: $singleRequest->getVersion(),
                 requestObject: $singleRequest,
                 contextBuilder: $this->contextBuilder
             );
+
+            $singleRequest->setResponse($result);
+
+            $service = $this->rpcServer->serviceHolder->getService($singleRequest->getMethod());
+
+            $this->eventFactory->fire(RpcEvent::PRE_RESPONSE, ...[
+                'response' => $result,
+                'rpcRequest' => $singleRequest,
+                'service' => $service,
+            ]);
+        } else {
+            $result = $this->rpcServer->handle($event->rpcRequest);
         }
 
         return $result;

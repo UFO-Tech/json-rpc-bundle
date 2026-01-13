@@ -7,24 +7,37 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\Serializer\SerializerInterface;
 use Throwable;
+use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcAsyncRequestEvent;
+use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcPostResponseEvent;
+use Ufo\JsonRpcBundle\Server\Async\RpcAsyncProcessor;
+use Ufo\JsonRpcBundle\Server\Async\RpcCallbackProcessor;
 use Ufo\RpcError\AbstractRpcErrorException;
 use Ufo\RpcError\RpcAsyncRequestException;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcAsyncOutputEvent;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcEvent;
 use Ufo\RpcObject\RPC\Cache;
+use Ufo\RpcObject\RpcAsyncRequest;
 use Ufo\RpcObject\RpcError;
 use Ufo\RpcObject\RpcResponse;
 use Ufo\RpcObject\Transformer\RpcResponseContextBuilder;
 
 
 #[AsEventListener(RpcEvent::OUTPUT_ASYNC, 'process', priority: 10)]
+#[AsEventListener(RpcEvent::POST_RESPONSE, 'processAsync', priority: 10)]
 class AsyncServerEventListener
 {
 
     public function __construct(
         protected RpcResponseContextBuilder $contextBuilder,
-        protected SerializerInterface $serializer
+        protected SerializerInterface $serializer,
+        protected RpcAsyncProcessor $asyncProcessor,
     ) {}
+
+    public function processAsync(RpcPostResponseEvent $event): void
+    {
+        if (!$event->rpcRequest->isAsync()) return;
+        $this->asyncProcessor->processAsync($event->rpcRequest);
+    }
 
     public function process(RpcAsyncOutputEvent $event): void
     {

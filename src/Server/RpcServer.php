@@ -22,7 +22,7 @@ class RpcServer
     protected RpcResponse $responseObject;
 
     public function __construct(
-        protected IServiceHolder $serviceHolder,
+        readonly public IServiceHolder $serviceHolder,
         protected RpcEventFactory $eventFactory,
         protected RpcCacheService $cache,
     ) {}

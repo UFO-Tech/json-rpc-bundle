@@ -143,7 +143,8 @@ class SymfonyFlowListener
     public function firePostResponseEvent(TerminateEvent|ConsoleTerminateEvent $event): void
     {
         try {
-            fastcgi_finish_request();
+            if ($this->requestCarrier->getCarrier() instanceof RpcFromHttp) fastcgi_finish_request();
+
             $preResponse = $this->eventFactory->getEvent(RpcEvent::getEventFQSN(RpcEvent::PRE_RESPONSE));
             $event->stopPropagation();
             /**
@@ -157,7 +158,7 @@ class SymfonyFlowListener
             );
             $event->stopPropagation();
 
-        } catch (\Throwable $e) {}
+        } catch (\Throwable) {}
     }
 
 }
