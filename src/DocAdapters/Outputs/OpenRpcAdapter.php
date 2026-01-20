@@ -15,6 +15,7 @@ use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMap;
 use Ufo\RpcError\RpcInternalException;
 use Ufo\RpcError\WrongWayException;
 use Ufo\RpcObject\RPC\DTO;
+use Ufo\RpcObject\RPC\ResultAsDTO;
 use Ufo\RpcObject\RpcTransport;
 
 use function array_key_exists;
@@ -23,6 +24,7 @@ use function class_exists;
 use function implode;
 use function is_array;
 use function is_null;
+use function is_string;
 use function str_starts_with;
 use function substr;
 
@@ -39,12 +41,14 @@ class OpenRpcAdapter
         protected ChainParamConvertor $paramConvertor,
     ) {}
 
-    public function adapt(): array
+    public function adapt(bool $fullInfo = true): array
     {
         $this->buildSignature();
         $this->buildServer();
-        $this->buildServices();
-        $this->buildComponents();
+        if ($fullInfo) {
+            $this->buildServices();
+            $this->buildComponents();
+        }
         return $this->rpcSpecBuilder->build();
     }
 
@@ -91,8 +95,7 @@ class OpenRpcAdapter
     {
         $method = $this->rpcSpecBuilder->buildMethod(
             $service->getName(),
-            $service->getDescription(),
-            $service->isDeprecated()
+            $service->getDescription()
         );
         array_map(
             fn(ParamDefinition $param) => $this->buildParam($method, $param, $service),

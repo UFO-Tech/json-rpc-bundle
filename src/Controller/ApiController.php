@@ -4,6 +4,7 @@ namespace Ufo\JsonRpcBundle\Controller;
 
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Ufo\JsonRpcBundle\DocAdapters\Outputs\OpenRpcAdapter;
@@ -32,9 +33,9 @@ class ApiController extends AbstractController
      * @return Response
      */
     #[Route('', name: self::API_ROUTE, methods: ["GET"], format: 'json')]
-    public function serverAction(OpenRpcAdapter $openRpcAdapter): Response
+    public function serverAction(OpenRpcAdapter $openRpcAdapter, Request $request): Response
     {
-        $result = $openRpcAdapter->adapt();
+        $result = $openRpcAdapter->adapt(!$request->query->has('info'));
         return new JsonResponse(json_encode($result, JSON_PRETTY_PRINT), json: true);
     }
 

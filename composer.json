@@ -1,12 +1,16 @@
 {
   "name": "ufo-tech/json-rpc-bundle",
   "description": "The bundle for easy using json-rpc api on your project",
-  "version": "9.2.0",
+  "version": "9.2.1",
   "license": "MIT",
   "authors": [
     {
       "name": "Alex Maystrenko",
       "email": "ashterix69@gmail.com"
+    },
+    {
+      "name": "Valik Nikolaev",
+      "email": "valiknik225@gmail.com"
     }
   ],
   "type": "symfony-bundle",
