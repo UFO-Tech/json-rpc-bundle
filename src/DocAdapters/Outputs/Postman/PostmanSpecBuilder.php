@@ -2,6 +2,7 @@
 
 namespace Ufo\JsonRpcBundle\DocAdapters\Outputs\Postman;
 
+use DateTimeImmutable;
 use Ufo\JsonRpcBundle\DocAdapters\Outputs\Postman\Blocks\Header;
 use Ufo\JsonRpcBundle\DocAdapters\Outputs\Postman\Blocks\Info;
 use Ufo\JsonRpcBundle\DocAdapters\Outputs\Postman\Blocks\Method;
@@ -22,14 +23,24 @@ class PostmanSpecBuilder
 
     protected Server $server;
 
-    protected function __construct(string $name, string $description)
+
+    protected function __construct(string $name, string $description, string $version)
     {
-        $this->postmanSpecFiller = new PostmanSpecFiller(new Info($name, $description, static::SCHEMA));
+
+        $this->postmanSpecFiller = new PostmanSpecFiller(
+            new Info(
+                $name,
+                $description,
+                static::SCHEMA,
+                $version,
+                (new DateTimeImmutable())->format('Y-m-d H:i:s')
+            )
+        );
     }
 
-    public static function createBuilder(string $name, string $description = ''): static
+    public static function createBuilder(string $name, string $description, string $version): static
     {
-        return new static($name, $description);
+        return new static($name, $description, $version);
     }
 
     public function addServer(string $url): static

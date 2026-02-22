@@ -34,7 +34,6 @@ class ServiceMapFactory
         protected SerializerInterface $serializer,
         #[AutowireIterator(IRpcService::TAG)]
         protected iterable $procedures,
-        protected RouterInterface $router,
         protected ChainServiceFiller $chainServiceFiller,
 
     ) {
@@ -113,10 +112,7 @@ class ServiceMapFactory
 
     protected function initServices(): void
     {
-        $this->serviceMap = new ServiceMap(
-            $this->router->generate(ApiController::API_ROUTE),
-            $this->rpcConfig
-        );
+        $this->serviceMap = new ServiceMap($this->rpcConfig);
     }
 
     public function __destruct()

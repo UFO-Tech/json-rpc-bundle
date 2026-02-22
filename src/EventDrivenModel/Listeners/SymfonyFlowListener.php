@@ -37,6 +37,7 @@ use Ufo\RpcError\RpcMethodNotFoundExceptionRpc;
 use Ufo\RpcError\RpcRuntimeException;
 use Ufo\RpcError\RpcTokenNotSentException;
 use Ufo\RpcError\WrongWayException;
+use Ufo\RpcObject\RPC\Info;
 
 use function fastcgi_finish_request;
 use function json_encode;
@@ -64,23 +65,31 @@ class SymfonyFlowListener
 
     public function initHttpRequest(RequestEvent $event): void
     {
-        $apiRoute = $this->router->getRouteCollection()->get(ApiController::API_ROUTE);
         $request = $event->getRequest();
-        if ($request->getPathInfo() === $apiRoute->getPath()
-            && ($request->isMethod(Request::METHOD_OPTIONS) || $request->isXmlHttpRequest())
-        ) {
+
+        if ($this->checkRpcRoute($request, null) && ($request->isMethod(Request::METHOD_OPTIONS) || $request->isXmlHttpRequest())) {
             $event->stopPropagation();
             $event->setResponse(new Response());
             return;
         }
 
-        if ($request->getPathInfo() === $apiRoute->getPath() && $request->isMethod(Request::METHOD_POST)) {
+        if ($this->checkRpcRoute($request)) {
+            $route = $this->router->match($request->getPathInfo());
 
             $this->initRequest(
                 new HttpTokenHolder($this->rpcConfig, $request),
-                new RpcFromHttp($request)
+                new RpcFromHttp($request, $route['ver'] ?? Info::DEFAULT_VERSION)
             );
         }
+    }
+
+    protected function checkRpcRoute(Request $request, ?string $method = Request::METHOD_POST): bool
+    {
+        $route = $this->router->match($request->getPathInfo());
+        $routeName = $route['_route'] ?? '';
+        return ($routeName === ApiController::API_ROUTE_VER || $routeName === ApiController::API_ROUTE)
+            && (!$method || $request->isMethod($method))
+        ;
     }
 
     /**
@@ -96,10 +105,7 @@ class SymfonyFlowListener
      */
     public function magicPostController(RequestEvent $event): void
     {
-        $apiRoute = $this->router->getRouteCollection()->get(ApiController::API_ROUTE);
-        $request = $event->getRequest();
-
-        if ($request->getPathInfo() === $apiRoute->getPath() && $request->isMethod(Request::METHOD_POST)) {
+        if ($this->checkRpcRoute($event->getRequest())) {
             $result = $this->requestHandler->handle();
             $event->setResponse(new JsonResponse($result));
         }
@@ -123,7 +129,7 @@ class SymfonyFlowListener
 
             $this->initRequest(
                 new CliTokenHolder($this->rpcConfig, $input),
-                new RpcFromCli($json)
+                new RpcFromCli($json, $input->getOption('ver'))
             );
             $result = $this->requestHandler->handle();
 

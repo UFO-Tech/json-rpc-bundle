@@ -20,7 +20,7 @@ class UfoRpcServer extends Server
 
     public function toRecord(): RecordInterface
     {
-        $this->description = "Json-RPC api server from UFO Tech\n\nUFO Tech, or Universal Flexible Open Technologies, is an initiative aimed at providing PHP developers with tools to create complex yet user-friendly solutions for modern web applications and service-oriented architectures.";
+        $this->description = Package::description();
         $record = parent::toRecord();
         $record->put('name', $this->name . ' v.' . Package::version());
         $record->put('x-method', "POST");

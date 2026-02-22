@@ -13,7 +13,7 @@ use function uniqid;
 
 use const JSON_PRETTY_PRINT;
 
-final class Method implements IPostmanBlock
+class Method implements IPostmanBlock
 {
     /**
      * @param string $name
@@ -92,7 +92,7 @@ final class Method implements IPostmanBlock
                     'mode' => 'raw',
                     'raw' => json_encode($this->getRpcSignature(), JSON_PRETTY_PRINT),
                 ],
-                'url' => $this->url->toArray(),
+                'url' => $this->url->toArray()['raw'],
             ],
         ];
     }

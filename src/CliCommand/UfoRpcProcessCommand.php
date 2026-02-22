@@ -7,6 +7,7 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
+use Ufo\RpcObject\RPC\Info;
 
 use function strtolower;
 
@@ -33,19 +34,23 @@ class UfoRpcProcessCommand extends Command
                 mode: InputArgument::OPTIONAL,
                 description: 'Json request object for provide',
                 default: '[]'
-            );
-        $this
+            )
             ->addOption(
                 strtolower($this->rpcConfig->securityConfig->tokenName),
                 mode: $this->rpcConfig->securityConfig->protectedApi ? InputOption::VALUE_REQUIRED : InputOption::VALUE_OPTIONAL,
                 description: 'Security token',
                 default: $this->rpcConfig->securityConfig->protectedApi ? '' : null,
-            );
-        $this
+            )
             ->addOption(
                 'async',
                 mode: InputOption::VALUE_OPTIONAL,
                 description: 'As async command',
+            )
+            ->addOption(
+                'ver',
+                mode: InputOption::VALUE_OPTIONAL,
+                description: 'API version',
+                default: Info::DEFAULT_VERSION
             )
         ;
     }

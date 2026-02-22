@@ -58,7 +58,7 @@ class SymfonyErrorListener
 
     public function requestJsonParseError(ExceptionEvent $event): void
     {
-        if (($this->router->match($event->getRequest()->getPathInfo())['_route'] ?? '')  !== ApiController::API_ROUTE) return;
+        if (!in_array(($this->router->match($event->getRequest()->getPathInfo())['_route'] ?? ''), [ApiController::API_ROUTE, ApiController::API_ROUTE_VER])) return;
 
         $exception = $event->getThrowable();
         if (!$exception instanceof RpcJsonParseException) return;
@@ -98,7 +98,7 @@ class SymfonyErrorListener
 
     public function otherErrors(ExceptionEvent $event): void
     {
-        if (($this->router->match($event->getRequest()->getPathInfo())['_route'] ?? '')  !== ApiController::API_ROUTE) return;
+        if (!in_array(($this->router->match($event->getRequest()->getPathInfo())['_route'] ?? ''), [ApiController::API_ROUTE, ApiController::API_ROUTE_VER])) return;
 
         $exception = $event->getThrowable();
         if ($exception instanceof StopHandler) return;

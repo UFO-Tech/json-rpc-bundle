@@ -7,10 +7,11 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\Exceptions\ServiceNotFoundException;
 use Ufo\JsonRpcBundle\Package;
+use Ufo\RpcObject\RPC\Info;
 use Ufo\RpcObject\RpcTransport;
 
 use function array_key_exists;
-use function is_null;
+use function array_unique;
 use function is_subclass_of;
 
 #[AutoconfigureTag(IServiceHolder::TAG)]
@@ -21,10 +22,10 @@ class ServiceMap implements IServiceHolder
 
     protected string $envelope;
     protected array $services = [];
+    protected array $excludePrevious = [];
     protected bool $fromCache = false;
 
     public function __construct(
-        protected string $target,
         protected RpcMainConfig $mainConfig
     ) {}
 
@@ -68,16 +69,6 @@ class ServiceMap implements IServiceHolder
         return $this->envelope;
     }
 
-    public function getTarget(): string
-    {
-        return $this->target;
-    }
-
-    public function getDescription(): string
-    {
-        return $this->mainConfig->docsConfig->projectDesc;
-    }
-
     /**
      * @param Service $service
      * @return $this
@@ -94,27 +85,47 @@ class ServiceMap implements IServiceHolder
                 throw new RuntimeException('Attempt to register a service "'. $name .'" already registered detected');
             }
         }
-        $this->services[$name] = $service;
+        $ver = $service->apiClassInfo->version ?? Info::DEFAULT_VERSION;
+        $this->services[$ver][$name] = $service;
+        $this->excludePrevious[$ver] = array_unique(array_merge($this->excludePrevious[$ver] ?? [], $service->apiClassInfo->removedMethods));
         return $this;
     }
 
-
     /**
+     * @param string $version
      * @return Service[]
      */
-    public function getServices(): array
+    public function getServices(string $version = Info::DEFAULT_VERSION): array
     {
-        return $this->services;
+        $versions = array_keys($this->services);
+        if (!in_array($version, $versions, true)) {
+            throw new RuntimeException('Version "'.$version.'" is not registered on RPC Service Map');
+        }
+        usort($versions, 'version_compare');
+
+        $result = [];
+
+        foreach ($versions as $ver) {
+            if (version_compare($ver, $version, '<=')) {
+                $result = array_replace($result, $this->services[$ver]);
+                $exclude = $this->excludePrevious[$version] ?? [];
+                $result = array_diff_key($result, array_flip($exclude));
+            }
+        }
+
+        return $result;
     }
 
     /**
      * @param string $serviceName
+     * @param string $version
      * @return Service
      * @throws ServiceNotFoundException
      */
-    public function getService(string $serviceName): Service
+    public function getService(string $serviceName, string $version = Info::DEFAULT_VERSION): Service
     {
-        return $this->services[$serviceName] ?? throw new ServiceNotFoundException('Service "'.$serviceName.'" is not found on RPC Service Map');
+        return $this->services[$version][$serviceName]
+               ?? throw new ServiceNotFoundException('Service "'.$serviceName.'" for version "'.$version.'" is not found on RPC Service Map');
     }
 
     public function setFromCacheTrue(): static
@@ -127,6 +138,11 @@ class ServiceMap implements IServiceHolder
     public function isFromCache(): bool
     {
         return $this->fromCache;
+    }
+
+    public function getVersions(): array
+    {
+        return array_keys($this->services);
     }
 
 }

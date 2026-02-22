@@ -4,7 +4,7 @@ namespace Ufo\JsonRpcBundle\DocAdapters\Outputs\Postman\Blocks;
 
 use function array_map;
 
-final class Folder implements IPostmanBlock
+class Folder implements IPostmanBlock
 {
     protected array $methods = [];
 

@@ -41,7 +41,7 @@ class RpcServer
     {
         $method = $request->getMethod();
         try {
-            $service = $this->serviceHolder->getService($method);
+            $service = $this->serviceHolder->getService($method, $request->apiVersion);
         } catch (ServiceNotFoundException $e) {
             throw new RpcMethodNotFoundExceptionRpc($e->getMessage());
         }

@@ -51,7 +51,7 @@ class RpcCacheService
         protected RpcEventFactory $eventFactory,
     )
     {
-        $this->localServiceMap = new ServiceMap('local', $this->rpcConfig);
+        $this->localServiceMap = new ServiceMap($this->rpcConfig);
         $this->localRpcServer = new RpcServer(
             $this->localServiceMap,
             $this->eventFactory,

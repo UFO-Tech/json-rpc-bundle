@@ -20,7 +20,8 @@ class RpcFromHttp implements IRpcRequestCarrier
      * @throws RpcJsonParseException
      */
     public function __construct(
-        protected Request $request
+        protected Request $request,
+        protected string $version = RpcRequest::DEFAULT_VERSION
     )
     {
         $this->prepare();
@@ -34,7 +35,7 @@ class RpcFromHttp implements IRpcRequestCarrier
         if ($this->checkBatchRequest($this->request->getContent())) {
             $this->batchRequest = RpcBatchRequest::fromJson($this->request->getContent());
         } else {
-            $this->requestObject = RpcRequest::fromJson($this->request->getContent());
+            $this->requestObject = RpcRequest::fromJson($this->request->getContent(), $this->version);
         }
     }
 

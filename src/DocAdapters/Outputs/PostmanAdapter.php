@@ -1,12 +1,15 @@
 <?php
 namespace Ufo\JsonRpcBundle\DocAdapters\Outputs;
 
+use Symfony\Component\Routing\RouterInterface;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
+use Ufo\JsonRpcBundle\Controller\ApiController;
 use Ufo\JsonRpcBundle\DocAdapters\Outputs\Postman\Blocks\Method;
 use Ufo\JsonRpcBundle\DocAdapters\Outputs\Postman\PostmanSpecBuilder;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMap;
+use Ufo\RpcObject\RPC\Info;
 use Ufo\RpcObject\RpcTransport;
 
 use function explode;
@@ -14,14 +17,17 @@ use function explode;
 class PostmanAdapter
 {
     protected PostmanSpecBuilder $postmanSpecBuilder;
+    protected string $version = Info::DEFAULT_VERSION;
 
     public function __construct(
         protected ServiceMap $serviceMap,
         protected RpcMainConfig $mainConfig,
+        protected RouterInterface $router
     ) {}
 
-    public function adapt(): array
+    public function adapt(string $version = Info::DEFAULT_VERSION): array
     {
+        $this->version = $version;
         $this->buildSignature();
         $this->buildServer();
         $this->buildServices();
@@ -31,22 +37,30 @@ class PostmanAdapter
     protected function buildSignature(): void
     {
         $this->postmanSpecBuilder = PostmanSpecBuilder::createBuilder(
-            $this->mainConfig->docsConfig->projectName,
-            $this->serviceMap->getDescription(),
+            name: 'RPC: ' . $this->mainConfig->docsConfig->projectName,
+            description: $this->mainConfig->docsConfig->projectDesc,
+            version: $this->version,
         );
     }
 
     protected function buildServer(): void
     {
         $http = RpcTransport::fromArray($this->mainConfig->url);
+        $path = $this->router->generate(ApiController::API_ROUTE);
+        if ($this->version !== Info::DEFAULT_VERSION) {
+            $path = $this->router->generate(ApiController::API_ROUTE_VER, ['ver' => $this->version]);
+        }
+        $this->postmanSpecBuilder->addVariable('base_url', $http->getDomainUrl());
+
         $this->postmanSpecBuilder->addServer(
-            $http->getDomainUrl() . $this->serviceMap->getTarget()
+//            '{{base_url}}' . $path,
+            $http->getDomainUrl() . $path,
         );
     }
 
     protected function buildServices(): void
     {
-        foreach ($this->serviceMap->getServices() as $service) {
+        foreach ($this->serviceMap->getServices($this->version) as $service) {
             $this->buildService($service);
         }
     }
@@ -54,7 +68,6 @@ class PostmanAdapter
     protected function buildService(Service $service): void
     {
         $variableApiToken = $this->postmanSpecBuilder->addVariable('apiToken', '!changeMe!');
-        $variableAccessToken = $this->postmanSpecBuilder->addVariable('accessToken', '!changeMe!');
         $headers = [
             [
                 'key' => 'Content-Type',
@@ -63,20 +76,14 @@ class PostmanAdapter
             [
                 'key' => $this->mainConfig->securityConfig->tokenName,
                 'value' => '{{' . $variableApiToken->key . '}}',
-            ],
-            [
-                'key' => 'AccessToken',
-                'value' => '{{' . $variableAccessToken->key . '}}',
-            ],
+            ]
         ];
 
-        $fqcn = explode('\\', $service->getProcedureFQCN());
-        $tag = end($fqcn);
         $method = $this->postmanSpecBuilder->buildMethod(
             $service->getName(),
             $service->getDescription(),
             $headers,
-            $tag
+            $service->procedure
         );
 
         foreach ($service->getParams() as $param) {

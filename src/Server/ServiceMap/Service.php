@@ -15,7 +15,6 @@ use Ufo\DTO\Helpers\TypeHintResolver;
 use Ufo\RpcObject\RPC\AssertionsCollection;
 use Ufo\RpcObject\RPC\DTO;
 use Ufo\RpcObject\RPC\Info;
-use Ufo\RpcObject\RPC\ResultAsDTO;
 use Ufo\DTO\JsonSerializableTrait;
 
 use function array_key_exists;
@@ -38,10 +37,7 @@ class Service implements IArrayConvertible, IArrayConstructible
     protected string $returnDescription = '';
     protected ?string $returnItems = null;
 
-    #[DTO(ResultAsDTO::class, context: [
-        ResultAsDTO::C_RENAME_KEYS => ['dtoFormat' => 'format'],
-    ])]
-    protected ?ResultAsDTO $responseInfo = null;
+    protected ?DTO $responseInfo = null;
 
     protected array $schema = [];
 
@@ -66,18 +62,21 @@ class Service implements IArrayConvertible, IArrayConstructible
 
     protected array $defaultParams = [];
 
-    protected string $methodName;
+    readonly public string $methodName;
+    readonly public string $procedure;
 
     protected bool $deprecated = false;
 
     public function __construct(
-        protected string $name,
-        protected string $procedureFQCN,
-        public readonly string $concat = Info::DEFAULT_CONCAT,
-        readonly public array $uses = []
+        readonly public  string $name,
+        readonly public string $procedureFQCN,
+        readonly public Info $apiClassInfo,
+        readonly public string $concat = Info::DEFAULT_CONCAT,
+        readonly public array $uses = [],
     ) {
-        $t = explode($this->concat, $this->name);
-        $this->methodName = end($t);
+        $p = explode($this->concat, $this->name, 2);
+        $this->methodName = $p[1] ?? $p[0];
+        $this->procedure = ($p[1] ?? false) ? $p[0] : 'Main';
         $this->attrCollection = new AttributesCollection();
     }
 
@@ -96,17 +95,17 @@ class Service implements IArrayConvertible, IArrayConstructible
     }
 
     /**
-     * @return ?ResultAsDTO
+     * @return ?DTO
      */
-    public function getResponseInfo(): ?ResultAsDTO
+    public function getResponseInfo(): ?DTO
     {
         return $this->responseInfo;
     }
 
     /**
-     * @param ?ResultAsDTO $responseInfo
+     * @param ?DTO $responseInfo
      */
-    public function setResponseInfo(?ResultAsDTO $responseInfo): void
+    public function setResponseInfo(?DTO $responseInfo): void
     {
         $this->responseInfo = $responseInfo;
     }

@@ -2,6 +2,7 @@
 
 namespace Ufo\JsonRpcBundle\DocAdapters\Outputs\OpenRpc;
 
+use cebe\openapi\spec\Response;
 use PSX\OpenAPI\Contact;
 use PSX\OpenAPI\Info;
 use PSX\OpenAPI\License;
@@ -12,6 +13,9 @@ use PSX\OpenRPC\ContentDescriptor;
 use PSX\OpenRPC\Error;
 use PSX\OpenRPC\Method;
 use PSX\OpenRPC\OpenRPC;
+use Ufo\RpcError\AbstractRpcErrorException;
+use Ufo\RpcError\RpcBadParamException;
+use Ufo\RpcError\RpcRuntimeException;
 
 class OpenRpcSpecBuilder
 {
@@ -22,6 +26,9 @@ class OpenRpcSpecBuilder
     protected array $servers = [];
 
     protected array $methods = [];
+
+    /** @var array<string, mixed> */
+    protected array $infoExtensions = [];
 
     protected function __construct(string $openRpcVersion)
     {
@@ -37,6 +44,7 @@ class OpenRpcSpecBuilder
         ?string $licenseName = null,
         ?string $contactName = null,
         ?string $contactLink = null,
+        array $versions = []
     ): static {
         $builder = new static($openRpcVersion);
         $license = new License();
@@ -51,6 +59,8 @@ class OpenRpcSpecBuilder
         $contact->setName($contactName);
         $contact->setUrl($contactLink);
         $info->setContact($contact);
+
+        $builder->infoExtensions['x-versions'] = $versions;
 
         $builder->getOpenRPC()->setInfo($info);
 
@@ -133,22 +143,42 @@ class OpenRpcSpecBuilder
         return $result;
     }
 
-    public function buildError(Method $method, int $code, string $message): Error
+    public function buildError(Method $method, array $throws = []): void
     {
-        $error = new Error();
-        $error->setCode($code);
-        $error->setMessage($message);
-
+        $codes = [];
         $errors = $method->getErrors();
-        $errors[] = $error;
+        foreach ($throws as $errorName => $exception) {
+            if ($errorName === 'Throwable') {
+                $exception = RpcRuntimeException::class;
+            }
+            try {
+                throw new $exception();
+            } catch (\Throwable $e) {
+                if ($e instanceof $exception) {
+                    try {
+                        $e = AbstractRpcErrorException::fromThrowable($e, false);
+                    } catch (AbstractRpcErrorException $e) {}
+                } else {
+                    $e = new RpcBadParamException();
+                }
+                if (isset($codes[$e->getCode()])) continue;
+                $codes[$e->getCode()] = true;
+
+                $error = new Error();
+                $error->setCode($e->getCode());
+                $error->setMessage($e->getMessage());
+                $errors[] = $error;
+            }
+        }
+
         $method->setErrors($errors);
-        return $error;
     }
 
-    public function buildTag(Method $method, string $name): Tag
+    public function buildTag(Method $method, string $name, string $summary): Tag
     {
         $tag = new Tag();
         $tag->setName($name);
+        $tag->setDescription($summary);
 
         $tags = $method->getTags();
         $tags[] = $tag;
@@ -176,7 +206,21 @@ class OpenRpcSpecBuilder
         $this->openRPC->setServers($this->servers);
         $this->openRPC->setMethods($this->methods);
 
-        return $this->openRPC->toRecord()->getAll();
+        $data = $this->openRPC->toRecord()->getAll();
+
+        // normalize info to array (PSX may keep it as Info object)
+        if (isset($data['info']) && $data['info'] instanceof \PSX\OpenAPI\Info) {
+            $data['info'] = $data['info']->toRecord()->getAll();
+        }
+
+        if ($this->infoExtensions !== []) {
+            $data['info'] ??= [];
+            foreach ($this->infoExtensions as $key => $value) {
+                $data['info'][$key] = $value;
+            }
+        }
+
+        return $data;
     }
 
 }

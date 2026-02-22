@@ -49,6 +49,8 @@ class UfoReflectionProcedure
 
     protected string $concat = Info::DEFAULT_CONCAT;
 
+    protected Info $apiClassInfo;
+
     protected bool $async = false;
 
     protected AssertionsCollection $assertions;
@@ -79,9 +81,11 @@ class UfoReflectionProcedure
              */
             $info = $infoAttribute->newInstance();
             $procedureClassName = $info->alias ?? $procedureClassName;
-            $this->concat = $info->concat;
-        } catch (Throwable) {
+
+        } catch (Throwable $e) {
+            $info = new Info($procedureClassName);
         } finally {
+            $this->apiClassInfo = $info;
             $this->name = $procedureClassName;
             $this->namespace = $this->reflection->getNamespaceName();
         }
@@ -104,10 +108,11 @@ class UfoReflectionProcedure
         $context = $contextFactory->createFromReflector($this->reflection);
         
         $service = new Service(
-            $className . $method->getName(),
-            $this->procedure::class,
-            $this->concat,
-            $context->getNamespaceAliases()
+            name: $className . $method->getName(),
+            procedureFQCN: $this->procedure::class,
+            apiClassInfo: $this->apiClassInfo,
+            concat: $this->concat,
+            uses: $context->getNamespaceAliases(),
         );
 
         $this->chainServiceFiller->fill($method, $service, $this->methodDoc);

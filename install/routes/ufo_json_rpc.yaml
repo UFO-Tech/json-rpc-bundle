@@ -1,5 +1,5 @@
 # config/routes/ufo_json_rpc.yaml
 ufo_json_rpc:
     resource: ../../vendor/ufo-tech/json-rpc-bundle/config/router.yaml
-    prefix: /api
+    prefix: /rpc
     trailing_slash_on_root: false

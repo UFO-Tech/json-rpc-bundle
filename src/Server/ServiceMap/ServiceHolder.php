@@ -5,6 +5,8 @@ namespace Ufo\JsonRpcBundle\Server\ServiceMap;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 use Ufo\JsonRpcBundle\Exceptions\ServiceNotFoundException;
+use Ufo\RpcError\WrongWayException;
+use Ufo\RpcObject\RPC\Info;
 
 class ServiceHolder implements IServiceHolder
 {
@@ -19,20 +21,21 @@ class ServiceHolder implements IServiceHolder
 
     /**
      * @param string $serviceName
+     * @param string $version
      * @return Service
      * @throws ServiceNotFoundException
      */
-    public function getService(string $serviceName): Service
+    public function getService(string $serviceName, string $version = Info::DEFAULT_VERSION): Service
     {
-        return $this->cachedService($serviceName);
+        return $this->cachedService($serviceName, $version);
     }
 
     /**
      * @throws ServiceNotFoundException
      */
-    protected function cachedService(string $serviceName): Service
+    protected function cachedService(string $serviceName, string $version): Service
     {
-        $cacheKey = static::generateServiceCacheName($serviceName);
+        $cacheKey = static::generateServiceCacheName($serviceName, $version);
 
         try {
             return $this->cache->getItem($cacheKey)->get();
@@ -42,15 +45,34 @@ class ServiceHolder implements IServiceHolder
                  * @var IServiceHolder $holder
                  */
                 try {
-                    return $holder->getService($serviceName);
+                    return $holder->getService($serviceName, $version);
                 } catch (ServiceNotFoundException) {}
             };
-            throw new ServiceNotFoundException('Service "' . $serviceName . '" is not found on RPC Service Map');
+            throw new ServiceNotFoundException('Service "'.$serviceName.'" for version "'.$version.'" is not found on RPC Service Map');
         }
     }
 
-    public static function generateServiceCacheName(string $serviceName): string
+    public static function generateServiceCacheName(string $serviceName, string $version): string
     {
-        return static::SERVICE_CACHE_PREFIX . $serviceName;
+        return static::SERVICE_CACHE_PREFIX . $serviceName . '_' . $version;
     }
+
+    /**
+     * @param string $version
+     * @throws WrongWayException
+     */
+    public function getServices(string $version = Info::DEFAULT_VERSION): array
+    {
+        throw new WrongWayException('Method "getServices" not implemented for "' . static::class . '"');
+    }
+
+    public function getVersions(): array
+    {
+        $versions = [];
+        foreach ($this->holders as $holder) {
+            $versions = array_merge($versions, $holder->getVersions());
+        };
+        return array_unique($versions);
+    }
+
 }

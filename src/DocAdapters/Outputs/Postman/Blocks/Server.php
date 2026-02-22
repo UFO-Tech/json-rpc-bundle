@@ -9,7 +9,7 @@ use function parse_url;
 
 use const PHP_URL_SCHEME;
 
-readonly final class Server implements IPostmanBlock
+readonly class Server implements IPostmanBlock
 {
     public function __construct(
         public string $raw,
@@ -28,7 +28,7 @@ readonly final class Server implements IPostmanBlock
             $data['port'] = $parse['port'];
         }
         return [
-            'raw' => $this->raw,
+            'raw' => '{{base_url}}/' . implode('/', $data['path']),
             ...$data
         ];
     }
