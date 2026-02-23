@@ -16,6 +16,7 @@ use Ufo\RpcObject\RPC\AssertionsCollection;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\RpcObject\RPC\DTO;
+use Ufo\RpcObject\RPC\DTOCollection;
 use Ufo\RpcObject\RPC\Param;
 use function array_diff_key;
 
@@ -164,16 +165,21 @@ class JsonSchemaNormalizer implements NormalizerInterface
                     && !enum_exists($schema[T::CLASS_FQCN] ?? null)
                 ) {
                     $service->addParamsDto($paramDefinition->name, new DtoReflector(
-                            new DTO($schema[T::CLASS_FQCN], context: [DTO::C_COLLECTION => true]
-                            ), $this->paramConvertor)
+                            new DTOCollection($schema[T::CLASS_FQCN]),
+                            $this->paramConvertor
+                        )
                     );
                 }
             });
         }
 
         if ($nType === T::OBJECT->value && class_exists($type) && !enum_exists($type)) {
-            $service->addParamsDto($paramDefinition->name, new DtoReflector(
-                    new DTO($type), $this->paramConvertor)
+            $service->addParamsDto(
+                $paramDefinition->name,
+                new DtoReflector(
+                    new DTO($type),
+                    $this->paramConvertor
+                )
             );
         }
     }

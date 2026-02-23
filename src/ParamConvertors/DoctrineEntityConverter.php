@@ -6,6 +6,7 @@ use Doctrine\Persistence\ManagerRegistry;
 use Doctrine\Persistence\ObjectManager;
 use LogicException;
 use Stringable;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 use Throwable;
 use Ufo\DTO\Helpers\TypeHintResolver;
 use Ufo\RpcObject\RPC\Param;
@@ -13,11 +14,11 @@ use Ufo\RpcObject\RPC\Param;
 use function array_values;
 use function current;
 
-
-class DoctrineEntityConverter implements IParamConvertor
+#[AsTaggedItem(IParamConvertor::TAG, priority: 100)]
+readonly class DoctrineEntityConverter implements IParamConvertor
 {
     public function __construct(
-        private ?ManagerRegistry $registry = null
+        protected ?ManagerRegistry $registry = null
     ) {}
 
     public function toObject(float|int|string|null $value, array $context = [], ?callable $callback = null): ?object

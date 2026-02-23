@@ -18,11 +18,13 @@ use function class_exists;
 use function implode;
 use function is_array;
 use function is_null;
+use function stat;
 use function str_starts_with;
 use function substr;
 
 trait JsonSchemaDtoFormatTrait
 {
+    const string SCHEMAS = '#/components/schemas/';
     protected array $schemas = [];
 
     public function checkAndGetSchemaFromDesc(array $objSchema, ?DTO $dtoAttr = null): array
@@ -111,8 +113,12 @@ trait JsonSchemaDtoFormatTrait
         }
 
         if ($enumFQCN = EnumResolver::getEnumFQCN($param->getRealType())) {
-            $paramSchema = EnumResolver::applyEnumFqcnToJsonSchema($enumFQCN, $paramSchema);
-        }
+            $enumData = EnumResolver::generateEnumSchema($enumFQCN);
+            $enumName = $enumData[EnumResolver::ENUM][EnumResolver::ENUM_NAME] ?? throw new \RuntimeException('Undefined enum name');
+            $this->schemas[$enumName] = $enumData;
+            $paramSchema = $this->applyEnumRefToSchema($paramSchema, $enumName, $enumData);
+         }
+
 
         return $paramSchema;
     }
@@ -265,7 +271,7 @@ trait JsonSchemaDtoFormatTrait
 
     protected function createSchemaLink(string $dtoName): array
     {
-        return ['$ref' => '#/components/schemas/' . $dtoName];
+        return [T::REF => static::SCHEMAS . $dtoName];
     }
 
     protected function formatFromResponse(Service $service): ?array
@@ -305,4 +311,17 @@ trait JsonSchemaDtoFormatTrait
         return $this->formatFromResultAsDto($responseInfo);
     }
 
+    protected function applyEnumRefToSchema(array $paramSchema, string $enumName, array $enumData): array
+    {
+        return T::applyToSchema(
+            $paramSchema,
+            function (array $schema) use ($enumName, $enumData): array
+            {
+                if (($schema[T::TYPE] ?? '') === ($enumData[T::TYPE] ?? null)) {
+                    $schema = [T::REF => static::SCHEMAS . $enumName];
+                }
+                return $schema;
+            }
+        );
+    }
 }

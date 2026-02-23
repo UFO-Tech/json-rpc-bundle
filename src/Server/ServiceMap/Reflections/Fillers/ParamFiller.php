@@ -11,6 +11,7 @@ use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\DTO\Helpers\TypeHintResolver as T;
 use Ufo\RpcObject\RPC\Param;
+use Ufo\DTO\Helpers\EnumResolver;
 
 use function is_string;
 
@@ -28,9 +29,9 @@ class ParamFiller extends AbstractServiceFiller
             foreach ($paramsReflection as $paramRef) {
                 $descType = $this->getParamType($methodDoc, $paramRef->getName());
 
-                $type =  (string) $paramRef->getType();
+                $type = (string) $paramRef->getType();
                 $schema = T::typeDescriptionToJsonSchema($descType ?? $type, $service->uses);
-
+                $t = EnumResolver::getEnumFQCN($descType ?? $type);
                 $paramDefinition = ParamDefinition::fromParamReflection(
                     paramRef: $paramRef,
                     type: $schema,

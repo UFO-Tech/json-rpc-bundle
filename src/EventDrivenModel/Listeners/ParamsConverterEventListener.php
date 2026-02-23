@@ -15,14 +15,17 @@ use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcEvent;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcPostExecuteEvent;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcPreExecuteEvent;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcPreResponseEvent;
+use Ufo\JsonRpcBundle\EventDrivenModel\RpcEventFactory;
 use Ufo\JsonRpcBundle\ParamConvertors\ChainParamConvertor;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\DtoReflector;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
+use Ufo\RpcError\ConstraintsImposedException;
 use Ufo\RpcObject\RPC\DTO;
 use Ufo\RpcObject\RPC\Param;
 use Ufo\RpcObject\RpcResponse;
 
 use function array_map;
+use function array_unique;
 use function class_exists;
 use function count;
 use function interface_exists;
@@ -36,7 +39,8 @@ class ParamsConverterEventListener
 {
 
     public function __construct(
-        protected ChainParamConvertor $paramConvertor
+        protected ChainParamConvertor $paramConvertor,
+        protected RpcEventFactory $eventFactory,
     ) {}
 
     public function objectToScalar(RpcPreResponseEvent $event): void
@@ -83,36 +87,64 @@ class ParamsConverterEventListener
         if (count($service->getParamsDto()) > 0) {
             foreach ($service->getParamsDto() as $paramName => $paramDtoCollection) {
                 $result = $event->params[$paramName] ?? null;
+                $errors = [];
 
                 foreach ($paramDtoCollection as $paramDto) {
-                    try {
-                        if (!is_array($event->params[$paramName])) continue;
-                        $dtoClass = $paramDto->dto->dtoFQCN;
+                    if (!is_array($event->params[$paramName])) continue;
+                    $dtoClass = $paramDto->dto->dtoFQCN;
 
-                        if (!$paramDto->dto->isCollection()) {
-                            $result = DTOTransformer::fromArray($dtoClass, $event->params[$paramName] ?? []);
+                    if (!$paramDto->dto->isCollection()) {
+                        try {
+                            $result = $this->transformSingleObject($dtoClass, $event->params[$paramName] ?? []);
+                            unset($errors[$paramName]);
                             break;
+                        } catch (Throwable $exception) {
+                            $errors[$paramName][] = $exception->getMessage();
+                            $errors[$paramName] = array_unique($errors[$paramName]);
+                            continue;
+                        }
+                    }
+
+                    foreach ($event->params[$paramName] ?? [] as $key => $item) {
+                        if (is_object($result[$key] ?? null)) {
+                            unset($errors[$key]);
+                            continue;
                         }
 
-                        foreach ($event->params[$paramName] ?? [] as $key => $item) {
-                            if (is_object($result[$key] ?? null)) continue;
-
-                            try {
-                                $result[$key] = DTOTransformer::fromArray($dtoClass, $item);
-                            } catch (Throwable) {
-                                $result[$key] = $item;
-                            }
+                        try {
+                            $result[$key] = $this->transformSingleObject($dtoClass, $item);
+                            unset($errors[$paramName][$key]);
+                        } catch (Throwable $exception) {
+                            $errors[$paramName][$key][] = $exception->getMessage();
+                            $errors[$paramName][$key] = array_unique($errors[$paramName][$key]);
                         }
-                    } catch (Throwable $exception) {
-                        continue;
                     }
 
                 }
 
                 $event->params[$paramName] = $result;
+                if (count($errors) > 0 ){
+                    $e = new ConstraintsImposedException(
+                        "Invalid Data for call method: {$service->getMethodName()}",
+                        $errors
+                    );
+                    $this->eventFactory->fireError($event->rpcRequest, $e);
+                }
             }
+
         }
     }
+
+    protected function transformSingleObject(string $dtoClass, mixed $data): object
+    {
+        if (!is_array($data)) {
+            throw new BadParamException('Invalid Data for create object: "' . $dtoClass . '". Data must be an array');
+        }
+        return DTOTransformer::fromArray($dtoClass, $data);
+
+    }
+
+
 
     protected function convertParams(Service $service, array &$params): void
     {
