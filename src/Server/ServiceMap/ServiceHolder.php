@@ -4,6 +4,7 @@ namespace Ufo\JsonRpcBundle\Server\ServiceMap;
 
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
+use Throwable;
 use Ufo\JsonRpcBundle\Exceptions\ServiceNotFoundException;
 use Ufo\RpcError\WrongWayException;
 use Ufo\RpcObject\RPC\Info;
@@ -39,7 +40,7 @@ class ServiceHolder implements IServiceHolder
 
         try {
             return $this->cache->getItem($cacheKey)->get();
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             foreach ($this->holders as $holder) {
                 /**
                  * @var IServiceHolder $holder
@@ -47,7 +48,7 @@ class ServiceHolder implements IServiceHolder
                 try {
                     return $holder->getService($serviceName, $version);
                 } catch (ServiceNotFoundException) {}
-            };
+            }
             throw new ServiceNotFoundException('Service "'.$serviceName.'" for version "'.$version.'" is not found on RPC Service Map');
         }
     }

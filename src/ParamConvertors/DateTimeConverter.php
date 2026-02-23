@@ -5,15 +5,23 @@
 
 namespace Ufo\JsonRpcBundle\ParamConvertors;
 
+use DateTime;
+use DateTimeImmutable;
+use DateTimeInterface;
+use Throwable;
 use Ufo\DTO\Helpers\TypeHintResolver;
+use Ufo\RpcError\RpcBadParamException;
+use Ufo\RpcObject\RPC\Param;
+
 use function in_array;
 
 class DateTimeConverter implements IParamConvertor
 {
+    const string DEFAULT_FORMAT = 'Y-m-d H:i:s';
     protected const array SUPPORTS_MAP = [
-        \DateTime::class,
-        \DateTimeImmutable::class,
-        \DateTimeInterface::class,
+        DateTime::class,
+        DateTimeImmutable::class,
+        DateTimeInterface::class,
     ];
 
     /**
@@ -26,9 +34,9 @@ class DateTimeConverter implements IParamConvertor
     public function toScalar(object $object, array $context = [], ?callable $callback = null): string|int|float|null
     {
         /**
-         * @var \DateTimeInterface $object
+         * @var DateTimeInterface $object
          */
-        $format = $context['format'] ?? 'Y-m-d H:i:s';
+        $format = $context['format'] ?? static::DEFAULT_FORMAT;
         $value = $object->format($format);
         if ($callback !== null) {
             $value = $callback($value, $object);
@@ -42,12 +50,8 @@ class DateTimeConverter implements IParamConvertor
         $classFQCN = $context[TypeHintResolver::CLASS_FQCN] ?? null;
         try {
             $object = new $classFQCN($value);
-        } catch (\Throwable) {
-            try {
-                $object = new \DateTime($value ?? 'now');
-            } catch (\Throwable) {
-                $object = new \DateTime();
-            }
+        } catch (Throwable) {
+            throw new RpcBadParamException('Value "' . $value . '" is not a valid date in format "' . ($context['format'] ?? static::DEFAULT_FORMAT) . '"');
         }
 
         if ($callback !== null) {
@@ -61,4 +65,8 @@ class DateTimeConverter implements IParamConvertor
         return in_array($classFQCN, static::SUPPORTS_MAP);
     }
 
+    public function getParamAttr(string $classFQCN): Param
+    {
+        return new Param(Param::NULLABLE_STRING, context: [Param::C_CONVERTOR => $this::class]);
+    }
 }

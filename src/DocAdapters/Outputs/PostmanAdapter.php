@@ -53,7 +53,6 @@ class PostmanAdapter
         $this->postmanSpecBuilder->addVariable('base_url', $http->getDomainUrl());
 
         $this->postmanSpecBuilder->addServer(
-//            '{{base_url}}' . $path,
             $http->getDomainUrl() . $path,
         );
     }

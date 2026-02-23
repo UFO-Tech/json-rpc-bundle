@@ -6,13 +6,20 @@ use phpDocumentor\Reflection\DocBlock;
 use ReflectionException;
 use ReflectionMethod;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
+use Ufo\JsonRpcBundle\ParamConvertors\ChainParamConvertor;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\DTO\Helpers\TypeHintResolver as T;
+use Ufo\RpcObject\RPC\Param;
+
+use function is_string;
 
 #[AutoconfigureTag(IServiceFiller::TAG, ['priority' => 101])]
 class ParamFiller extends AbstractServiceFiller
 {
+    public function __construct(
+        protected ChainParamConvertor $convertor,
+    ) {}
 
     public function fill(ReflectionMethod $method, Service $service, DocBlock $methodDoc): void
     {
@@ -25,12 +32,20 @@ class ParamFiller extends AbstractServiceFiller
                 $schema = T::typeDescriptionToJsonSchema($descType ?? $type, $service->uses);
 
                 $paramDefinition = ParamDefinition::fromParamReflection(
-                    $paramRef,
-                    $schema,
-                    $this->getTypes($paramRef->getType()),
-                    $this->getParamDescription($methodDoc, $paramRef->getName()),
-                    $descType
+                    paramRef: $paramRef,
+                    type: $schema,
+                    realType: $this->getTypes($paramRef->getType()),
+                    description: $this->getParamDescription($methodDoc, $paramRef->getName()),
+                    paramItems: $descType
                 );
+                if (
+                    !$paramDefinition->attributesCollection->getAttribute(Param::class)
+                    && is_string($paramDefinition->getRealType())
+                    && $this->convertor->supported($paramDefinition->getRealType())
+                    && $paramAttr = $this->convertor->getParamAttr($paramDefinition->getRealType())
+                ) {
+                    $paramDefinition->attributesCollection->addAttribute($paramAttr);
+                }
                 try {
                     $paramDefinition->setDefault($paramRef->getDefaultValue());
                 } catch (ReflectionException) {}

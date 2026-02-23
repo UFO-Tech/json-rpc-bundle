@@ -3,6 +3,7 @@
 namespace Ufo\JsonRpcBundle\Validations\JsonSchema;
 
 
+use ArrayObject;
 use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
 use Ufo\DTO\Helpers\EnumResolver;
 use Ufo\JsonRpcBundle\ParamConvertors\ChainParamConvertor;
@@ -37,7 +38,7 @@ class JsonSchemaNormalizer implements NormalizerInterface
      * @param array $context
      * @return array
      */
-    public function normalize(mixed $data, ?string $format = null, array $context = []): array|string|int|float|bool|\ArrayObject|null
+    public function normalize(mixed $data, ?string $format = null, array $context = []): array|string|int|float|bool|ArrayObject|null
     {
         /**
          * @var ?Service $service
@@ -46,7 +47,7 @@ class JsonSchemaNormalizer implements NormalizerInterface
 
         $assertionsList = $data->getAssertionsCollection();
         $properties = [];
-        foreach ($service->getParams() as $property => $paramDefinition) {
+        foreach ($service?->getParams() as $property => $paramDefinition) {
 
             $this->checkParamConvertor($paramDefinition, $service);
 
@@ -100,18 +101,17 @@ class JsonSchemaNormalizer implements NormalizerInterface
 
             if ($paramAttr->isCollection()) return;
 
-            $paramDefinition->setSchema(
-                $this->paramNormalizer->normalize(
-                    $assertionsAttr,
-                    context: [
-                        'realType' => $paramAttr->getType(),
-                        'type' => $paramDefinition->getRealType(),
-                        'currentSchema' => $paramDefinition->getType(),
-                        'service' => $service,
-                        'targetType' => $this->getScalarTargetType($paramAttr->getType()),
-                    ]
-                )
-            )->setDefault($paramAttr->default);
+            $schema = $this->paramNormalizer->normalize(
+                $assertionsAttr,
+                context: [
+                    'realType' => $paramAttr->getType(),
+                    'type' => $paramDefinition->getRealType(),
+                    'currentSchema' => $paramDefinition->getType(),
+                    'service' => $service,
+                    'targetType' => $this->getScalarTargetType($paramAttr->getType()),
+                ]
+            );
+            $paramDefinition->setSchema($schema)->setDefault($paramAttr->getData(Param::C_DEFAULT));
 
             $attrType = $paramAttr->getType();
             if (is_array($attrType)) {

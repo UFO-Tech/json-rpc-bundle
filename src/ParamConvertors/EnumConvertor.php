@@ -4,8 +4,10 @@ namespace Ufo\JsonRpcBundle\ParamConvertors;
 
 use BackedEnum;
 use RuntimeException;
+use Throwable;
 use Ufo\DTO\DTOTransformer;
 use Ufo\DTO\Helpers\TypeHintResolver;
+use Ufo\RpcObject\RPC\Param;
 use UnitEnum;
 
 class EnumConvertor implements IParamConvertor
@@ -38,14 +40,14 @@ class EnumConvertor implements IParamConvertor
             if (!$enum instanceof UnitEnum) {
                 $enum = null;
             }
-        } catch (\Throwable) {
+        } catch (Throwable) {
             $enum = is_subclass_of($fqcn, BackedEnum::class) ? $fqcn::tryFrom($value) : null;
         }
 
         if (!$enum && method_exists($fqcn, 'tryFromValue')) {
             try {
                 $enum = $fqcn::tryFromValue($value);
-            } catch (\Throwable) {}
+            } catch (Throwable) {}
         }
 
         if (!$enum) {
@@ -61,6 +63,12 @@ class EnumConvertor implements IParamConvertor
 
     public function supported(string $classFQCN): bool
     {
-        return is_subclass_of($classFQCN, BackedEnum::class);
+        return is_subclass_of($classFQCN, UnitEnum::class) && !is_subclass_of($classFQCN, BackedEnum::class);
+    }
+
+    public function getParamAttr(string $classFQCN): Param
+    {
+        $ref = new \ReflectionEnum($classFQCN);
+        return new Param(Param::STRING, context: [Param::C_CONVERTOR => $this::class]);
     }
 }

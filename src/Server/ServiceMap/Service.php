@@ -19,11 +19,13 @@ use Ufo\DTO\JsonSerializableTrait;
 
 use function array_key_exists;
 use function array_map;
+use function class_exists;
 use function count;
 use function end;
 use function explode;
 use function implode;
 use function is_array;
+use function is_object;
 use function json_encode;
 
 class Service implements IArrayConvertible, IArrayConstructible
@@ -232,7 +234,6 @@ class Service implements IArrayConvertible, IArrayConstructible
             }
             $this->return = TypeHintResolver::typeDescriptionToJsonSchema($types, $this->uses);
         }
-
         return $this;
     }
 

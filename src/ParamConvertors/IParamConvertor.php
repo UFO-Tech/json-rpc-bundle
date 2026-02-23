@@ -30,7 +30,7 @@ interface IParamConvertor
      * @param int|string|float|null $value The scalar value to convert.
      * @param array{
      *     classFQCN: class-string,            // Required target class for reconstruction.
-     *     param?: \Ufo\RpcObject\RPC\Param,   // Optional Param attribute with metadata.
+     *     param?: Param,   // Optional Param attribute with metadata.
      *     nullable?: bool,                    // Whether null is allowed (default false).
      *     default?: mixed,                    // Default value if input is null or invalid.
      *     extra?: mixed                       // Extra parameters specific to a convertor.
@@ -41,4 +41,6 @@ interface IParamConvertor
     public function toObject(int|string|float|null $value, array $context = [], ?callable $callback = null): ?object;
 
     public function supported(string $classFQCN): bool;
+
+    public function getParamAttr(string $classFQCN): Param;
 }

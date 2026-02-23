@@ -5,6 +5,7 @@ namespace Ufo\JsonRpcBundle\Server\RpcCache;
 use Deprecated;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Contracts\Cache\ItemInterface;
+use Throwable;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\EventDrivenModel\RpcEventFactory;
 use Ufo\JsonRpcBundle\Server\RpcServer;
@@ -130,7 +131,7 @@ class RpcCacheService
                 if ($relation->warmUp) {
                     array_map(fn(Service $service) => $dto->addWarmUpsMethod($service->getName()), $reflection->getMethods($relation->methods));
                 }
-            } catch (\Throwable) {}
+            } catch (Throwable) {}
         }
         $this->definitionDTO = $dto;
         return $dto;
@@ -154,13 +155,13 @@ class RpcCacheService
         foreach ($this->definitionDTO->getServices() as $service) {
             try {
                 $this->localServiceMap->addService($service);
-            } catch (\Throwable) {}
+            } catch (Throwable) {}
         }
 
         foreach ($this->definitionDTO->getWarmupRequests() as $warmupRequest) {
             try {
                 $this->localRpcServer->handle($warmupRequest);
-            } catch (\Throwable) {}
+            } catch (Throwable) {}
         }
     }
 
@@ -214,7 +215,7 @@ class RpcCacheService
             }
             $dto->addServices($reflection->getMethods($methods));
             array_map(fn(Service $service) => $dto->addWarmUpsMethod($service->getName()), $reflection->getMethods($methods));
-        } catch (\Throwable) {}
+        } catch (Throwable) {}
         $this->definitionDTO = $dto;
         return $dto;
     }

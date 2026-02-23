@@ -11,8 +11,11 @@ use Ufo\DTO\Interfaces\IArrayConstructible;
 use Ufo\DTO\Interfaces\IArrayConvertible;
 use Ufo\JsonRpcBundle\Server\ServiceMap\AttributesCollection;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
+use Ufo\RpcObject\RPC\Param;
 
 use function array_map;
+use function class_exists;
+use function is_string;
 use function Symfony\Component\DependencyInjection\Loader\Configurator\param;
 
 class ParamDefinition implements IArrayConvertible, IArrayConstructible
@@ -21,7 +24,7 @@ class ParamDefinition implements IArrayConvertible, IArrayConstructible
 
     protected bool $optional = false;
     protected mixed $default = null;
-    protected AttributesCollection $attributesCollection;
+    readonly public AttributesCollection $attributesCollection;
 
     public function __construct(
         readonly public string $name,
@@ -44,10 +47,11 @@ class ParamDefinition implements IArrayConvertible, IArrayConstructible
     ): static
     {
         $paramDef = new static(
-            $paramRef->getName(),
-            $type,
-            $realType,
-            $description,
+            name: $paramRef->getName(),
+            type: $type,
+            realType: $realType,
+            description: $description,
+            schema: $type,
             paramItems: $paramItems
         );
         array_map(fn(ReflectionAttribute $attribute) => $paramDef->attributesCollection->addAttribute($attribute->newInstance()), $paramRef->getAttributes());

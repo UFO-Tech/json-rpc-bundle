@@ -2,7 +2,9 @@
 
 namespace Ufo\JsonRpcBundle\Exceptions;
 
-class StopHandler extends \Exception
+use Exception;
+
+class StopHandler extends Exception
 {
 
 }

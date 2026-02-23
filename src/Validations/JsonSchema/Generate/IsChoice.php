@@ -2,6 +2,7 @@
 
 namespace Ufo\JsonRpcBundle\Validations\JsonSchema\Generate;
 
+use ReflectionException;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\Constraints\Choice;
@@ -24,7 +25,7 @@ class IsChoice implements IConstraintGenerator
      * @param Constraint $constraint
      * @param array &$rules
      * @param Generator|null $generator
-     * @throws \ReflectionException
+     * @throws ReflectionException
      */
     protected function apply(Constraint $constraint, array &$rules, ?Generator $generator = null): void
     {

@@ -6,12 +6,15 @@
 namespace Ufo\JsonRpcBundle\ParamConvertors;
 
 use Ramsey\Uuid\Rfc4122;
+use RuntimeException;
 use Symfony\Component\Uid;
 use Ramsey\Uuid\Uuid;
 use Ramsey\Uuid\UuidInterface;
 use Stringable;
-
+use Throwable;
 use Ufo\DTO\Helpers\TypeHintResolver;
+use Ufo\RpcObject\RPC\Param;
+
 use function class_exists;
 use function in_array;
 
@@ -53,11 +56,11 @@ class UuidConverter implements IParamConvertor
          */
         try {
             return $object->toString();
-        } catch (\Throwable) {
+        } catch (Throwable) {
             try {
                 return (string)$object;
-            } catch (\Throwable) {
-                throw new \RuntimeException('No convertor found for ' . $object::class);
+            } catch (Throwable) {
+                throw new RuntimeException('No convertor found for ' . $object::class);
             }
         }
     }
@@ -71,7 +74,7 @@ class UuidConverter implements IParamConvertor
         if ($classFQCN === UuidInterface::class || $classFQCN === Uid\AbstractUid::class) {
             return Uuid::fromString($value);
         }
-        throw new \RuntimeException('No convertor found for "' . $value . '" and classFQCN: ' . $classFQCN);
+        throw new RuntimeException('No convertor found for "' . $value . '" and classFQCN: ' . $classFQCN);
     }
 
     public function supported(string $classFQCN): bool
@@ -79,4 +82,8 @@ class UuidConverter implements IParamConvertor
         return in_array($classFQCN, static::SUPPORTS_MAP);
     }
 
+    public function getParamAttr(string $classFQCN): Param
+    {
+        return new Param(Param::STRING, context: [Param::C_CONVERTOR => $this::class]);
+    }
 }

@@ -34,6 +34,10 @@ services:
   Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity:
     class: Ufo\JsonRpcBundle\Security\TokenRpcSecurity
 
+  Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMapFactory:
+    arguments:
+      $cache: '@rpc.cache.pool'
+
   Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMap:
     factory: ['@Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMapFactory', 'getServiceMap']
 

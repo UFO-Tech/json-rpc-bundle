@@ -2,13 +2,14 @@
 
 namespace Ufo\JsonRpcBundle\ParamConvertors;
 
+use RuntimeException;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 use Ufo\DTO\Helpers\TypeHintResolver;
 use Ufo\JsonRpcBundle\Validations\JsonSchema\JsonSchemaPropertyNormalizer;
+use Ufo\RpcObject\RPC\Param;
 
 class ChainParamConvertor
 {
-
     /**
      * @param IParamConvertor[] $convertors
      */
@@ -24,12 +25,12 @@ class ChainParamConvertor
             if (!$convertor->supported($object::class)) continue;
             return $convertor->toScalar($object, $context, $callback);
         }
-        throw new \RuntimeException('No convertor found for ' . $object::class);
+        throw new RuntimeException('No convertor found for ' . $object::class);
     }
 
     public function toObject(float|int|string|null $value, array $context = [], ?callable $callback = null): ?object
     {
-        $classFQCN = $context[TypeHintResolver::CLASS_FQCN] ?? throw new \RuntimeException('No "classFQCN" provided to convertor context');
+        $classFQCN = $context[TypeHintResolver::CLASS_FQCN] ?? throw new RuntimeException('No "classFQCN" provided to convertor context');
         $needConvertor = $context['param']?->convertorFQCN ?? null;
         foreach ($this->convertors as $convertor) {
             if ($needConvertor && $convertor::class !== $needConvertor) continue;
@@ -37,6 +38,29 @@ class ChainParamConvertor
             if (!$convertor->supported($classFQCN)) continue;
             return $convertor->toObject($value, $context, $callback);
         }
-        throw new \RuntimeException('No convertor found for ' . $value);
+        throw new RuntimeException('No convertor found for ' . $value);
+    }
+
+    public function supported(string $classFQCN): bool
+    {
+        $supported = false;
+        foreach ($this->convertors as $convertor) {
+            if (!$convertor->supported($classFQCN)) continue;
+            $supported = true;
+            break;
+        }
+        return $supported;
+    }
+
+    public function getParamAttr(string $classFQCN): ?Param
+    {
+        $param = null;
+        foreach ($this->convertors as $convertor) {
+            if ($convertor->supported($classFQCN)) {
+                $param = $convertor->getParamAttr($classFQCN);
+                break;
+            };
+        }
+        return $param;
     }
 }

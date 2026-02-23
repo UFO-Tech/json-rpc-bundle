@@ -6,8 +6,10 @@ use LogicException;
 use phpDocumentor\Reflection\DocBlockFactory;
 use ReflectionClass;
 use ReflectionException;
+use ReflectionObject;
 use ReflectionProperty;
 use ReflectionType;
+use Throwable;
 use Ufo\DTO\DTOTransformer;
 use Ufo\DTO\Helpers\TypeHintResolver;
 use Ufo\JsonRpcBundle\ParamConvertors\ChainParamConvertor;
@@ -50,7 +52,7 @@ class DtoReflector
      */
     protected function setResult(): void
     {
-        $refAttr = new \ReflectionObject($this->dto);
+        $refAttr = new ReflectionObject($this->dto);
         $refAttr->getProperty('dtoFormat')->setValue($this->dto, $this->responseFormat);
         $refAttr->getProperty('realFormat')?->setValue($this->dto, $this->realFormat);
     }
@@ -77,13 +79,13 @@ class DtoReflector
                 if (!$param->isPromoted()) continue;
                 try {
                     $defaultParams[$param->getName()] = $param->getDefaultValue();
-                } catch (\Throwable) {
+                } catch (Throwable) {
                     $requiredParams[$param->getName()] = $param->getName();
                 }
             }
         }
 
-        foreach ($this->refDTO->getProperties(\ReflectionProperty::IS_PUBLIC) as $property) {
+        foreach ($this->refDTO->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
             if (!isset($requiredParams[$property->getName()]) && $property->hasDefaultValue()) {
                 $defaultParams[$property->getName()] = $property->getDefaultValue() ?? $defaultParams[$property->getName()] ?? null;
             }
@@ -93,7 +95,7 @@ class DtoReflector
             $nullable = ($property->getType()->allowsNull()) ? '?' : '';
             try {
                 $this->responseFormat[$property->getName()] = $nullable . $this->getType($property, $property->getType(), $paramConvertor);
-            } catch (\Throwable ) {
+            } catch (Throwable ) {
                 $t = [];
                 foreach ($property->getType()?->getTypes() as $type) {
                     $t[] = $this->getType($property, $type, $paramConvertor);
@@ -123,7 +125,7 @@ class DtoReflector
         } else {
             try {
                 $typeName = $this->getDescriptionType($property) ?? $typeName;
-            } catch (\Throwable) {}
+            } catch (Throwable) {}
         }
         return $typeName;
     }
@@ -143,13 +145,16 @@ class DtoReflector
                 $descType = (string)$param->getType();
                 break;
             }
-        }   
+        }
+
         if ($docProperty) {
             $docReflection = DocBlockFactory::createInstance()->create($docProperty);
             try {
-                $descType = (string)$docReflection->getTagsByName('param')[0]?->getType();
-            } catch (\Throwable) {
-                $descType = (string)$docReflection->getTagsByName('var')[0]?->getType();
+                $descType = (string)($docReflection->getTagsByName('param')[0] ?? null)->getType();
+            } catch (Throwable) {
+                try {
+                    $descType = (string)($docReflection->getTagsByName('var')[0] ?? null)->getType();
+                } catch (Throwable) {}
             }
         }
 

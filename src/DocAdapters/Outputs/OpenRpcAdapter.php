@@ -114,7 +114,7 @@ class OpenRpcAdapter
             $service->getReturnDescription(),
             $objSchema
         );
-        $tag = $this->rpcSpecBuilder->buildTag($method, $service->procedure, $service->getProcedureFQCN());
+        $this->rpcSpecBuilder->buildTag($method, $service->procedure, $service->getProcedureFQCN());
 
         $throws = [];
         foreach ($service->getThrows() as $rawThrow) {

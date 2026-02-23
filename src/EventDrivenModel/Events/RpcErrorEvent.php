@@ -2,6 +2,7 @@
 
 namespace Ufo\JsonRpcBundle\EventDrivenModel\Events;
 
+use Throwable;
 use Ufo\RpcObject\RpcError;
 use Ufo\RpcObject\RpcRequest;
 
@@ -13,7 +14,7 @@ class RpcErrorEvent extends BaseRpcEvent
 
     public function __construct(
         public RpcRequest $rpcRequest,
-        public \Throwable $exception,
+        public Throwable $exception,
     ) {
         $this->rpcError = RpcError::fromThrowable($this->exception);
     }

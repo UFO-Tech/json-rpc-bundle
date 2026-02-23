@@ -44,7 +44,7 @@ final readonly class RpcMainConfig
         $url = $requestStack->getCurrentRequest()?->getUri() ?? "";
         $this->url = parse_url($url) ?? [];
 
-        $this->sdkVendors = array_column($sdkConfigs['vendors'] ?? [], 'name');;
+        $this->sdkVendors = array_column($sdkConfigs['vendors'] ?? [], 'name');
     }
 
     protected function recursiveMerge(array $config, array $extraConfig): array
