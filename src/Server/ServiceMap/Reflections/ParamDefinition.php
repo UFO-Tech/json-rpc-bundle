@@ -4,6 +4,8 @@ namespace Ufo\JsonRpcBundle\Server\ServiceMap\Reflections;
 
 use ReflectionAttribute;
 use ReflectionParameter;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\DependencyInjection\Exception\LogicException;
 use Ufo\DTO\ArrayConstructibleTrait;
 use Ufo\DTO\ArrayConvertibleTrait;
 use Ufo\DTO\Helpers\TypeHintResolver;
@@ -54,7 +56,17 @@ class ParamDefinition implements IArrayConvertible, IArrayConstructible
             schema: $type,
             paramItems: $paramItems
         );
-        array_map(fn(ReflectionAttribute $attribute) => $paramDef->attributesCollection->addAttribute($attribute->newInstance()), $paramRef->getAttributes());
+        array_map(function (ReflectionAttribute $attribute) use ($paramDef
+        ) {
+            try {
+                $instance = $attribute->newInstance();
+            } catch (LogicException $e) {
+                if ($attribute->name !== Autowire::class) throw $e;
+                $instance = new Autowire('');
+            }
+
+            return $paramDef->attributesCollection->addAttribute($instance);
+        }, $paramRef->getAttributes());
         return $paramDef;
     }
 

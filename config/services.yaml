@@ -55,3 +55,6 @@ services:
     arguments:
       $cache: '@rpc.cache.pool'
 
+  Ufo\JsonRpcBundle\EventDrivenModel\Listeners\ValidateParamsListener:
+    arguments:
+        $rpcArgumentLocators: '@ufo.rpc.argument_locators'

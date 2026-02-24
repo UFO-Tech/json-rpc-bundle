@@ -10,6 +10,7 @@ use Ufo\JsonRpcBundle\ParamConvertors\ChainParamConvertor;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\DTO\Helpers\TypeHintResolver as T;
+use Ufo\RpcObject\RPC\IgnoreApi;
 use Ufo\RpcObject\RPC\Param;
 use Ufo\DTO\Helpers\EnumResolver;
 
@@ -27,6 +28,8 @@ class ParamFiller extends AbstractServiceFiller
         $paramsReflection = $method->getParameters();
         if (!empty($paramsReflection)) {
             foreach ($paramsReflection as $paramRef) {
+                if ($paramRef->getAttributes(IgnoreApi::class)) continue;
+
                 $descType = $this->getParamType($methodDoc, $paramRef->getName());
 
                 $type = (string) $paramRef->getType();

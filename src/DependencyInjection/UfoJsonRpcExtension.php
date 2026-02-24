@@ -3,6 +3,7 @@
 namespace Ufo\JsonRpcBundle\DependencyInjection;
 
 use Exception;
+use ReflectionClass;
 use Symfony\Component\Cache\Adapter\AbstractAdapter;
 use Symfony\Component\Cache\Adapter\AdapterInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -14,6 +15,7 @@ use Symfony\Component\DependencyInjection\Loader;
 use Ufo\JsonRpcBundle\ConfigService\RpcAsyncConfig;
 use Ufo\JsonRpcBundle\ConfigService\RpcCacheConfig;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
+use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMap;
 use Ufo\RpcError\RpcBadParamException;
 use Ufo\RpcObject\RPC\Cache;
 use Ufo\RpcObject\RpcAsyncRequest;
@@ -131,6 +133,4 @@ class UfoJsonRpcExtension extends Extension implements PrependExtensionInterface
     {
         return RpcMainConfig::NAME;
     }
-
-
 }

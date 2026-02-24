@@ -3,6 +3,7 @@
 namespace Ufo\JsonRpcBundle\EventDrivenModel\Listeners;
 
 
+use Psr\Container\ContainerInterface;
 use ReflectionException;
 use ReflectionMethod;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
@@ -13,6 +14,7 @@ use Ufo\RpcError\ConstraintsImposedException;
 use Ufo\RpcError\RpcBadParamException;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcEvent;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcPreExecuteEvent;
+use Ufo\RpcObject\RPC\IgnoreApi;
 use Ufo\RpcObject\Rules\Validator\RpcValidator;
 
 use function array_key_exists;
@@ -27,10 +29,13 @@ use function sprintf;
 #[AsEventListener(RpcEvent::PRE_EXECUTE, 'constraintValidation', priority: 1001)]
 class ValidateParamsListener
 {
+
     public function __construct(
         protected RpcEventFactory $eventFactory,
         protected RpcValidator $rpcValidator,
-        protected ServiceLocator $serviceLocator
+        protected ServiceLocator $serviceLocator,
+
+        private ContainerInterface $rpcArgumentLocators,
     ) {}
 
     public function constraintValidation(RpcPreExecuteEvent $event): void
@@ -86,15 +91,31 @@ class ValidateParamsListener
         }
         $namedParams = [];
         $refMethod = new ReflectionMethod($service->getProcedureFQCN(), $service->getMethodName());
+
+        /** @var ContainerInterface $container */
+        $container = $this->rpcArgumentLocators->get($service->procedureFQCN.'::'.$service->getMethodName());
+
         foreach ($refMethod->getParameters() as $refParam) {
             if (array_key_exists($refParam->getName(), $requestedParams)) {
                 $namedParams[$refParam->getName()] = $requestedParams[$refParam->getName()];
                 continue;
             }
+
             if ($refParam->isOptional()) {
                 $namedParams[$refParam->getName()] = $refParam->getDefaultValue();
                 continue;
             }
+
+
+            if ($container->has($refParam->getName())) {
+                try {
+                    $namedParams[$refParam->getName()] = $container->get($refParam->getName());
+                } catch (\Throwable $e) {
+                    continue;
+                }
+                continue;
+            }
+
             throw new RpcBadParamException(sprintf('Required parameter "%s" not passed', $refParam->getName()));
         }
 
