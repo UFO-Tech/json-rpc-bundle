@@ -1,6 +1,6 @@
 <?php
 
-namespace Ufo\JsonRpcBundle\DependencyInjection;
+namespace Ufo\JsonRpcBundle\DependencyInjection\CompilerPass;
 
 use ReflectionAttribute;
 use ReflectionUnionType;
@@ -13,6 +13,7 @@ use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\ExpressionLanguage\Expression;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 use Symfony\Component\DependencyInjection\Compiler\ServiceLocatorTagPass;
+use Ufo\JsonRpcBundle\Server\ServiceMap\IServiceHolder;
 
 use function class_exists;
 use function enum_exists;
@@ -65,9 +66,9 @@ final class RpcRegisterArgumentLocatorsPass implements CompilerPassInterface
 
                     $arguments[$param->getName()] = match (true) {
                         $autowire->value instanceof Reference,
-                            $autowire->value instanceof Expression,
-                            $autowire->value instanceof ArgumentInterface
-                        => $autowire->value,
+                        $autowire->value instanceof Expression,
+                        $autowire->value instanceof ArgumentInterface
+                            => $autowire->value,
 
                         default => $parameterBag->resolveValue($autowire->value),
                     };
@@ -90,7 +91,7 @@ final class RpcRegisterArgumentLocatorsPass implements CompilerPassInterface
         );
 
         $container->setAlias(
-            'ufo.rpc.argument_locators',
+            IServiceHolder::ARG_LOCATOR,
             (string) $locatorRef
         )->setPublic(false);
     }

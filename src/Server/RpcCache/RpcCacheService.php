@@ -2,17 +2,18 @@
 
 namespace Ufo\JsonRpcBundle\Server\RpcCache;
 
-use Deprecated;
 use Psr\Cache\CacheItemPoolInterface;
+use Psr\Container\ContainerInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\Cache\ItemInterface;
 use Throwable;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\EventDrivenModel\RpcEventFactory;
 use Ufo\JsonRpcBundle\Server\RpcServer;
+use Ufo\JsonRpcBundle\Server\ServiceMap\IServiceHolder;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\Fillers\ChainServiceFiller;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\UfoReflectionProcedure;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
-use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceLocator;
 use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMap;
 use Ufo\RpcError\WrongWayException;
 use Ufo\RpcObject\RPC\CacheRelation;
@@ -47,7 +48,9 @@ class RpcCacheService
     public function __construct(
         protected CacheItemPoolInterface $cache,
         protected RpcMainConfig $rpcConfig,
-        protected ServiceLocator $serviceLocator,
+
+        #[Autowire(service: IServiceHolder::LOCATOR)]
+        protected ContainerInterface $serviceLocator,
         protected ChainServiceFiller $chainServiceFiller,
         protected RpcEventFactory $eventFactory,
     )

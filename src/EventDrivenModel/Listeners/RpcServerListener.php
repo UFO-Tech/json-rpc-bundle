@@ -3,13 +3,15 @@
 namespace Ufo\JsonRpcBundle\EventDrivenModel\Listeners;
 
 
+use Psr\Container\ContainerInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Throwable;
 use TypeError;
 use Ufo\JsonRpcBundle\EventDrivenModel\RpcEventFactory;
 use Ufo\JsonRpcBundle\Locker\LockerService;
+use Ufo\JsonRpcBundle\Server\ServiceMap\IServiceHolder;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
-use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceLocator;
 use Ufo\RpcError\RpcBadParamException;
 use Ufo\RpcError\RpcRuntimeException;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\BaseRpcEvent;
@@ -38,7 +40,9 @@ class RpcServerListener
     public function __construct(
         protected LockerService $lockerService,
         protected RpcEventFactory $eventFactory,
-        protected ServiceLocator $serviceLocator,
+
+        #[Autowire(service: IServiceHolder::LOCATOR)]
+        protected ContainerInterface $serviceLocator,
         protected RpcResponseContextBuilder $contextBuilder,
     ) {}
 
@@ -50,10 +54,15 @@ class RpcServerListener
             return;
         }
         try {
-            $result = call_user_func_array([
-                $this->serviceLocator->get($event->service->getProcedureFQCN()),
-                $event->service->getMethodName(),
-            ], $event->params);
+            $result = call_user_func_array(
+                [
+                    $this->serviceLocator->get(
+                        $event->service->getProcedureFQCN()
+                    ),
+                    $event->service->getMethodName(),
+                ],
+                $event->params
+            );
         } catch (TypeError $e) {
             $message = preg_replace('/.*\\\\/', '', $e->getMessage());
             $message = preg_replace('/Argument #\d+ \(\$([a-zA-Z0-9_]+)\)/', 'Parameter "$1"', $message);

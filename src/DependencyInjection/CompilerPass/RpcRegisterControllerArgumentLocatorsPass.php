@@ -1,6 +1,6 @@
 <?php
 
-namespace Ufo\JsonRpcBundle\DependencyInjection;
+namespace Ufo\JsonRpcBundle\DependencyInjection\CompilerPass;
 
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\DependencyInjection\Attribute\AutowireCallable;
@@ -21,7 +21,6 @@ use Symfony\Component\DependencyInjection\Compiler\ServiceLocatorTagPass;
 
 use function array_unique;
 use function class_exists;
-use function enum_exists;
 use function interface_exists;
 use function is_subclass_of;
 use function json_encode;

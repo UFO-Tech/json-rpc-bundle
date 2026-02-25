@@ -15,6 +15,18 @@ services:
     exclude:
       - '../src/DependencyInjection/'
       - '../src/UfoJsonRpcBundle.php'
+      - '../src/Package.php'
+      - '../src/Server/ServiceMap/Service.php'
+      - '../src/ConfigService/RpcAsyncConfig.php'
+      - '../src/ConfigService/RpcAsyncInfo.php'
+      - '../src/ConfigService/RpcCacheConfig.php'
+      - '../src/ConfigService/RpcDocsConfig.php'
+      - '../src/ConfigService/RpcSecurityConfig.php'
+      - '../src/DocAdapters/Outputs/OpenRpc/'
+      - '../src/DocAdapters/Outputs/Postman/'
+      - '../src/EventDrivenModel/Events/'
+      - '../src/Exceptions/'
+      - '../src/Server/RequestPrepare/Holders/'
 
   Ufo\JsonRpcBundle\ConfigService\RpcMainConfig:
     $rpcConfigs: '%ufo_json_rpc%'
@@ -55,6 +67,3 @@ services:
     arguments:
       $cache: '@rpc.cache.pool'
 
-  Ufo\JsonRpcBundle\EventDrivenModel\Listeners\ValidateParamsListener:
-    arguments:
-        $rpcArgumentLocators: '@ufo.rpc.argument_locators'

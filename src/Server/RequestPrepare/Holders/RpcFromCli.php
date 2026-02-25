@@ -1,7 +1,9 @@
 <?php
 
-namespace Ufo\JsonRpcBundle\Server\RequestPrepare;
+namespace Ufo\JsonRpcBundle\Server\RequestPrepare\Holders;
 
+use Ufo\JsonRpcBundle\Server\RequestPrepare\BatchChecker;
+use Ufo\JsonRpcBundle\Server\RequestPrepare\IRpcRequestCarrier;
 use Ufo\RpcError\RpcJsonParseException;
 use Ufo\RpcError\WrongWayException;
 use Ufo\RpcObject\RPC\Info;
@@ -38,7 +40,7 @@ class RpcFromCli implements IRpcRequestCarrier
             $this->requestObject = RpcRequest::fromJson($this->inputJson, $this->version);
         }
     }
-    
+
     public function getRequestObject(): RpcRequest
     {
         return $this->requestObject ?? throw new WrongWayException('Request is not set');

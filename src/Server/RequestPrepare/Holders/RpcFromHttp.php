@@ -1,8 +1,10 @@
 <?php
 
-namespace Ufo\JsonRpcBundle\Server\RequestPrepare;
+namespace Ufo\JsonRpcBundle\Server\RequestPrepare\Holders;
 
 use Symfony\Component\HttpFoundation\Request;
+use Ufo\JsonRpcBundle\Server\RequestPrepare\BatchChecker;
+use Ufo\JsonRpcBundle\Server\RequestPrepare\IRpcRequestCarrier;
 use Ufo\RpcError\RpcJsonParseException;
 use Ufo\RpcError\WrongWayException;
 use Ufo\RpcObject\RpcBatchRequest;

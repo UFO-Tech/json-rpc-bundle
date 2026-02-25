@@ -7,10 +7,8 @@ use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
 use Throwable;
 use Ufo\JsonRpcBundle\Server\RequestPrepare\RequestCarrier;
-use Ufo\JsonRpcBundle\Server\RequestPrepare\RpcFromHttp;
 use Ufo\RpcError\RpcAsyncRequestException;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
-use Ufo\RpcObject\IRpcSpecialParamHandler;
 use Ufo\RpcObject\RpcRequest;
 
 class RpcCallbackProcessor

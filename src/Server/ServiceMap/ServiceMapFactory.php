@@ -5,13 +5,11 @@ namespace Ufo\JsonRpcBundle\Server\ServiceMap;
 use Psr\Cache\CacheItemPoolInterface;
 use ReflectionException;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
-use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 use Throwable;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
-use Ufo\JsonRpcBundle\Controller\ApiController;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\Fillers\ChainServiceFiller;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\UfoReflectionProcedure;
 use Ufo\RpcError\RpcInternalException;
@@ -23,7 +21,6 @@ class ServiceMapFactory
     protected const int CACHE_LIFETIME  = 31536000;
     const string CACHE_SM = 'rpc.service_map';
 
-    protected ServiceLocator $serviceLocator;
     protected ServiceMap $serviceMap;
 
     /**

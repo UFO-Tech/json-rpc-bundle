@@ -6,15 +6,15 @@ namespace Ufo\JsonRpcBundle\EventDrivenModel\Listeners;
 use Psr\Container\ContainerInterface;
 use ReflectionException;
 use ReflectionMethod;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Ufo\JsonRpcBundle\EventDrivenModel\RpcEventFactory;
+use Ufo\JsonRpcBundle\Server\ServiceMap\IServiceHolder;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
-use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceLocator;
 use Ufo\RpcError\ConstraintsImposedException;
 use Ufo\RpcError\RpcBadParamException;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcEvent;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcPreExecuteEvent;
-use Ufo\RpcObject\RPC\IgnoreApi;
 use Ufo\RpcObject\Rules\Validator\RpcValidator;
 
 use function array_key_exists;
@@ -33,9 +33,11 @@ class ValidateParamsListener
     public function __construct(
         protected RpcEventFactory $eventFactory,
         protected RpcValidator $rpcValidator,
-        protected ServiceLocator $serviceLocator,
 
-        private ContainerInterface $rpcArgumentLocators,
+        #[Autowire(service: IServiceHolder::LOCATOR)]
+        protected ContainerInterface $serviceLocator,
+        #[Autowire(service: IServiceHolder::ARG_LOCATOR)]
+        protected ContainerInterface $rpcArgumentLocators,
     ) {}
 
     public function constraintValidation(RpcPreExecuteEvent $event): void
