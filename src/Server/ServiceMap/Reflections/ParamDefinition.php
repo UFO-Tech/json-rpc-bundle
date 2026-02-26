@@ -11,6 +11,7 @@ use Ufo\DTO\ArrayConvertibleTrait;
 use Ufo\DTO\Helpers\TypeHintResolver;
 use Ufo\DTO\Interfaces\IArrayConstructible;
 use Ufo\DTO\Interfaces\IArrayConvertible;
+use Ufo\DTO\SmartArrayConvertibleTrait;
 use Ufo\JsonRpcBundle\Server\ServiceMap\AttributesCollection;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\RpcObject\RPC\Param;
@@ -22,7 +23,7 @@ use function Symfony\Component\DependencyInjection\Loader\Configurator\param;
 
 class ParamDefinition implements IArrayConvertible, IArrayConstructible
 {
-    use ArrayConvertibleTrait, ArrayConstructibleTrait;
+    use SmartArrayConvertibleTrait, ArrayConstructibleTrait;
 
     protected bool $optional = false;
     protected mixed $default = null;

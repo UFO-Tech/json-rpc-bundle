@@ -3,9 +3,10 @@
 namespace Ufo\JsonRpcBundle\Tests\Unit\Server\RequestPrepare;
 
 use PHPUnit\Framework\TestCase;
-use Ufo\JsonRpcBundle\Server\RequestPrepare\RpcFromCli;
+use Ufo\JsonRpcBundle\Server\RequestPrepare\Holders\RpcFromCli;
 use Ufo\RpcError\RpcJsonParseException;
 use Ufo\RpcError\WrongWayException;
+use Ufo\RpcObject\RpcBatchRequest;
 use Ufo\RpcObject\RpcRequest;
 
 class RpcFromCliTest extends TestCase
@@ -50,6 +51,23 @@ class RpcFromCliTest extends TestCase
         $inputJson = '{'; // Invalid request JSON
         $rpcFromCli = new RpcFromCli($inputJson);
         $rpcFromCli->getRequestObject();
+    }
+
+    /**
+     * @throws RpcJsonParseException
+     */
+    public function testGetBatchRequestObjectReturnsBatchForBatchInput(): void
+    {
+        $inputJson = json_encode([
+            ['jsonrpc' => '2.0', 'method' => 'testMethod1', 'id' => 1],
+            ['jsonrpc' => '2.0', 'method' => 'testMethod2', 'id' => 2],
+        ]);
+
+        $rpcFromCli = new RpcFromCli($inputJson);
+        $batch = $rpcFromCli->getBatchRequestObject();
+
+        $this->assertInstanceOf(RpcBatchRequest::class, $batch);
+        $this->assertCount(2, $batch->getCollection());
     }
 
 }

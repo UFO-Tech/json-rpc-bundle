@@ -24,7 +24,7 @@ ufo_json_rpc:
       symfony_asserts: false      # Indicates if an array of Symfony validation constraints is used
 
   async:
-    - #      - type: 'amqp'
+      #      - type: 'amqp'
       #        config:
       #          name: 'rpc_async'
       #          dsn: '%env(resolve:RPC_TRANSPORT_DSN)%'

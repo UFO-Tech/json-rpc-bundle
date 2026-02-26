@@ -9,7 +9,7 @@ use Ufo\DTO\Helpers\TypeHintResolver;
 use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Interfaces\IConstraintGenerator;
 use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Traits\ConstraintApplier;
 
-#[AutoconfigureTag('rpc.constraint')]
+#[AutoconfigureTag(IConstraintGenerator::TAG)]
 class IsCollection implements IConstraintGenerator
 {
     use ConstraintApplier;

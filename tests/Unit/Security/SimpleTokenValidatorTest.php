@@ -15,7 +15,7 @@ class SimpleTokenValidatorTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->setUpConfig([
+        $this->setConfig([
             RpcSecurityConfig::NAME => [
                 RpcSecurityConfig::PROTECTED_API => true,
                 RpcSecurityConfig::TOKENS => ['valid-token-1', 'valid-token-2'],

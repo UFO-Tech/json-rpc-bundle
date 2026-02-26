@@ -62,7 +62,7 @@ trait JsonSchemaDtoFormatTrait
     public function schemaForParam(ParamDefinition $param, Service $service): array
     {
         $schema = $service->getSchema()['properties'] ?? [];
-        $paramSchema = $schema[$param->name] ?? [];
+        $paramSchema = $schema[$param->name] ?? $param->getSchema() ?? [];
 
         if ($param->getRealType() === T::OBJECT->value
             && $dto = $this->checkParamHasDTO(
@@ -73,8 +73,7 @@ trait JsonSchemaDtoFormatTrait
             )
         ) {
             $paramSchema = $this->schemaFromDto($dto->getFormat());
-        }
-        elseif ($param->getRealType() === T::ARRAY->value) {
+        } elseif ($param->getRealType() === T::ARRAY->value) {
             $newSchema = T::applyToSchema($paramSchema, fn(array $schema) => $this->checkAndGetSchemaFromDesc(
                 $schema,
                 $param->getAttributesCollection()->getAttribute(DTO::class)

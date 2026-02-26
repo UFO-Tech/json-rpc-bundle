@@ -20,7 +20,7 @@ class Generator
     protected iterable $constraints = [];
 
     public function __construct(
-        #[AutowireIterator('rpc.constraint')]
+        #[AutowireIterator(IConstraintGenerator::TAG)]
         iterable $constraints = [],
         private ?LoggerInterface $logger = null
     ) {

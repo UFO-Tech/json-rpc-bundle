@@ -19,8 +19,8 @@ class DateTimeConverter implements IParamConvertor
 {
     const string DEFAULT_FORMAT = 'Y-m-d H:i:s';
     protected const array SUPPORTS_MAP = [
-        DateTime::class,
         DateTimeImmutable::class,
+        DateTime::class,
         DateTimeInterface::class,
     ];
 
@@ -47,9 +47,9 @@ class DateTimeConverter implements IParamConvertor
 
     public function toObject(int|string|float|null $value, array $context = [], ?callable $callback = null): ?object
     {
-        $classFQCN = $context[TypeHintResolver::CLASS_FQCN] ?? null;
+        $classFQCN = $context[TypeHintResolver::CLASS_FQCN] ?? static::SUPPORTS_MAP[0] ?? DateTime::class;
         try {
-            $object = new $classFQCN($value);
+            $object = new $classFQCN($value ?? 'now');
         } catch (Throwable) {
             throw new RpcBadParamException('Value "' . $value . '" is not a valid date in format "' . ($context['format'] ?? static::DEFAULT_FORMAT) . '"');
         }

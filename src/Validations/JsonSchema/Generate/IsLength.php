@@ -11,7 +11,7 @@ use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Interfaces\IConstraintGene
 use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Traits\ConstraintApplier;
 use function is_null;
 
-#[AutoconfigureTag('rpc.constraint')]
+#[AutoconfigureTag(IConstraintGenerator::TAG)]
 class IsLength implements IConstraintGenerator
 {
     use ConstraintApplier;

@@ -6,6 +6,7 @@ use phpDocumentor\Reflection\DocBlock;
 use ReflectionException;
 use ReflectionMethod;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Ufo\JsonRpcBundle\ParamConvertors\ChainParamConvertor;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
@@ -28,7 +29,7 @@ class ParamFiller extends AbstractServiceFiller
         $paramsReflection = $method->getParameters();
         if (!empty($paramsReflection)) {
             foreach ($paramsReflection as $paramRef) {
-                if ($paramRef->getAttributes(IgnoreApi::class)) continue;
+                if ($paramRef->getAttributes(Autowire::class)) continue;
 
                 $descType = $this->getParamType($methodDoc, $paramRef->getName());
 

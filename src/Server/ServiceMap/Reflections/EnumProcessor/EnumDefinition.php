@@ -31,7 +31,7 @@ readonly class EnumDefinition implements IArrayConvertible, IArrayConstructible
      *       enum: array<int, string|int>
      *   }
      */
-    public function toArray(): array
+    public function toArray(bool $publicOnly = true): array
     {
         return [
             TypeHintResolver::TYPE => $this->type,

@@ -6,6 +6,7 @@ use DateTime;
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 use Ufo\JsonRpcBundle\ParamConvertors\DateTimeConverter;
+use Ufo\RpcError\RpcBadParamException;
 
 class DateTimeConverterTest extends TestCase
 {
@@ -80,7 +81,7 @@ class DateTimeConverterTest extends TestCase
     {
         
         $result = $this->convertor->toObject('2023-12-01 15:30:45');
-        $this->assertInstanceOf(\DateTime::class, $result);
+        $this->assertInstanceOf(\DateTimeInterface::class, $result);
         $this->assertSame('2023-12-01 15:30:45', $result->format('Y-m-d H:i:s'));
     }
 
@@ -104,7 +105,7 @@ class DateTimeConverterTest extends TestCase
         
         $callback = fn($value, $object) => $object->setTime(0, 0, 0);
         $result = $this->convertor->toObject('2023-12-01 15:30:45', [], $callback);
-        $this->assertInstanceOf(\DateTime::class, $result);
+        $this->assertInstanceOf(\DateTimeInterface::class, $result);
         $this->assertSame('2023-12-01 00:00:00', $result->format('Y-m-d H:i:s'));
     }
 
@@ -113,9 +114,8 @@ class DateTimeConverterTest extends TestCase
      */
     public function testToObjectWithInvalidInput(): void
     {
-        
-        $result = $this->convertor->toObject('invalid-date-string');
-        $this->assertInstanceOf(\DateTime::class, $result);
+        $this->expectException(RpcBadParamException::class);
+        $this->convertor->toObject('invalid-date-string');
     }
 
     /**
@@ -124,7 +124,7 @@ class DateTimeConverterTest extends TestCase
     public function testToObjectWithNullValue(): void
     {
         $result = $this->convertor->toObject(null);
-        $this->assertInstanceOf(\DateTime::class, $result);
+        $this->assertInstanceOf(\DateTimeInterface::class, $result);
     }
 
     /**

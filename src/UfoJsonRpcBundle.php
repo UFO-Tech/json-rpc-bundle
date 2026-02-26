@@ -28,7 +28,6 @@ class UfoJsonRpcBundle extends Bundle
         $container
             ->addCompilerPass(new RpcRegisterControllerArgumentLocatorsPass())
             ->addCompilerPass(new RpcServiceMapPass())
-            ->addCompilerPass(new RpcRegisterArgumentLocatorsPass())
         ;
     }
 }

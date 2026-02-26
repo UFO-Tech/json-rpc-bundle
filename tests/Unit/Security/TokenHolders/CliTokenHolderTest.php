@@ -20,7 +20,7 @@ class CliTokenHolderTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->setUpConfig([
+        $this->setConfig([
             RpcSecurityConfig::NAME => [
                 RpcSecurityConfig::TOKEN_NAME => 'AUTH_TOKEN',
                 RpcSecurityConfig::PROTECTED_API => true,

@@ -31,8 +31,8 @@ final readonly class RpcMainConfig
     public function __construct(
         array $rpcConfigs,
         public string $environment,
-        RequestStack $requestStack,
-        array $sdkConfigs,
+        ?RequestStack $requestStack = null,
+        array $sdkConfigs = [],
     ) {
         $extraConfig = Yaml::parse(file_get_contents(__DIR__.'/../../install/packages/ufo_json_rpc.yaml'));
         $configs = $this->recursiveMerge($rpcConfigs, $extraConfig[self::NAME]);
@@ -41,7 +41,7 @@ final readonly class RpcMainConfig
         $this->securityConfig = new RpcSecurityConfig($configs[RpcSecurityConfig::NAME], $this);
         $this->docsConfig = new RpcDocsConfig($configs[RpcDocsConfig::NAME], $this);
         $this->asyncConfig = new RpcAsyncConfig($configs[RpcAsyncConfig::NAME], $this);
-        $url = $requestStack->getCurrentRequest()?->getUri() ?? "";
+        $url = $requestStack?->getCurrentRequest()?->getUri() ?? "";
         $this->url = parse_url($url) ?? [];
 
         $this->sdkVendors = array_column($sdkConfigs['vendors'] ?? [], 'name');

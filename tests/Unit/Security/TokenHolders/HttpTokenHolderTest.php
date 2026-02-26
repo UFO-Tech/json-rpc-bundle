@@ -17,7 +17,7 @@ class HttpTokenHolderTest extends TestCase
     {
         $tokenKey = 'Authorization-Token';
         $tokenValue = 'sample_token_value';
-        $this->setUpConfig([
+        $this->setConfig([
             RpcSecurityConfig::NAME => [
                 RpcSecurityConfig::PROTECTED_API => true,
                 RpcSecurityConfig::TOKEN_NAME => $tokenKey,
@@ -35,7 +35,7 @@ class HttpTokenHolderTest extends TestCase
         $this->expectException(RpcTokenNotSentException::class);
         $tokenKey = 'Authorization-Token';
         $tokenValue = 'sample_token_value';
-        $this->setUpConfig([
+        $this->setConfig([
             RpcSecurityConfig::NAME => [
                 RpcSecurityConfig::PROTECTED_API => true,
                 RpcSecurityConfig::TOKEN_NAME => $tokenKey,

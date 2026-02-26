@@ -9,7 +9,6 @@ use ReflectionClass;
 use ReflectionMethod;
 use Throwable;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
-use Ufo\JsonRpcBundle\ConfigService\RpcDocsConfig;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\Fillers\ChainServiceFiller;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\RpcError\RpcInternalException;
@@ -37,6 +36,11 @@ class UfoReflectionProcedure
     protected string $namespace;
 
     /**
+     * @var class-string
+     */
+    protected string $procedure;
+
+    /**
      * ReflectionClass object
      *
      * @var ReflectionClass
@@ -56,11 +60,19 @@ class UfoReflectionProcedure
     protected AssertionsCollection $assertions;
 
     public function __construct(
-        protected IRpcService $procedure,
-        protected RpcDocsConfig $rpcDocsConfig,
+        string|IRpcService|ReflectionMethod|ReflectionClass $procedure,
         protected ChainServiceFiller $chainServiceFiller,
     ) {
-        $this->reflection = new ReflectionClass(get_class($procedure));
+        $refClass = $procedure;
+        if ($procedure instanceof IRpcService) {
+            $procedure = $procedure::class;
+        } elseif ($procedure instanceof ReflectionMethod) {
+            $procedure = $procedure->getDeclaringClass()->getName();
+        } elseif ($procedure instanceof ReflectionClass) {
+            $procedure = $procedure->getName();
+        }
+        $this->procedure = $procedure;
+        $this->reflection = ($procedure instanceof ReflectionClass) ? $refClass : new ReflectionClass($procedure);
         $this->provideNameAndNamespace();
         foreach ($this->reflection->getMethods() as $method) {
             if (str_starts_with($method->getName(), '__') || count($method->getAttributes(IgnoreApi::class)) > 0) continue;
@@ -103,13 +115,13 @@ class UfoReflectionProcedure
         }
         $this->methodDoc = DocBlockFactory::createInstance()->create($docBlock);
         $className = (empty($this->name)) ? '' : $this->name . $this->concat;
-        
+
         $contextFactory = new ContextFactory();
         $context = $contextFactory->createFromReflector($this->reflection);
-        
+
         $service = new Service(
             name: $className . $method->getName(),
-            procedureFQCN: $this->procedure::class,
+            procedureFQCN: $this->procedure,
             apiClassInfo: $this->apiClassInfo,
             concat: $this->concat,
             uses: $context->getNamespaceAliases(),

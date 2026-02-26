@@ -5,6 +5,7 @@ namespace Ufo\JsonRpcBundle\Tests\Unit\ParamConvertors;
 use PHPUnit\Framework\TestCase;
 use Ufo\JsonRpcBundle\ParamConvertors\BackedEnumConvertor;
 use Ufo\JsonRpcBundle\Tests\Unit\MockBackedEnum;
+use Ufo\RpcObject\RPC\Param;
 
 class BackedEnumConvertorTest extends TestCase
 {
@@ -77,6 +78,26 @@ class BackedEnumConvertorTest extends TestCase
     {
         $result = $this->convertor->supported(\stdClass::class);
         $this->assertFalse($result);
+    }
+
+    public function testToScalarConvertsBackedEnumValue(): void
+    {
+        $this->assertSame('a', $this->convertor->toScalar(MockBackedEnum::A));
+    }
+
+    public function testToScalarThrowsForNonEnumObject(): void
+    {
+        $this->expectException(\RuntimeException::class);
+        $this->convertor->toScalar(new \stdClass());
+    }
+
+    public function testGetParamAttrReturnsConvertorContextAndBackingType(): void
+    {
+        $param = $this->convertor->getParamAttr(MockBackedEnum::class);
+
+        $this->assertInstanceOf(Param::class, $param);
+        $this->assertSame('string', $param->getType());
+        $this->assertSame(BackedEnumConvertor::class, $param->context[Param::C_CONVERTOR] ?? null);
     }
 
 }

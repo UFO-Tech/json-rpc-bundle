@@ -15,9 +15,6 @@ use Ufo\RpcObject\RpcResponse;
 
 class RpcServer
 {
-    const string VERSION_1 = '1.0';
-    const string VERSION_2 = '2.0';
-
     protected ?RpcRequest $requestObject = null;
     protected RpcResponse $responseObject;
 

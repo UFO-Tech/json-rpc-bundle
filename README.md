@@ -1,7 +1,7 @@
 # JsonRpcBundle
 ![Ukraine](https://img.shields.io/badge/Glory-Ukraine-yellow?labelColor=blue)
 
-JSON-RPC 2.0 server for Symfony v.6.* and later
+JSON-RPC 2.0 server for Symfony v.7.2 and later
 
 ### About this package
 
@@ -20,7 +20,7 @@ This package makes it easy to create APIs using a JSON-RPC server.
 ![symfony_version](https://img.shields.io/packagist/dependency-v/ufo-tech/json-rpc-bundle/symfony/serializer?label=SymfonySerializer&logo=Symfony&logoColor=white) 
 ![symfony version](https://img.shields.io/packagist/dependency-v/ufo-tech/json-rpc-bundle/symfony/serializer?label=SymfonyCache&logo=Symfony&logoColor=white)
 
-This package allows you to easily create APIs using a JSON-RPC server for Symfony v.6.* and newer versions. It is suitable for developers who want to quickly and effectively integrate RPC functionality into their projects.
+This package allows you to easily create APIs using a JSON-RPC server for Symfony v.7.2 and newer versions (PHP >= 8.3). It is suitable for developers who want to quickly and effectively integrate RPC functionality into their projects.
 
 ### Key Benefits
 - **Ease of Integration:** Integrating this package into your project is extremely simple. You just need to add a special interface to any existing class, and it will automatically gain the ability to handle JSON-RPC requests.

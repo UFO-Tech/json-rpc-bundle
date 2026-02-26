@@ -23,10 +23,7 @@ final class RpcServiceValueResolver
      */
     public function __construct(
         private ContainerInterface $rpcArgumentLocators,
-    )
-    {
-        $a =2;
-    }
+    ) {}
 
     /**
      * Resolve service argument.

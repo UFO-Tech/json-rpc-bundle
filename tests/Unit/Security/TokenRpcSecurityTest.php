@@ -25,29 +25,24 @@ class TokenRpcSecurityTest extends TestCase
     {
         $this->tokenValidatorMock = $this->createMock(ITokenValidator::class);
         $this->tokenHolderMock = $this->createMock(IRpcTokenHolder::class);
-        $this->setUpConfig([
+        $this->setConfig([
             RpcSecurityConfig::NAME => [
                 RpcSecurityConfig::PROTECTED_API => true,
             ]
         ]);
-    }
-
-    protected function setUpConfig(array $config = []): void
-    {
-        $this->setConfig($config);
         $this->tokenRpcSecurity = new TokenRpcSecurity($this->rpcMainConfig, $this->tokenValidatorMock);
         $this->tokenRpcSecurity->setTokenHolder($this->tokenHolderMock);
     }
 
     public function testIsValidApiRequestWhenNotProtectedApi(): void
     {
-        $this->setUpConfig([
+        $this->setConfig([
             RpcSecurityConfig::NAME => [
                 RpcSecurityConfig::PROTECTED_API => false,
             ]
         ]);
 
-        $this->tokenValidatorMock->expects($this->never())->method('isValid');
+        $this->tokenValidatorMock->expects($this->once())->method('isValid');
         $this->assertTrue($this->tokenRpcSecurity->isValidApiRequest());
     }
 

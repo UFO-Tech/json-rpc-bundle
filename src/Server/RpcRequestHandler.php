@@ -4,6 +4,7 @@ namespace Ufo\JsonRpcBundle\Server;
 
 use Closure;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
 use Symfony\Component\Serializer\SerializerInterface;
 use Ufo\JsonRpcBundle\EventDrivenModel\RpcEventFactory;
 use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
@@ -30,7 +31,7 @@ class RpcRequestHandler
     public function __construct(
         protected RequestCarrier $requestCarrier,
         protected RpcServer $rpcServer,
-        protected SerializerInterface $serializer,
+        protected SerializerInterface&NormalizerInterface $serializer,
         protected RpcAsyncProcessor $asyncProcessor,
         protected RpcCallbackProcessor $callbackProcessor,
         protected RpcResponseContextBuilder $contextBuilder,
@@ -144,11 +145,11 @@ class RpcRequestHandler
 
             $service = $this->rpcServer->serviceHolder->getService($singleRequest->getMethod());
 
-            $this->eventFactory->fire(RpcEvent::PRE_RESPONSE, ...[
-                'response' => $result,
-                'rpcRequest' => $singleRequest,
-                'service' => $service,
-            ]);
+            $this->eventFactory->fire(RpcEvent::PRE_RESPONSE,
+                $result,
+                $singleRequest,
+                $service,
+            );
         } else {
             $result = $this->rpcServer->handle($event->rpcRequest);
         }
