@@ -2,8 +2,10 @@
 
 namespace Ufo\JsonRpcBundle\Server\ServiceMap;
 
+use ReflectionException;
 use RuntimeException;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\Exceptions\ServiceNotFoundException;
 use Ufo\JsonRpcBundle\Package;
@@ -11,8 +13,11 @@ use Ufo\RpcObject\RPC\Info;
 use Ufo\RpcObject\RpcTransport;
 
 use function array_key_exists;
+use function array_keys;
 use function array_unique;
+use function in_array;
 use function is_subclass_of;
+use function usort;
 
 #[AutoconfigureTag(IServiceHolder::TAG)]
 class ServiceMap implements IServiceHolder
@@ -26,8 +31,11 @@ class ServiceMap implements IServiceHolder
     protected bool $fromCache = false;
 
     public function __construct(
+        #[Autowire(param: IServiceHolder::MAP)]
+        protected array $serviceMapData,
         protected RpcMainConfig $mainConfig
     ) {}
+
 
     /**
      * Get transport.
@@ -70,79 +78,41 @@ class ServiceMap implements IServiceHolder
     }
 
     /**
-     * @param Service $service
-     * @return $this
-     */
-    public function addService(Service $service): static
-    {
-        $name = $service->getName();
-        if (array_key_exists($name, $this->services)
-            && !is_subclass_of($service->getProcedureFQCN(), $this->services[$name]->getProcedureFQCN())
-        ) {
-            if (is_subclass_of($this->services[$name]->getProcedureFQCN(), $service->getProcedureFQCN())) {
-                return $this;
-            } else {
-                throw new RuntimeException('Attempt to register a service "'. $name .'" already registered detected');
-            }
-        }
-        $ver = $service->apiClassInfo->version ?? Info::DEFAULT_VERSION;
-        $this->services[$ver][$name] = $service;
-        $this->excludePrevious[$ver] = array_unique(array_merge($this->excludePrevious[$ver] ?? [], $service->apiClassInfo->removedMethods));
-        return $this;
-    }
-
-    /**
      * @param string $version
      * @return Service[]
+     * @throws ReflectionException
      */
     public function getServices(string $version = Info::DEFAULT_VERSION): array
     {
-        $versions = array_keys($this->services);
-        if (!in_array($version, $versions, true)) {
-            throw new RuntimeException('Version "'.$version.'" is not registered on RPC Service Map');
+        $services = $this->serviceMapData[$version]
+                    ?? throw new RuntimeException('Version "'.$version.'" is not registered on RPC Service Map');
+
+        foreach ($services as $serviceName => $data) {
+            $this->services[$version][$serviceName] ??= Service::fromArray($data);
         }
-        usort($versions, 'version_compare');
-
-        $result = [];
-
-        foreach ($versions as $ver) {
-            if (version_compare($ver, $version, '<=')) {
-                $result = array_replace($result, $this->services[$ver]);
-                $exclude = $this->excludePrevious[$version] ?? [];
-                $result = array_diff_key($result, array_flip($exclude));
-            }
-        }
-
-        return $result;
+        return $this->services[$version];
     }
 
     /**
      * @param string $serviceName
      * @param string $version
      * @return Service
-     * @throws ServiceNotFoundException
+     * @throws ServiceNotFoundException|\ReflectionException
      */
     public function getService(string $serviceName, string $version = Info::DEFAULT_VERSION): Service
     {
-        return $this->services[$version][$serviceName]
-               ?? throw new ServiceNotFoundException('Service "'.$serviceName.'" for version "'.$version.'" is not found on RPC Service Map');
+        return $this->services[$version][$serviceName] ??= Service::fromArray($this->serviceMapData[$version][$serviceName])
+                                                           ?? $this->errorMessage($serviceName, $version);
     }
 
-    public function setFromCacheTrue(): static
+    protected function errorMessage(string $serviceName, string $version): never
     {
-        $this->fromCache = true;
-
-        return $this;
-    }
-
-    public function isFromCache(): bool
-    {
-        return $this->fromCache;
+        throw new ServiceNotFoundException('Service "'.$serviceName.'" for version "'.$version.'" is not found on RPC Service Map');
     }
 
     public function getVersions(): array
     {
-        return array_keys($this->services);
+        return array_keys($this->serviceMapData);
     }
 
 }

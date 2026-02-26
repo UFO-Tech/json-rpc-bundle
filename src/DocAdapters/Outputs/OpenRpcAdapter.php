@@ -76,10 +76,7 @@ class OpenRpcAdapter
             $http->getDomainUrl() . $this->router->generate(ApiController::API_ROUTE),
             $this->serviceMap->getEnvelope(),
             $this->serviceMap->getTransport(),
-            rpcEnv: [
-                ...['fromCache' => $this->serviceMap->isFromCache()],
-                ...Package::ufoEnvironment(),
-            ],
+            rpcEnv: Package::ufoEnvironment()
         );
     }
 

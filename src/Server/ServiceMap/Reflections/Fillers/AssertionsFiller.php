@@ -13,18 +13,21 @@ use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\RpcObject\RPC\AssertionsCollection;
 
 use Ufo\RpcObject\RPC\Param;
+use Ufo\RpcObject\Transformer\Transformer;
+
 use function in_array;
 
 #[AutoconfigureTag(IServiceFiller::TAG, ['priority' => 99])]
 class AssertionsFiller extends AbstractServiceFiller
 {
     protected RpcDocsConfig $rpcDocsConfig;
+    protected SerializerInterface $serializer;
 
     public function __construct(
-        protected SerializerInterface $serializer,
         protected RpcMainConfig $rpcConfig,
     )
     {
+        $this->serializer = Transformer::getDefault();
         $this->rpcDocsConfig = $this->rpcConfig->docsConfig;
     }
 

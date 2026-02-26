@@ -4,8 +4,10 @@ namespace Ufo\JsonRpcBundle\Server\ServiceMap;
 
 use ReflectionException;
 use TypeError;
+use Ufo\DTO\ArrayConvertibleTrait;
 use Ufo\DTO\DTOTransformer;
 use Ufo\DTO\ServiceTransformer;
+use Ufo\DTO\SmartArrayConvertibleTrait;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\DtoReflector;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
 use Ufo\RpcError\RpcInternalException;
@@ -30,7 +32,7 @@ use function json_encode;
 
 class Service implements IArrayConvertible, IArrayConstructible
 {
-    use JsonSerializableTrait;
+    use JsonSerializableTrait, SmartArrayConvertibleTrait;
 
     protected string $description = '';
 
@@ -70,7 +72,7 @@ class Service implements IArrayConvertible, IArrayConstructible
     protected bool $deprecated = false;
 
     public function __construct(
-        readonly public  string $name,
+        readonly public string $name,
         readonly public string $procedureFQCN,
         readonly public Info $apiClassInfo,
         readonly public string $concat = Info::DEFAULT_CONCAT,
@@ -283,36 +285,6 @@ class Service implements IArrayConvertible, IArrayConstructible
     public function getReturnItems(): ?string
     {
         return $this->returnItems;
-    }
-
-    /**
-     * @throws RpcInternalException
-     */
-    public function toArray(): array
-    {
-        $array = [
-            'name'           => $this->getName(),
-            'procedureFQCN'  => $this->getProcedureFQCN(),
-            'methodName'     => $this->getMethodName(),
-            'description'    => $this->getDescription(),
-            'parameters'     => array_map(fn(ParamDefinition $param) => $param->toArray(), $this->getParams()),
-            'returns'        => (count($this->getReturn()) > 1) ? $this->getReturn() : $this->getReturn()[0],
-            'returnItems'    => $this->returnItems,
-            'responseFormat' => $this->responseInfo?->getResponseFormat() ?? $this->return,
-            'attrCollection' => DTOTransformer::toArray($this->attrCollection),
-            'uses'           => $this->uses,
-        ];
-        if (!empty($this->throws)) {
-            $array['throws'] = $this->throws;
-        }
-        if (!empty($this->schema)) {
-            $array['json_schema'] = $this->schema;
-        }
-        if (!empty($this->assertions)) {
-            $array['symfony_assertions'] = $this->assertions->toArray();
-        }
-
-        return $array;
     }
 
     public function setAssertions(AssertionsCollection $assertions): static

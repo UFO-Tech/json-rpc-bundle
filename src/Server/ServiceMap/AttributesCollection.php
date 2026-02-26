@@ -15,7 +15,6 @@ class AttributesCollection
     /**
      * @var object[]
      */
-    #[DTOCollection(IArrayConstructible::class)]
     protected array $attributes = [];
 
     public function getAttribute(string $attrFQCN, int $position = 0): ?object

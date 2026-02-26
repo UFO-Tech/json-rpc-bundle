@@ -42,12 +42,12 @@ class RpcCacheService
      */
     protected array $reflections = [];
 
-    protected ServiceMap $localServiceMap;
     protected RpcServer $localRpcServer;
 
     public function __construct(
         protected CacheItemPoolInterface $cache,
         protected RpcMainConfig $rpcConfig,
+        protected ServiceMap $serviceMap,
 
         #[Autowire(service: IServiceHolder::LOCATOR)]
         protected ContainerInterface $serviceLocator,
@@ -55,9 +55,8 @@ class RpcCacheService
         protected RpcEventFactory $eventFactory,
     )
     {
-        $this->localServiceMap = new ServiceMap($this->rpcConfig);
         $this->localRpcServer = new RpcServer(
-            $this->localServiceMap,
+            $this->serviceMap,
             $this->eventFactory,
             $this
         );
@@ -127,7 +126,6 @@ class RpcCacheService
 
                 $reflection = new UfoReflectionProcedure(
                     $procedure,
-                    $this->rpcConfig->docsConfig,
                     $this->chainServiceFiller
                 );
                 $dto->addServices($reflection->getMethods($relation->methods));
@@ -155,11 +153,6 @@ class RpcCacheService
     public function warmupCache(): void
     {
         if (!$this->definitionDTO) return;
-        foreach ($this->definitionDTO->getServices() as $service) {
-            try {
-                $this->localServiceMap->addService($service);
-            } catch (Throwable) {}
-        }
 
         foreach ($this->definitionDTO->getWarmupRequests() as $warmupRequest) {
             try {
@@ -211,7 +204,6 @@ class RpcCacheService
                 $procedure = $this->serviceLocator->get($class);
                 $reflection = new UfoReflectionProcedure(
                     $procedure,
-                    $this->rpcConfig->docsConfig,
                     $this->chainServiceFiller
                 );
                 $this->reflections[$class] = $reflection;

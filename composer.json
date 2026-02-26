@@ -43,7 +43,7 @@
     "symfony/http-client": "^7.2",
     "symfony/process": "^7.2",
     "ufo-tech/packages": "^1",
-    "ufo-tech/dto-transformer": "^2",
+    "ufo-tech/dto-transformer": "^2.1",
     "ufo-tech/rpc-objects": "^3.4",
     "ufo-tech/rpc-exceptions": "^1.3",
     "doctrine/persistence": ">=3.1",
