@@ -5,6 +5,7 @@ namespace Ufo\JsonRpcBundle\Tests\Unit\ParamConvertors;
 use PHPUnit\Framework\TestCase;
 use Ufo\JsonRpcBundle\ParamConvertors\BackedEnumConvertor;
 use Ufo\JsonRpcBundle\Tests\Unit\MockBackedEnum;
+use Ufo\JsonRpcBundle\Tests\Unit\MockBackedEnumWithAlias;
 use Ufo\RpcObject\RPC\Param;
 
 class BackedEnumConvertorTest extends TestCase
@@ -98,6 +99,14 @@ class BackedEnumConvertorTest extends TestCase
         $this->assertInstanceOf(Param::class, $param);
         $this->assertSame('string', $param->getType());
         $this->assertSame(BackedEnumConvertor::class, $param->context[Param::C_CONVERTOR] ?? null);
+    }
+
+    public function testToObjectUsesTryFromValueFallbackWhenTryFromFails(): void
+    {
+        $context = ['classFQCN' => MockBackedEnumWithAlias::class];
+        $result = $this->convertor->toObject('alias', $context);
+
+        $this->assertSame(MockBackedEnumWithAlias::A, $result);
     }
 
 }

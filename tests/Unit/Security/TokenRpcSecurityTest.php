@@ -87,4 +87,37 @@ class TokenRpcSecurityTest extends TestCase
         $this->tokenRpcSecurity->getTokenHolder();
     }
 
+    public function testIsValidDocRequestWhenNotProtectedDoc(): void
+    {
+        $this->setConfig([
+            RpcSecurityConfig::NAME => [
+                RpcSecurityConfig::PROTECTED_API => true,
+                RpcSecurityConfig::PROTECTED_DOC => false,
+            ]
+        ]);
+        $security = new TokenRpcSecurity($this->rpcMainConfig, $this->tokenValidatorMock);
+        $security->setTokenHolder($this->tokenHolderMock);
+
+        $this->tokenValidatorMock->expects($this->never())->method('isValid');
+
+        $this->assertTrue($security->isValidDocRequest());
+    }
+
+    public function testIsValidDocRequestWhenProtectedDoc(): void
+    {
+        $this->setConfig([
+            RpcSecurityConfig::NAME => [
+                RpcSecurityConfig::PROTECTED_API => true,
+                RpcSecurityConfig::PROTECTED_DOC => true,
+            ]
+        ]);
+        $security = new TokenRpcSecurity($this->rpcMainConfig, $this->tokenValidatorMock);
+        $security->setTokenHolder($this->tokenHolderMock);
+
+        $this->tokenHolderMock->expects($this->once())->method('getToken')->willReturn('doc-token');
+        $this->tokenValidatorMock->expects($this->once())->method('isValid')->with('doc-token');
+
+        $this->assertTrue($security->isValidDocRequest());
+    }
+
 }

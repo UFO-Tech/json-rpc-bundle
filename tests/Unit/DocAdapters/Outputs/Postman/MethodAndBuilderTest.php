@@ -42,13 +42,18 @@ class MethodAndBuilderTest extends TestCase
 
     public function testPostmanSpecFillerCombinesFoldersMethodsAndVariables(): void
     {
-        $filler = new PostmanSpecFiller(new Info('API', 'Desc', 'schema', '1.0', 'doc-v1'));
+        $info = new Info('API', 'Desc', 'schema', '1.0', 'doc-v1');
+        $filler = new PostmanSpecFiller($info);
         $methodA = new Method('ping', 'Ping', [], new Server('https://api.example.com/rpc'));
         $methodB = new Method('status', 'Status', [], new Server('https://api.example.com/rpc'));
 
         $filler->addToFolder('Core', $methodA);
         $filler->addMethod($methodB);
         $filler->addVariable('base_url', new Variable('base_url', 'https://api.example.com'));
+
+        $this->assertSame($info, $filler->getInfo());
+        $this->assertCount(1, $filler->getMethods());
+        $this->assertCount(1, $filler->getFolders());
 
         $data = $filler->toArray();
 
@@ -82,4 +87,3 @@ class MethodAndBuilderTest extends TestCase
         $this->assertSame('base_url', $collection['variables'][0]['key']);
     }
 }
-
