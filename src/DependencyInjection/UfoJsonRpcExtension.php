@@ -3,26 +3,18 @@
 namespace Ufo\JsonRpcBundle\DependencyInjection;
 
 use Exception;
-use ReflectionClass;
-use Symfony\Component\Cache\Adapter\AbstractAdapter;
-use Symfony\Component\Cache\Adapter\AdapterInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\Config\FileLocator;
-use Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException;
 use Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface;
 use Symfony\Component\DependencyInjection\Extension\Extension;
 use Symfony\Component\DependencyInjection\Loader;
 use Ufo\JsonRpcBundle\ConfigService\RpcAsyncConfig;
-use Ufo\JsonRpcBundle\ConfigService\RpcCacheConfig;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
-use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMap;
+use Ufo\JsonRpcBundle\DependencyInjection\Attribute\RequiresExtension;
 use Ufo\RpcError\RpcBadParamException;
-use Ufo\RpcObject\RPC\Cache;
 use Ufo\RpcObject\RpcAsyncRequest;
 
 use function is_null;
-use function ltrim;
-use function substr;
 
 /**
  * This is the class that loads and manages your bundle configuration.
@@ -62,6 +54,7 @@ class UfoJsonRpcExtension extends Extension implements PrependExtensionInterface
 
         $loader = new Loader\YamlFileLoader($this->container, new FileLocator(__DIR__.'/../../config'));
         $loader->load('services.yaml');
+        $this->removeServicesWithMissingExtensions();
     }
 
     public function prepend(ContainerBuilder $container): void
@@ -98,6 +91,25 @@ class UfoJsonRpcExtension extends Extension implements PrependExtensionInterface
                     'routing'    => $routs,
                 ],
             ]);
+        }
+    }
+
+    protected function removeServicesWithMissingExtensions(): void
+    {
+        foreach ($this->container->getDefinitions() as $serviceId => $definition) {
+            $class = $definition->getClass();
+            if (!$class) continue;
+
+            $reflection = $this->container->getReflectionClass($class, false);
+            if (!$reflection) continue;
+
+            foreach ($reflection->getAttributes(RequiresExtension::class) as $attribute) {
+                $requiredExtension = $attribute->newInstance()->extension;
+                if (!$this->container->hasExtension($requiredExtension)) {
+                    $this->container->removeDefinition($serviceId);
+                    break;
+                }
+            }
         }
     }
 

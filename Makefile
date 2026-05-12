@@ -44,6 +44,9 @@ composer-update: composer
 composer-i: composer-install
 composer-u: composer-update
 
+test: CMD = test
+test: composer
+
 commit-a:
 	@printf "\033[33mПідтвердити push з amend? (y/N): \033[0m"; \
 	read CONF && [ "$$CONF" = "y" ] || exit 1; \

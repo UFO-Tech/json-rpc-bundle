@@ -8,6 +8,7 @@ use LogicException;
 use Stringable;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 use Throwable;
+use Ufo\JsonRpcBundle\DependencyInjection\Attribute\RequiresExtension;
 use Ufo\DTO\Helpers\TypeHintResolver;
 use Ufo\RpcObject\RPC\Param;
 
@@ -15,6 +16,7 @@ use function array_values;
 use function current;
 
 #[AsTaggedItem(IParamConvertor::TAG, priority: 100)]
+#[RequiresExtension(RequiresExtension::DOCTRINE)]
 readonly class DoctrineEntityConverter implements IParamConvertor
 {
     public function __construct(
