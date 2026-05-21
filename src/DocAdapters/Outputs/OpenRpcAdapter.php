@@ -10,6 +10,7 @@ use Ufo\JsonRpcBundle\DocAdapters\Outputs\OpenRpc\OpenRpcSpecBuilder;
 use Ufo\JsonRpcBundle\DocAdapters\Traits\JsonSchemaDtoFormatTrait;
 use Ufo\JsonRpcBundle\Package;
 use Ufo\JsonRpcBundle\ParamConvertors\ChainParamConvertor;
+use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\EnumProcessor\EnumsHolder;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMap;
@@ -36,6 +37,7 @@ class OpenRpcAdapter
         protected RpcMainConfig $mainConfig,
         protected ChainParamConvertor $paramConvertor,
         protected RouterInterface $router,
+        protected EnumsHolder $enumsHolder,
     ) {}
 
     public function adapt(bool $fullInfo = true, string $version = Info::DEFAULT_VERSION): array
@@ -147,4 +149,8 @@ class OpenRpcAdapter
         return $this->paramConvertor;
     }
 
+    protected function getEnumsHolder(): EnumsHolder
+    {
+        return $this->enumsHolder;
+    }
 }

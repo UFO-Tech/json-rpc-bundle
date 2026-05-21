@@ -20,9 +20,11 @@ use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\Exception\LogicException;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\ExpressionLanguage\Expression;
-use Symfony\Component\Serializer\Serializer;
 use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Contracts\Cache\CacheInterface;
 use Throwable;
+use Ufo\DTO\DTOTransformer;
+use Ufo\DTO\Factory\DefaultDTOTransformerFactory;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 use Ufo\JsonRpcBundle\ParamConvertors\ChainParamConvertor;
 use Ufo\JsonRpcBundle\ParamConvertors\IParamConvertor;
@@ -58,10 +60,17 @@ class RpcServiceMapPass implements CompilerPassInterface
     protected ?ChainServiceFiller $chainServiceFiller = null;
     protected ?SerializerInterface $serializer = null;
 
+    protected const string DTO_FROM_ARRAY_TRANSFORMER_TAG = 'dto.from_array_transformer';
+
     /**
      * @var array<string, Service>
      */
     protected array $serviceMap = [];
+
+    /**
+     * @var array<string, object>
+     */
+    protected array $compiledServices = [];
 
     /**
      * @throws ReflectionException|RpcInternalException
@@ -69,6 +78,8 @@ class RpcServiceMapPass implements CompilerPassInterface
     public function process(ContainerBuilder $container): void
     {
         $this->container = $container;
+        $this->compileStaticDTOTransformer();
+
         $rpcServices = $container->findTaggedServiceIds(IRpcService::TAG);
         $rpcClassRef = []; // ServiceLocator
         $methodLocators = []; // MethodLocators
@@ -96,6 +107,18 @@ class RpcServiceMapPass implements CompilerPassInterface
         $this->registration(IServiceHolder::LOCATOR, $rpcClassRef);
         $this->registration(IServiceHolder::ARG_LOCATOR, $methodLocators);
         $this->container->setParameter(IServiceHolder::MAP, $this->getServicesForMap());
+        DTOTransformer::reset();
+    }
+
+    /**
+     * @throws RpcInternalException
+     */
+    protected function compileStaticDTOTransformer(): void
+    {
+        DTOTransformer::reset();
+        $factory = DefaultDTOTransformerFactory::default();
+//        $dtoTransformers = $this->getTaggedServices(self::DTO_FROM_ARRAY_TRANSFORMER_TAG);
+        DTOTransformer::boot($factory->create(DTOTransformer::class));
     }
 
     /**
@@ -193,6 +216,10 @@ class RpcServiceMapPass implements CompilerPassInterface
 
     protected function getReferenceService(string $serviceId, int $deep = 0, bool $allowNull = false): ?object
     {
+        if (isset($this->compiledServices[$serviceId])) {
+            return $this->compiledServices[$serviceId];
+        }
+
         if ($serviceId === SerializerInterface::class) return $this->compileSerializer();
         // In compiler passes, interfaces are usually registered as aliases (autowiring). `findDefinition()` resolves aliases.
         if (!$this->container->has($serviceId) && !$this->container->hasAlias($serviceId) && !$this->container->hasDefinition($serviceId)) {
@@ -284,8 +311,7 @@ class RpcServiceMapPass implements CompilerPassInterface
                 $params[] = $this->getReferenceService($depId, $deep + 1, $type->allowsNull());
             }
         }
-
-        return $reflection->newInstanceArgs($params);
+        return $this->compiledServices[$serviceId] = $reflection->newInstanceArgs($params);
     }
 
     public function processServiceMap(ReflectionClass $refClass): void

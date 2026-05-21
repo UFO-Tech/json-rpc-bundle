@@ -7,6 +7,7 @@ use RuntimeException;
 use Throwable;
 use Ufo\DTO\DTOTransformer;
 use Ufo\DTO\Helpers\TypeHintResolver;
+use Ufo\DTO\Transformer\Converter\EnumConverter;
 use Ufo\RpcObject\RPC\Param;
 use UnitEnum;
 
@@ -36,10 +37,7 @@ class EnumConvertor implements IParamConvertor
         }
 
         try {
-            $enum = DTOTransformer::transformEnum($fqcn, $value);
-            if (!$enum instanceof UnitEnum) {
-                $enum = null;
-            }
+            $enum = EnumConverter::toEnum($fqcn, $value);
         } catch (Throwable) {
             $enum = is_subclass_of($fqcn, BackedEnum::class) ? $fqcn::tryFrom($value) : null;
         }

@@ -52,7 +52,7 @@ class Service implements IArrayConvertible, IArrayConstructible
     protected array $ufoAssertions = [];
 
     /**
-     * @var array<string,array<DtoReflector>
+     * @var array<string,array<DtoReflector>>
      */
     protected array $paramsDto = [];
 

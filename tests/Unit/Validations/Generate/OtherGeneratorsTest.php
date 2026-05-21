@@ -7,6 +7,7 @@ namespace Ufo\JsonRpcBundle\Tests\Unit\Validations\Generate;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Validator\Constraints as Assert;
 use Ufo\DTO\Helpers\EnumResolver;
+use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\EnumProcessor\EnumsHolder;
 use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Enums\CompositeConstraintType;
 use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\IsChoice;
 use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\IsCollection;
@@ -25,7 +26,7 @@ class OtherGeneratorsTest extends TestCase
 {
     public function testIsChoiceGeneratesEnumSchemaForStringChoices(): void
     {
-        $generator = new IsChoice();
+        $generator = new IsChoice(new EnumsHolder());
         $rules = ['type' => 'string'];
 
         $generator->generate(new Assert\Choice(['choices' => ['a', 'b']]), $rules);

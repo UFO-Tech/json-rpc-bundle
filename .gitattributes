@@ -1,0 +1,12 @@
+/tests export-ignore
+/benchmarks export-ignore
+/phpunit.xml export-ignore
+/.gitignore export-ignore
+/.gitattributes export-ignore
+/phpunit.xml.dist export-ignore
+/Makefile export-ignore
+/Makefile.md export-ignore
+/MakefileCustom export-ignore
+/MakefileCustom.dist export-ignore
+/.env export-ignore
+/docker-compose.yaml export-ignore

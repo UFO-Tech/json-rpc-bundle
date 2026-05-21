@@ -8,6 +8,7 @@ use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\Constraints\Choice;
 use Ufo\DTO\Helpers\EnumResolver;
 use Ufo\DTO\Helpers\TypeHintResolver;
+use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\EnumProcessor\EnumsHolder;
 use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Interfaces\IConstraintGenerator;
 use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Traits\ConstraintApplier;
 
@@ -15,6 +16,10 @@ use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Traits\ConstraintApplier;
 class IsChoice implements IConstraintGenerator
 {
     use ConstraintApplier;
+
+    public function __construct(
+        protected EnumsHolder $enumsHolder
+    ) {}
 
     public function getSupportedClass(): string
     {
@@ -39,7 +44,7 @@ class IsChoice implements IConstraintGenerator
         if (is_array($constraint->callback) && count($constraint->callback) === 2) {
             [$enum, $method] = $constraint->callback;
             if (method_exists($enum, $method)) {
-                $enumData = EnumResolver::generateEnumSchema($enum);
+                $enumData = $this->enumsHolder->getEnum($enum);
             }
         }
 

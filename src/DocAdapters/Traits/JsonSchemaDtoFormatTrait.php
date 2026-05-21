@@ -6,6 +6,7 @@ use Ufo\DTO\Helpers\EnumResolver;
 use Ufo\DTO\Helpers\TypeHintResolver as T;
 use Ufo\JsonRpcBundle\ParamConvertors\ChainParamConvertor;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\DtoReflector;
+use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\EnumProcessor\EnumsHolder;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\RpcError\RpcInternalException;
@@ -112,10 +113,10 @@ trait JsonSchemaDtoFormatTrait
         }
 
         if ($enumFQCN = EnumResolver::getEnumFQCN($param->getRealType())) {
-            $enumData = EnumResolver::generateEnumSchema($enumFQCN);
-            $enumName = $enumData[EnumResolver::ENUM][EnumResolver::ENUM_NAME] ?? throw new \RuntimeException('Undefined enum name');
-            $this->schemas[$enumName] = $enumData;
-            $paramSchema = $this->applyEnumRefToSchema($paramSchema, $enumName, $enumData);
+            $enumDef = $this->getEnumsHolder()->getEnum($enumFQCN);
+            $enumData = $enumDef->toArray();
+            $this->schemas[$enumDef->name] = $enumData;
+            $paramSchema = $this->applyEnumRefToSchema($paramSchema, $enumDef->name, $enumData);
          }
 
 
@@ -248,7 +249,7 @@ trait JsonSchemaDtoFormatTrait
             }
         }
         if (!$jsonValue && EnumResolver::getEnumFQCN($type)) {
-            $jsonValue = EnumResolver::generateEnumSchema($type);
+            $jsonValue = $this->getEnumsHolder()->getEnum($type)->toArray();
         } elseif (!$jsonValue && T::isRealClass($type)) {
             $newDtoResponse = new DTO($type);
             new DtoReflector($newDtoResponse, $this->getParamConvertor());
@@ -299,6 +300,8 @@ trait JsonSchemaDtoFormatTrait
         }
         return $schema;
     }
+
+    abstract protected function getEnumsHolder(): EnumsHolder;
 
 
     /**

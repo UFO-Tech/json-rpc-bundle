@@ -3,6 +3,8 @@
 namespace Ufo\JsonRpcBundle\Tests\Unit\Server\ServiceMap;
 
 use PHPUnit\Framework\TestCase;
+use Ufo\DTO\DTOTransformer;
+use Ufo\DTO\Factory\DefaultDTOTransformerFactory;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\RpcObject\RPC\AssertionsCollection;
@@ -75,6 +77,9 @@ class ServiceTest extends TestCase
 
     public function testAttributeCollectionAndToJsonAndToString(): void
     {
+        $factory = DefaultDTOTransformerFactory::default(); // DTOTransformerFactoryInterface
+        DTOTransformer::boot($factory->create());
+
         $service = $this->createService('main.ping');
         $attribute = new \stdClass();
 

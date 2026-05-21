@@ -20,19 +20,17 @@ class EnumsHolder
         return $this->enums;
     }
 
-    /**
-     * @param class-string $enumFQCN
-     * @return EnumDefinition
-     * @throws ReflectionException
-     */
+
     public function getEnum(string $enumFQCN): EnumDefinition
     {
-        if (!$definition = $this->enums[$enumFQCN] ?? false) {
-            $enumFQCN = EnumResolver::getEnumFQCN($enumFQCN);
+        $enumFQCN = EnumResolver::getEnumFQCN($enumFQCN);
+
+        if (!isset($this->enums[$enumFQCN])) {
             $enumData = EnumResolver::generateEnumSchema($enumFQCN);
             $this->enums[$enumFQCN] = EnumDefinition::fromArray($enumData);
         }
-        return $definition;
+
+        return $this->enums[$enumFQCN];
     }
 
 }
