@@ -6,6 +6,7 @@ use Ufo\DTO\Helpers\EnumResolver;
 use Ufo\DTO\Helpers\TypeHintResolver as T;
 use Ufo\JsonRpcBundle\ParamConvertors\ChainParamConvertor;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\DtoReflector;
+use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\EnumProcessor\EnumDefinition;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\EnumProcessor\EnumsHolder;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
@@ -52,7 +53,9 @@ trait JsonSchemaDtoFormatTrait
             foreach ($objSchema[T::ONE_OFF] as &$objSchema_) {
                 $this->replaceClassNameToDTO($objSchema_);
             }
-        } elseif ($objSchema[T::ADDITIONAL_PROPERTIES] ?? false) {
+        } elseif (is_array($objSchema[T::ADDITIONAL_PROPERTIES] ?? null)) {
+            // additionalProperties may be a boolean (true/false) in JSON Schema — only
+            // recurse when it is a nested schema array, otherwise TypeError on `true`.
             $this->replaceClassNameToDTO($objSchema[T::ADDITIONAL_PROPERTIES]);
         }
     }
@@ -117,8 +120,7 @@ trait JsonSchemaDtoFormatTrait
             $enumData = $enumDef->toArray();
             $this->schemas[$enumDef->name] = $enumData;
             $paramSchema = $this->applyEnumRefToSchema($paramSchema, $enumDef->name, $enumData);
-         }
-
+        }
 
         return $paramSchema;
     }
@@ -200,6 +202,7 @@ trait JsonSchemaDtoFormatTrait
                     $jsonValue,
                     $uses,
                 );
+                $jsonValue = $this->extractInlineEnumsToRefs($jsonValue);
                 if (array_key_exists($name, $defaultParams)) {
                     $jsonValue['default'] = $defaultParams[$name];
                 }
@@ -248,8 +251,10 @@ trait JsonSchemaDtoFormatTrait
                 $this->schemaFromDto($dto->getFormat());
             }
         }
-        if (!$jsonValue && EnumResolver::getEnumFQCN($type)) {
-            $jsonValue = $this->getEnumsHolder()->getEnum($type)->toArray();
+        if (!$jsonValue && ($enumFQCN = EnumResolver::getEnumFQCN($type))) {
+            $enumDef = $this->getEnumsHolder()->getEnum($enumFQCN);
+            $this->schemas[$enumDef->name] = $enumDef->toArray();
+            $jsonValue = $enumDef->getRef();
         } elseif (!$jsonValue && T::isRealClass($type)) {
             $newDtoResponse = new DTO($type);
             new DtoReflector($newDtoResponse, $this->getParamConvertor());
@@ -311,6 +316,26 @@ trait JsonSchemaDtoFormatTrait
     {
         if (is_null($responseInfo)) return null;
         return $this->formatFromResultAsDto($responseInfo);
+    }
+
+    /**
+     * Walks a schema and replaces every inline enum (identified by its x-ufo-enum
+     * marker) with a $ref to a registered component, so enums are shared instead of
+     * duplicated across DTO properties. Recurses into oneOf/items/additionalProperties.
+     */
+    protected function extractInlineEnumsToRefs(array $schema): array
+    {
+        return T::applyToSchema(
+            $schema,
+            function (array $node): array {
+                if (EnumResolver::findEnumNameInJsonSchema($node)) {
+                    $enumDef = EnumDefinition::fromArray($node);
+                    $this->schemas[$enumDef->name] = $enumDef->toArray();
+                    return $enumDef->getRef();
+                }
+                return $node;
+            }
+        );
     }
 
     protected function applyEnumRefToSchema(array $paramSchema, string $enumName, array $enumData): array

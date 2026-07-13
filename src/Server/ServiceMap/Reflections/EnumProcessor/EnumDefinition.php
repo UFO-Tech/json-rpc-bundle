@@ -67,7 +67,7 @@ readonly class EnumDefinition implements IArrayConvertible, IArrayConstructible
         return new static(
             $enumName,
             $data['type'],
-            $data[EnumResolver::ENUM]
+            $data[EnumResolver::ENUM][EnumResolver::METHOD_VALUES]
         );
     }
 

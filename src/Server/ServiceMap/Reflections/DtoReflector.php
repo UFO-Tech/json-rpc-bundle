@@ -4,6 +4,7 @@ namespace Ufo\JsonRpcBundle\Server\ServiceMap\Reflections;
 
 use LogicException;
 use phpDocumentor\Reflection\DocBlockFactory;
+use phpDocumentor\Reflection\Types\ContextFactory;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionObject;
@@ -134,12 +135,20 @@ class DtoReflector
     {
         $descType = null;
         $docProperty = $property->getDocComment();
-        $ctor = (new ReflectionClass($property->getDeclaringClass()->getName()))->getConstructor();
+        $declaringClass = $property->getDeclaringClass();
+        $ctor = (new ReflectionClass($declaringClass->getName()))->getConstructor();
         $docConstructor = $ctor?->getDocComment();
 
+        // Build a phpDocumentor Context from the declaring class so relative type names in the
+        // docblock (e.g. "Enums\DeliveryCapabilityEnum" imported via `use App\SDK\Atlas\Enums;`)
+        // resolve to their full FQCN instead of a bogus leading-slash global name.
+        $context = null;
+        try {
+            $context = (new ContextFactory())->createFromReflector($declaringClass);
+        } catch (Throwable) {}
+
         if (!$docProperty && $property->isPromoted() && $docConstructor) {
-            
-            $docReflection = DocBlockFactory::createInstance()->create($docConstructor);
+            $docReflection = DocBlockFactory::createInstance()->create($docConstructor, $context);
             foreach ($docReflection->getTagsByName('param') as $param) {
                 if ($param->getVariableName() !== $property->getName()) continue;
                 $descType = (string)$param->getType();
@@ -148,7 +157,7 @@ class DtoReflector
         }
 
         if ($docProperty) {
-            $docReflection = DocBlockFactory::createInstance()->create($docProperty);
+            $docReflection = DocBlockFactory::createInstance()->create($docProperty, $context);
             try {
                 $descType = (string)($docReflection->getTagsByName('param')[0] ?? null)->getType();
             } catch (Throwable) {
