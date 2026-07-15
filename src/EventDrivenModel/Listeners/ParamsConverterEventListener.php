@@ -179,6 +179,7 @@ class ParamsConverterEventListener
                         $value,
                         [
                             'param' => $paramAttribute,
+                            'paramDefinition' => $paramDefinition,
                             TypeHintResolver::CLASS_FQCN => $classFQCN ?? $this->resolveParamTypeClassFQCN($paramDefinition->getRealType()),
                         ]
                     );

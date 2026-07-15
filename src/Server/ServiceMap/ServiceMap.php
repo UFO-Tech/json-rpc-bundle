@@ -101,8 +101,9 @@ class ServiceMap implements IServiceHolder
      */
     public function getService(string $serviceName, string $version = Info::DEFAULT_VERSION): Service
     {
-        return $this->services[$version][$serviceName] ??= Service::fromArray($this->serviceMapData[$version][$serviceName])
-                                                           ?? $this->errorMessage($serviceName, $version);
+        return $this->services[$version][$serviceName] ??= Service::fromArray(
+            $this->serviceMapData[$version][$serviceName] ?? $this->errorMessage($serviceName, $version)
+        );
     }
 
     protected function errorMessage(string $serviceName, string $version): never

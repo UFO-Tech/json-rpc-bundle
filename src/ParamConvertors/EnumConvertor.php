@@ -8,6 +8,7 @@ use Throwable;
 use Ufo\DTO\DTOTransformer;
 use Ufo\DTO\Helpers\TypeHintResolver;
 use Ufo\DTO\Transformer\Converter\EnumConverter;
+use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
 use Ufo\RpcObject\RPC\Param;
 use UnitEnum;
 
@@ -49,7 +50,14 @@ class EnumConvertor implements IParamConvertor
         }
 
         if (!$enum) {
-            throw new RuntimeException("Invalid value '{$value}' for enum {$fqcn}");
+            /** @var ParamDefinition $paramDef */
+            if (
+                !($paramDef = $context['paramDefinition'] ?? false)
+                || !$paramDef->isOptional() || $paramDef->getDefault() !== null
+            ) {
+                throw new RuntimeException("Invalid value '{$value}' for enum {$fqcn}");
+            }
+            return null;
         }
 
         if ($callback !== null) {
