@@ -4,15 +4,11 @@ namespace Ufo\JsonRpcBundle\Server\Async;
 
 use Closure;
 use DateTime;
-use Symfony\Component\Console\Output\Output;
-use Symfony\Component\Console\Style\SymfonyStyle;
-use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Serializer\SerializerInterface;
 use Throwable;
 use Ufo\JsonRpcBundle\CliCommand\UfoRpcProcessCommand;
-use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcEvent;
 use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
 use Ufo\JsonRpcBundle\Security\TokenHolders\RpcAsyncTokenHolder;
 use Ufo\JsonRpcBundle\Server\RpcServer;
