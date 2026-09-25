@@ -18,6 +18,7 @@ use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcEvent;
 use Ufo\RpcObject\RPC\Cache;
 use Ufo\RpcObject\RpcAsyncRequest;
 use Ufo\RpcObject\RpcError;
+use Ufo\RpcObject\RpcNotificationRequest;
 use Ufo\RpcObject\RpcResponse;
 use Ufo\RpcObject\Transformer\RpcResponseContextBuilder;
 
@@ -35,8 +36,13 @@ class AsyncServerEventListener
 
     public function processAsync(RpcPostResponseEvent $event): void
     {
-        if (!$event->rpcRequest->isAsync()) return;
-        $this->asyncProcessor->processAsync($event->rpcRequest);
+        $request = $event->rpcRequest;
+        match (true) {
+            $request->isAsync(),
+            $request instanceof RpcNotificationRequest
+                => $this->asyncProcessor->processAsync($request),
+            default => null
+        };
     }
 
     public function process(RpcAsyncOutputEvent $event): void

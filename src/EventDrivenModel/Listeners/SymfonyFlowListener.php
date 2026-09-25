@@ -20,6 +20,7 @@ use Ufo\JsonRpcBundle\CliCommand\UfoRpcProcessCommand;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\Controller\ApiController;
 use Ufo\JsonRpcBundle\EventDrivenModel\RpcEventFactory;
+use Ufo\JsonRpcBundle\Exceptions\ServiceNotFoundException;
 use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
 use Ufo\JsonRpcBundle\Security\Interfaces\IRpcTokenHolder;
 use Ufo\JsonRpcBundle\Security\TokenHolders\CliTokenHolder;
@@ -30,6 +31,7 @@ use Ufo\JsonRpcBundle\Server\RequestPrepare\Holders\RpcFromCli;
 use Ufo\JsonRpcBundle\Server\RequestPrepare\Holders\RpcFromHttp;
 use Ufo\JsonRpcBundle\Server\RpcRequestHandler;
 use Ufo\RpcError\RpcAsyncRequestException;
+use Ufo\RpcError\RpcBadRequestException;
 use Ufo\RpcError\RpcInvalidTokenException;
 use Ufo\RpcError\RpcJsonParseException;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcEvent;
@@ -97,29 +99,34 @@ class SymfonyFlowListener
      * @param RequestEvent $event
      * @return void
      * @throws RpcAsyncRequestException
-     * @throws RpcInvalidTokenException
-     * @throws RpcJsonParseException
      * @throws RpcMethodNotFoundExceptionRpc
      * @throws RpcRuntimeException
      * @throws RpcTokenNotSentException
      * @throws WrongWayException
+     * @throws ServiceNotFoundException
+     * @throws RpcBadRequestException
      */
     public function magicPostController(RequestEvent $event): void
     {
         if ($this->checkRpcRoute($event->getRequest())) {
             $result = $this->requestHandler->handle();
-            $event->setResponse(new JsonResponse($result));
+            $response = match (true) {
+                empty($result) => new Response('', Response::HTTP_NO_CONTENT),
+                default => new JsonResponse($result)
+            };
+            $event->setResponse($response);
         }
     }
 
     /**
      * @param ConsoleCommandEvent $event
      * @throws RpcAsyncRequestException
-     * @throws RpcInvalidTokenException
+     * @throws RpcBadRequestException
      * @throws RpcJsonParseException
      * @throws RpcMethodNotFoundExceptionRpc
      * @throws RpcRuntimeException
      * @throws RpcTokenNotSentException
+     * @throws ServiceNotFoundException
      * @throws WrongWayException
      */
     public function parseCliRequestInArgs(ConsoleCommandEvent $event): void

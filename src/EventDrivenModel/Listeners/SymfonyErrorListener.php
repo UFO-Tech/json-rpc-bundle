@@ -22,6 +22,7 @@ use Ufo\JsonRpcBundle\Exceptions\StopHandler;
 use Ufo\JsonRpcBundle\Server\RequestPrepare\RequestCarrier;
 use Ufo\JsonRpcBundle\Server\RpcRequestHandler;
 use Ufo\RpcError\ExceptionToArrayTransformer;
+use Ufo\RpcError\RpcBadRequestException;
 use Ufo\RpcError\RpcInvalidTokenException;
 use Ufo\RpcError\RpcJsonParseException;
 use Ufo\RpcError\RpcTokenNotSentException;
@@ -46,6 +47,7 @@ class SymfonyErrorListener
     const string UNDEFINED = 'undefined';
     const string API_DOC_ERROR = 'api_doc_error';
     const string INVALID_JSON_FORMAT = 'invalid_json_format';
+    const string EMPTY_BATCH = 'empty_batch_request';
 
     public function __construct(
         protected RpcEventFactory $eventFactory,
@@ -105,10 +107,16 @@ class SymfonyErrorListener
         if ($exception instanceof StopHandler) return;
 
         try {
-            $result = [];
-            foreach ($this->requestCarrier->getBatchRequestObject()->getCollection() as $rpcObject) {
-                $resp = $rpcObject->getResponseObject() ?? $this->createResponse($rpcObject->getId(), $exception);
-                $result[] = $this->requestHandler->responseToArray($resp);
+            $batch = $this->requestCarrier->getBatchRequestObject()->getCollection();
+            if (empty($batch) && $exception instanceof RpcBadRequestException) {
+                $response = $this->createResponse(static::EMPTY_BATCH, $exception);
+                $result = $this->requestHandler->responseToArray($response);
+            } else {
+                $result = [];
+                foreach ($batch as $rpcObject) {
+                    $resp = $rpcObject->getResponseObject() ?? $this->createResponse($rpcObject->getId(), $exception);
+                    $result[] = $this->requestHandler->responseToArray($resp);
+                }
             }
         } catch (Throwable $e) {
             $rpcObject = $this->requestCarrier->getRequestObject();

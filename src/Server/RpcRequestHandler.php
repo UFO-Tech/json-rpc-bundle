@@ -7,23 +7,30 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
 use Symfony\Component\Serializer\SerializerInterface;
 use Ufo\JsonRpcBundle\EventDrivenModel\RpcEventFactory;
+use Ufo\JsonRpcBundle\Exceptions\ServiceNotFoundException;
 use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
 use Ufo\JsonRpcBundle\Server\RequestPrepare\RequestCarrier;
 use Ufo\RpcError\RpcAsyncRequestException;
+use Ufo\RpcError\RpcBadRequestException;
 use Ufo\RpcError\RpcMethodNotFoundExceptionRpc;
 use Ufo\RpcError\RpcRuntimeException;
 use Ufo\JsonRpcBundle\Server\Async\RpcAsyncProcessor;
 use Ufo\JsonRpcBundle\Server\Async\RpcCallbackProcessor;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcAsyncOutputEvent;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcEvent;
+use Ufo\RpcError\RpcTokenNotSentException;
 use Ufo\RpcError\WrongWayException;
+use Ufo\RpcObject\RpcNotificationRequest;
 use Ufo\RpcObject\RpcRequest;
 use Ufo\RpcObject\RpcResponse;
 use Ufo\RpcObject\Transformer\RpcResponseContextBuilder;
 
+use function in_array;
 
 class RpcRequestHandler
 {
+    protected const array SUPPORTED_VERSIONS = ['2.0'];
+
     protected Request $request;
 
     protected null|array|string $response = null;
@@ -42,14 +49,20 @@ class RpcRequestHandler
     /**
      * @return array
      * @throws RpcAsyncRequestException
+     * @throws RpcBadRequestException
      * @throws RpcMethodNotFoundExceptionRpc
      * @throws RpcRuntimeException
+     * @throws RpcTokenNotSentException
+     * @throws ServiceNotFoundException
+     * @throws WrongWayException
      * @throws WrongWayException
      */
     public function handle(): array
     {
         try {
             $requestObj = $this->requestCarrier->getBatchRequestObject();
+            if (empty($requestObj->getCollection()))
+                throw new RpcBadRequestException('Can`t process empty batch request');
             $this->processQueue($requestObj->getReadyToHandle(), $this->closureSetResponse());
             foreach ($requestObj->provideUnprocessedRequests() as $unprocessedRequest) {
                 $response = $this->provideSingleRequestToResponse($unprocessedRequest);
@@ -65,7 +78,10 @@ class RpcRequestHandler
     }
 
     /**
+     * @param array $queue
+     * @param Closure|null $callback
      * @throws RpcAsyncRequestException
+     * @throws RpcTokenNotSentException
      */
     protected function processQueue(array &$queue, ?Closure $callback): void
     {
@@ -103,13 +119,18 @@ class RpcRequestHandler
     }
 
     /**
-     * @throws RpcRuntimeException
+     * @param RpcRequest $singleRequest
+     * @return array
+     * @throws RpcBadRequestException
      * @throws RpcMethodNotFoundExceptionRpc
      */
     public function provideSingleRequest(RpcRequest $singleRequest): array
     {
         $result = $this->provideSingleRequestToResponse($singleRequest);
-        return $this->responseToArray($result);
+        return match (true) {
+            $singleRequest instanceof RpcNotificationRequest => [],
+            default => $this->responseToArray($result)
+        };
     }
 
     public function responseToArray(RpcResponse $response): array
@@ -121,39 +142,60 @@ class RpcRequestHandler
     /**
      * @param RpcRequest $singleRequest
      * @return RpcResponse
-     * @throws RpcRuntimeException
+     * @throws RpcBadRequestException
      * @throws RpcMethodNotFoundExceptionRpc
      */
     public function provideSingleRequestToResponse(RpcRequest $singleRequest): RpcResponse
     {
-        $event = $this->eventFactory->fireRequest($singleRequest);
+        if (!in_array($singleRequest->getVersion(), static::SUPPORTED_VERSIONS, true)) {
+            throw new RpcBadRequestException('Unsupported jsonrpc protocol version');
+        }
+        $this->eventFactory->fireRequest($singleRequest);
 
-        if ($singleRequest->isAsync()) {
+        return match (true) {
+            $singleRequest->isAsync() => $this->handleCallback($singleRequest),
+            $singleRequest instanceof RpcNotificationRequest => $this->handleNotification($singleRequest),
+            default => $this->rpcServer->handle($singleRequest)
+        };
+    }
 
-            $result = new RpcResponse(
-                $singleRequest->getId(),
-                [
-                    'async' => true,
-                    'callback' => (string)$singleRequest->getRpcParams()->getCallbackObject(),
-                ],
-                version: $singleRequest->getVersion(),
-                requestObject: $singleRequest,
-                contextBuilder: $this->contextBuilder
-            );
-
-            $singleRequest->setResponse($result);
-
-            $service = $this->rpcServer->serviceHolder->getService($singleRequest->getMethod());
-
-            $this->eventFactory->fire(RpcEvent::PRE_RESPONSE,
-                $result,
-                $singleRequest,
-                $service,
-            );
-        } else {
-            $result = $this->rpcServer->handle($event->rpcRequest);
+    protected function handleCallback(RpcRequest $singleRequest): RpcResponse
+    {
+        if ($singleRequest instanceof RpcNotificationRequest) {
+            return $this->handleNotification($singleRequest);
         }
 
-        return $result;
+        return $this->firePreResponseEvent(
+            $singleRequest,
+            [
+                'async' => true,
+                'callback' => (string)$singleRequest->getRpcParams()->getCallbackObject(),
+            ]
+        );
+    }
+
+    protected function handleNotification(RpcNotificationRequest $singleRequest): RpcResponse
+    {
+        return $this->firePreResponseEvent($singleRequest, null);
+    }
+
+    protected function firePreResponseEvent(RpcRequest $singleRequest, ?array $result): RpcResponse
+    {
+        $response = new RpcResponse(
+            $singleRequest->getId(),
+            $result,
+            version: $singleRequest->getVersion(),
+            requestObject: $singleRequest,
+            contextBuilder: $this->contextBuilder
+        );
+
+        $singleRequest->setResponse($response);
+        $service = $this->rpcServer->serviceHolder->getService($singleRequest->getMethod());
+        $this->eventFactory->fire(RpcEvent::PRE_RESPONSE,
+            $response,
+            $singleRequest,
+            $service,
+        );
+        return $response;
     }
 }

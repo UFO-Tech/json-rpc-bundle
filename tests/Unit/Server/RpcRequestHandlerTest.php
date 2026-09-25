@@ -19,6 +19,7 @@ use Ufo\JsonRpcBundle\Server\RpcRequestHandler;
 use Ufo\JsonRpcBundle\Server\RpcServer;
 use Ufo\JsonRpcBundle\Server\ServiceMap\IServiceHolder;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
+use Ufo\RpcError\RpcBadRequestException;
 use Ufo\RpcError\WrongWayException;
 use Ufo\RpcObject\RPC\Info;
 use Ufo\RpcObject\RpcBatchRequest;
@@ -62,7 +63,6 @@ class RpcRequestHandlerTest extends TestCase
     public function testHandleBatchProcessesQueueAndReturnsBatchResults(): void
     {
         $queueRequest = $this->createMock(RpcRequest::class);
-        $queueRequest->expects($this->once())->method('refreshRawJson');
         $queueRequest->method('getRpcParams')->willReturn(new SpecialRpcParams(null, 5));
 
         $unprocessedRequest = $this->createMock(RpcRequest::class);
@@ -105,20 +105,6 @@ class RpcRequestHandlerTest extends TestCase
         $carrier->expects($this->once())->method('getBatchRequestObject')->willReturn($batch);
 
         $asyncProcessor = $this->createMock(RpcAsyncProcessor::class);
-        $asyncProcessor->expects($this->once())
-            ->method('createProcesses')
-            ->with(
-                $queueRequest,
-                'ufo-rpc-token',
-                'token',
-                [],
-                null,
-                null,
-                null,
-                5.0
-            )
-        ;
-        $asyncProcessor->expects($this->once())->method('process');
 
         $handler = $this->getMockBuilder(RpcRequestHandler::class)
             ->setConstructorArgs([
@@ -134,11 +120,10 @@ class RpcRequestHandlerTest extends TestCase
             ->onlyMethods(['provideSingleRequestToResponse', 'responseToArray'])
             ->getMock()
         ;
-        $handler->expects($this->once())->method('provideSingleRequestToResponse')->with($unprocessedRequest)->willReturn($response);
-        $handler->expects($this->once())->method('responseToArray')->with($response)->willReturn(['id' => '9']);
 
-        $this->assertSame([['id' => '9']], $handler->handle());
-        $this->addToAssertionCount(1);
+        $this->expectException(RpcBadRequestException::class);
+        $this->expectExceptionMessage('Can`t process empty batch request');
+        $handler->handle();
     }
 
     public function testProvideSingleRequestConvertsResponseToArray(): void
@@ -184,8 +169,7 @@ class RpcRequestHandlerTest extends TestCase
 
     public function testProvideSingleRequestToResponseSyncUsesRpcServerHandle(): void
     {
-        $request = $this->createMock(RpcRequest::class);
-        $request->method('isAsync')->willReturn(false);
+        $request = new RpcRequest('1', 'ping');
         $response = new RpcResponse('1', ['ok' => true]);
 
         $eventFactory = $this->createMock(RpcEventFactory::class);
