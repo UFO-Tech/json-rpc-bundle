@@ -25,9 +25,7 @@ class IsAllTest extends TestCase
         $dispatch = new Generator([new IsNotBlank()]);
         $rules = ['type' => 'array'];
 
-        $isAll->generate(new Assert\All([
-            'constraints' => [new Assert\NotBlank()],
-        ]), $rules, $dispatch);
+        $isAll->generate(new Assert\All(constraints: [new Assert\NotBlank()]), $rules, $dispatch);
 
         $this->assertSame('array', $rules['type']);
         $this->assertArrayNotHasKey('minLength', $rules);
@@ -38,9 +36,7 @@ class IsAllTest extends TestCase
         $isAll = new IsAll();
         $rules = ['type' => 'string'];
 
-        $isAll->generate(new Assert\All([
-            'constraints' => [new Assert\NotBlank()],
-        ]), $rules, null);
+        $isAll->generate(new Assert\All(constraints: [new Assert\NotBlank()]), $rules, null);
 
         $this->assertSame(['type' => 'string'], $rules);
     }

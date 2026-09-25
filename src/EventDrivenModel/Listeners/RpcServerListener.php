@@ -1,7 +1,8 @@
 <?php
 
-namespace Ufo\JsonRpcBundle\EventDrivenModel\Listeners;
+declare(strict_types=1);
 
+namespace Ufo\JsonRpcBundle\EventDrivenModel\Listeners;
 
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -12,7 +13,7 @@ use Ufo\JsonRpcBundle\EventDrivenModel\RpcEventFactory;
 use Ufo\JsonRpcBundle\Locker\LockerService;
 use Ufo\JsonRpcBundle\Server\ServiceMap\IServiceHolder;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
-use Ufo\RpcError\RpcBadParamException;
+use Ufo\RpcError\ConstraintsImposedException;
 use Ufo\RpcError\RpcRuntimeException;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\BaseRpcEvent;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcErrorEvent;
@@ -64,9 +65,22 @@ class RpcServerListener
                 $event->params
             );
         } catch (TypeError $e) {
-            $message = preg_replace('/.*\\\\/', '', $e->getMessage());
-            $message = preg_replace('/Argument #\d+ \(\$([a-zA-Z0-9_]+)\)/', 'Parameter "$1"', $message);
-            $this->eventFactory->fireError($event->rpcRequest, new RpcBadParamException($message));
+            $paramName = 'unknown';
+            if (preg_match('/Argument #\d+ \(\$([a-zA-Z0-9_]+)\)/', $e->getMessage(), $matches)) {
+                $paramName = $matches[1];
+            }
+
+            $message = $e->getMessage();
+            $message = preg_replace('/.*Argument #\d+ \(\$([a-zA-Z0-9_]+)\)/', 'Parameter "$1"', $message);
+            $message = preg_replace('/, called in.*/', '', $message);
+            $message = ValidateParamsListener::normalizeMessage($message);
+
+            $this->eventFactory->fireError($event->rpcRequest, new ConstraintsImposedException(
+                sprintf(ValidateParamsListener::INVALID_DATA_FOR_CALL_METHOD_TEMPLATE, $event->rpcRequest->getMethod()),
+                [
+                    $paramName => $message,
+                ]
+            ));
             return;
         } catch (Throwable $e) {
             $this->eventFactory->fireError($event->rpcRequest, RpcRuntimeException::fromThrowable($e));

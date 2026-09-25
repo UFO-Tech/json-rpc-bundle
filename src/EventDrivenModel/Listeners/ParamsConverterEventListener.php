@@ -2,17 +2,13 @@
 
 namespace Ufo\JsonRpcBundle\EventDrivenModel\Listeners;
 
-
-use ReflectionClass;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Throwable;
 use Ufo\DTO\DTOTransformer;
 use Ufo\DTO\Exceptions\BadParamException;
 use Ufo\DTO\Helpers\EnumResolver;
 use Ufo\DTO\Helpers\TypeHintResolver;
-use Ufo\DTO\Tests\TypeHintResolverTest;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcEvent;
-use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcPostExecuteEvent;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcPreExecuteEvent;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcPreResponseEvent;
 use Ufo\JsonRpcBundle\EventDrivenModel\RpcEventFactory;
@@ -99,7 +95,7 @@ class ParamsConverterEventListener
                             unset($errors[$paramName]);
                             break;
                         } catch (Throwable $exception) {
-                            $errors[$paramName][] = $exception->getMessage();
+                            $errors[$paramName][] = ValidateParamsListener::normalizeMessage($exception->getMessage());
                             $errors[$paramName] = array_unique($errors[$paramName]);
                             continue;
                         }
@@ -107,7 +103,7 @@ class ParamsConverterEventListener
 
                     foreach ($event->params[$paramName] ?? [] as $key => $item) {
                         if (is_object($result[$key] ?? null)) {
-                            unset($errors[$key]);
+                            unset($errors[$paramName][$key]);
                             continue;
                         }
 
@@ -115,7 +111,7 @@ class ParamsConverterEventListener
                             $result[$key] = $this->transformSingleObject($dtoClass, $item);
                             unset($errors[$paramName][$key]);
                         } catch (Throwable $exception) {
-                            $errors[$paramName][$key][] = $exception->getMessage();
+                            $errors[$paramName][$key][] = ValidateParamsListener::normalizeMessage($exception->getMessage());
                             $errors[$paramName][$key] = array_unique($errors[$paramName][$key]);
                         }
                     }
@@ -123,12 +119,13 @@ class ParamsConverterEventListener
                 }
 
                 $event->params[$paramName] = $result;
+                $errors = array_filter($errors, static fn (array $messages): bool => count($messages) > 0);
+
                 if (count($errors) > 0 ){
-                    $e = new ConstraintsImposedException(
-                        "Invalid Data for call method: {$service->getMethodName()}",
+                    $this->eventFactory->fireError($event->rpcRequest, new ConstraintsImposedException(
+                        sprintf(ValidateParamsListener::INVALID_DATA_FOR_CALL_METHOD_TEMPLATE, $event->rpcRequest->getMethod()),
                         $errors
-                    );
-                    $this->eventFactory->fireError($event->rpcRequest, $e);
+                    ));
                 }
             }
 

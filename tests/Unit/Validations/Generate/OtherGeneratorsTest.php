@@ -29,7 +29,7 @@ class OtherGeneratorsTest extends TestCase
         $generator = new IsChoice(new EnumsHolder());
         $rules = ['type' => 'string'];
 
-        $generator->generate(new Assert\Choice(['choices' => ['a', 'b']]), $rules);
+        $generator->generate(new Assert\Choice(choices: ['a', 'b']), $rules);
 
         $this->assertSame(Assert\Choice::class, $generator->getSupportedClass());
         $this->assertSame('string', $rules['type']);
@@ -73,10 +73,10 @@ class OtherGeneratorsTest extends TestCase
         $eqRules = [];
         $numRules = ['type' => 'int'];
 
-        $eq->generate(new Assert\EqualTo(['value' => 10]), $eqRules);
-        $gt->generate(new Assert\GreaterThan(['value' => 5]), $numRules);
-        $gte->generate(new Assert\GreaterThanOrEqual(['value' => 6]), $numRules);
-        $range->generate(new Assert\Range(['min' => 1, 'max' => 9]), $numRules);
+        $eq->generate(new Assert\EqualTo(value: 10), $eqRules);
+        $gt->generate(new Assert\GreaterThan(value: 5), $numRules);
+        $gte->generate(new Assert\GreaterThanOrEqual(value: 6), $numRules);
+        $range->generate(new Assert\Range(min: 1, max: 9), $numRules);
 
         $this->assertSame(10, $eqRules['const']);
         $this->assertSame(5, $numRules['exclusiveMinimum']);
@@ -96,7 +96,7 @@ class OtherGeneratorsTest extends TestCase
         $uuidRules = ['type' => 'string'];
         $anyRules = [];
 
-        $length->generate(new Assert\Length(['min' => 2, 'max' => 8]), $lengthRules);
+        $length->generate(new Assert\Length(min: 2, max: 8), $lengthRules);
         $regex->generate(new Assert\Regex('/^[a-z]+$/'), $regexRules);
         $uuid->generate(new Assert\Uuid(), $uuidRules);
         $notNull->generate(new Assert\NotNull(), $anyRules);
@@ -114,7 +114,7 @@ class OtherGeneratorsTest extends TestCase
     {
         $this->assertSame(
             CompositeConstraintType::ALL,
-            CompositeConstraintType::fromConstraint(new Assert\All(['constraints' => [new Assert\NotBlank()]]))
+            CompositeConstraintType::fromConstraint(new Assert\All(constraints: [new Assert\NotBlank()]))
         );
         $this->assertNull(CompositeConstraintType::fromConstraint(new Assert\NotBlank()));
     }

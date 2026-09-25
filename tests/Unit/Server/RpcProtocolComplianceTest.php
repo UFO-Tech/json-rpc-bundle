@@ -52,7 +52,7 @@ class RpcProtocolComplianceTest extends TestCase
         $this->assertIsArray($body);
         $this->assertArrayHasKey('error', $body, 'An empty batch must return one error object, not an array of responses.');
         $this->assertSame('2.0', $body['jsonrpc']);
-        $this->assertSame(-32603, $body['error']['code']);
+        $this->assertSame(-32600, $body['error']['code']);
         $this->assertSame('Can`t process empty batch request', $body['error']['message']);
         $this->assertSame(SymfonyErrorListener::EMPTY_BATCH, $body['id']);
         $this->assertArrayNotHasKey('result', $body);
@@ -98,7 +98,7 @@ class RpcProtocolComplianceTest extends TestCase
         $this->assertIsArray($body);
         $this->assertArrayHasKey('error', $body);
         $this->assertSame('2.0', $body['jsonrpc']);
-        $this->assertSame(-32603, $body['error']['code']);
+        $this->assertSame(-32600, $body['error']['code']);
         $this->assertArrayNotHasKey('result', $body);
     }
 

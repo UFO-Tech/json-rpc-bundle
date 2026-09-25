@@ -29,6 +29,7 @@ use function sprintf;
 #[AsEventListener(RpcEvent::PRE_EXECUTE, 'constraintValidation', priority: 1001)]
 class ValidateParamsListener
 {
+    public const string INVALID_DATA_FOR_CALL_METHOD_TEMPLATE = 'Invalid Data for call method: %s';
 
     public function __construct(
         protected RpcEventFactory $eventFactory,
@@ -50,7 +51,10 @@ class ValidateParamsListener
                 $event->params
             );
         } catch (ConstraintsImposedException $e) {
-            $this->eventFactory->fireError($event->rpcRequest, $e);
+            $this->eventFactory->fireError($event->rpcRequest, new ConstraintsImposedException(
+                sprintf(static::INVALID_DATA_FOR_CALL_METHOD_TEMPLATE, $event->rpcRequest->getMethod()),
+                $e->getConstraintsImposed()
+            ));
             $event->stopPropagation();
         }
     }
@@ -97,6 +101,8 @@ class ValidateParamsListener
         /** @var ContainerInterface $container */
         $container = $this->rpcArgumentLocators->get($service->procedureFQCN.'::'.$service->getMethodName());
 
+        $errors = [];
+
         foreach ($refMethod->getParameters() as $refParam) {
             if (array_key_exists($refParam->getName(), $requestedParams)) {
                 $namedParams[$refParam->getName()] = $requestedParams[$refParam->getName()];
@@ -118,10 +124,23 @@ class ValidateParamsListener
                 continue;
             }
 
-            throw new RpcBadParamException(sprintf('Required parameter "%s" not passed', $refParam->getName()));
+            $errors[$refParam->getName()] = sprintf('Required parameter "%s" not passed', $refParam->getName());
+        }
+
+        if (count($errors)) {
+            $this->eventFactory->fireError($event->rpcRequest, new ConstraintsImposedException(
+                sprintf(static::INVALID_DATA_FOR_CALL_METHOD_TEMPLATE, $event->rpcRequest->getMethod()),
+                $errors
+            ));
+            $event->stopPropagation();
         }
 
         $event->params = $namedParams;
     }
 
+    
+    public static function normalizeMessage(string $message): string
+    {
+        return preg_replace('/[a-zA-Z0-9_\\\\]+\\\\([a-zA-Z0-9_]+)/', '$1', $message);
+    }
 }
