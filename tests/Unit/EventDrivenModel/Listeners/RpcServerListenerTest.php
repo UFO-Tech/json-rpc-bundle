@@ -18,6 +18,7 @@ use Ufo\JsonRpcBundle\Tests\Fixtures\Dto\PersonDto;
 use Ufo\JsonRpcBundle\Tests\Fixtures\Procedures\ListenerFixtureProcedure;
 use Ufo\RpcError\AbstractRpcErrorException;
 use Ufo\RpcError\ConstraintsImposedException;
+use Ufo\RpcError\RpcBadParamException;
 use Ufo\RpcObject\RPC\Info;
 use Ufo\RpcObject\RpcRequest;
 use Ufo\RpcObject\Transformer\RpcResponseContextBuilder;
@@ -90,6 +91,27 @@ class RpcServerListenerTest extends TestCase
         $this->assertInstanceOf(AbstractRpcErrorException::class, $exception);
         $this->assertNotInstanceOf(ConstraintsImposedException::class, $exception);
         $this->assertSame('kaboom', $exception->getMessage());
+    }
+
+    public function testRequestWithInvalidSpecialParamIsNotExecuted(): void
+    {
+        $locker = $this->createMock(LockerService::class);
+        $locker->expects($this->never())->method('release');
+
+        $request = RpcRequest::fromJson(
+            '{"jsonrpc":"2.0","method":"main.expectInt","params":{"id":"abc","$rpc":{"callback":null}},"id":494}'
+        );
+        $event = new RpcPreExecuteEvent(
+            $request,
+            new Service('main.expectInt', ListenerFixtureProcedure::class, new Info('main')),
+            ['abc']
+        );
+        $this->createListener($locker)->process($event);
+
+        $exception = $this->singleFiredException();
+        $this->assertInstanceOf(RpcBadParamException::class, $exception);
+        $this->assertStringContainsString('[params][$rpc][callback]', $exception->getMessage());
+        $this->assertTrue($event->isPropagationStopped());
     }
 
     private function singleFiredException(): \Throwable

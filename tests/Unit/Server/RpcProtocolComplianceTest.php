@@ -2,6 +2,7 @@
 
 namespace Ufo\JsonRpcBundle\Tests\Unit\Server;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 use Ufo\RpcObject\RPC\Info;
@@ -29,6 +30,7 @@ use Ufo\JsonRpcBundle\Server\RpcServer;
 use Ufo\JsonRpcBundle\Server\RpcCache\RpcCacheService;
 use Ufo\JsonRpcBundle\Server\ServiceMap\IServiceHolder;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
+use Ufo\RpcError\RpcBadParamException;
 use Ufo\RpcObject\RpcNotificationRequest;
 use Ufo\RpcObject\RpcRequest;
 use Ufo\RpcObject\RpcResponse;
@@ -217,6 +219,59 @@ class RpcProtocolComplianceTest extends TestCase
 
         $this->assertSame(204, $response->getStatusCode(), 'Notifications must return 204 status code');
         $this->assertSame('', $response->getContent(), 'Notifications must not produce a JSON-RPC response, including null or [].');
+    }
+
+    #[DataProvider('invalidSpecialParams')]
+    public function testInvalidSpecialParamReachesServerAsErroneousRequest(array $rpc, string $field): void
+    {
+        $handled = null;
+        $server = $this->createMock(RpcServer::class);
+        $server->expects($this->once())->method('handle')
+            ->willReturnCallback(function (RpcRequest $request) use (&$handled): RpcResponse {
+                $handled = $request;
+
+                return new RpcResponse($request->getId(), []);
+            });
+
+        $this->sendHttpRequest(json_encode([
+            'jsonrpc' => '2.0',
+            'method' => 'Method.name',
+            'params' => ['name' => ['name' => '20260924070000', 'mode' => 'delta'], '$rpc' => $rpc],
+            'id' => 494,
+        ], JSON_THROW_ON_ERROR), $server);
+
+        $this->assertInstanceOf(RpcRequest::class, $handled);
+        $this->assertTrue($handled->hasError());
+        $this->assertInstanceOf(RpcBadParamException::class, $handled->getError());
+        $this->assertStringContainsString('[params][$rpc][' . $field . ']', $handled->getError()->getMessage());
+    }
+
+    public static function invalidSpecialParams(): iterable
+    {
+        yield 'null callback' => [['callback' => null], 'callback'];
+        yield 'null timeout' => [['timeout' => null], 'timeout'];
+        yield 'timeout out of range' => [['timeout' => 5], 'timeout'];
+    }
+
+    public function testBusinessParamNamedLikeSpecialParamIsNotValidatedAsSpecial(): void
+    {
+        $server = $this->createMock(RpcServer::class);
+        $server->expects($this->once())->method('handle')
+            ->willReturnCallback(function (RpcRequest $request): RpcResponse {
+                $this->assertFalse($request->hasError());
+                $this->assertSame(['callback' => null, 'timeout' => 5], $request->getParams());
+
+                return new RpcResponse($request->getId(), ['ok' => true]);
+            });
+
+        $response = $this->sendHttpRequest(
+            '{"jsonrpc":"2.0","method":"testMethod","params":{"timeout":5,"callback":null},"id":1}',
+            $server
+        );
+        $body = json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR);
+
+        $this->assertSame(['ok' => true], $body['result']);
+        $this->assertArrayNotHasKey('error', $body);
     }
 
     private function sendHttpRequest(string $content, RpcServer $server, ?RpcEventFactory $eventFactory = null): Response
