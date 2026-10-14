@@ -12,11 +12,19 @@ ufo_json_rpc:
     clients_tokens:
       - '%env(resolve:UFO_API_TOKEN)%'      # Token example from .env.local
 
-    # Optional group-specific services implementing ITokenValidator:
+    # Optional group providers: configure either service or clients_tokens.
     # providers:
     #   user:
     #     service: App\Services\RpcSecurity\UserTokenValidator
-    #     api_groups: [public, internal]
+    #     api_groups: [general]
+    #   internal:
+    #     api_groups: [internal]
+    #     clients_tokens:
+    #       - '%env(resolve:UFO_INTERNAL_API_TOKEN)%'
+    #   public:
+    #     api_groups: [public]
+    #     clients_tokens:
+    #       - '%env(resolve:UFO_PUBLIC_API_TOKEN)%'
     # Groups without a provider keep the base token validation.
 
   # Configuration for API documentation

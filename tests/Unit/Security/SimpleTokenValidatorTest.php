@@ -3,26 +3,16 @@
 namespace  Ufo\JsonRpcBundle\Tests\Unit\JsonRpcBundle\Security;
 
 use PHPUnit\Framework\TestCase;
-use Ufo\JsonRpcBundle\ConfigService\RpcSecurityConfig;
 use Ufo\JsonRpcBundle\Security\SimpleTokenValidator;
-use Ufo\JsonRpcBundle\Tests\Unit\ConfigHolderTrait;
 use Ufo\RpcError\RpcInvalidTokenException;
 
 class SimpleTokenValidatorTest extends TestCase
 {
-    use ConfigHolderTrait;
     private SimpleTokenValidator $validator;
 
     protected function setUp(): void
     {
-        $this->setConfig([
-            RpcSecurityConfig::NAME => [
-                RpcSecurityConfig::PROTECTED_API => true,
-                RpcSecurityConfig::TOKENS => ['valid-token-1', 'valid-token-2'],
-            ]
-        ]);
-        $this->validator = new SimpleTokenValidator($this->rpcMainConfig);
-
+        $this->validator = new SimpleTokenValidator(['valid-token-1', 'valid-token-2']);
     }
 
     public function testIsValidWithValidToken(): void
@@ -39,6 +29,23 @@ class SimpleTokenValidatorTest extends TestCase
     public function testIsValidWithAnotherValidToken(): void
     {
         $this->assertTrue($this->validator->isValid('valid-token-2'));
+    }
+
+
+    public function testSeparateValidatorsUseIndependentTokenLists(): void
+    {
+        $validator = new SimpleTokenValidator(['group-token', 'rotated-token']);
+        self::assertTrue($validator->isValid('group-token'));
+        self::assertTrue($validator->isValid('rotated-token'));
+        $this->expectException(RpcInvalidTokenException::class);
+        $validator->isValid('valid-token-1');
+    }
+
+    public function testEmptyTokenListRejectsAllTokens(): void
+    {
+        $validator = new SimpleTokenValidator([]);
+        $this->expectException(RpcInvalidTokenException::class);
+        $validator->isValid('valid-token-1');
     }
 
 }

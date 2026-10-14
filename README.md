@@ -159,6 +159,37 @@ validation. Duplicate providers for a group, missing services, and invalid
 interfaces fail container compilation. `protected_api`, `protected_doc`, and
 `token_name` remain global. Protected documentation uses its group's provider.
 
+For simple token validation, assign separate environment keys to each group
+instead of registering custom services:
+
+```yaml
+ufo_json_rpc:
+    security:
+        protected_api: true
+        protected_doc: false
+        token_name: 'Ufo-RPC-Token'
+        clients_tokens:
+            - '%env(resolve:UFO_API_TOKEN)%'
+        providers:
+            internal:
+                api_groups: [internal]
+                clients_tokens:
+                    - '%env(resolve:UFO_INTERNAL_API_TOKEN)%'
+            public:
+                api_groups: [public]
+                clients_tokens:
+                    - '%env(resolve:UFO_PUBLIC_API_TOKEN)%'
+```
+
+Each provider must define exactly one of `service` or `clients_tokens`.
+For `clients_tokens`, the bundle creates a separate `SimpleTokenValidator`;
+no application service registration is needed. A list can contain several keys
+for token rotation. An empty list rejects every token without falling back.
+
+Here, internal API accepts only its internal keys and public API only its public
+keys. The base `UFO_API_TOKEN` applies to `general` and other groups without an
+assigned provider. The same provider selection applies to protected documentation.
+
 ### Custom token validator without API groups
 
 Keep the single `/rpc` route import without `defaults.api_group` and leave RPC

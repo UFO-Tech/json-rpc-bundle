@@ -197,6 +197,21 @@ class ApiGroupsTest extends KernelTestCase
         }
     }
 
+    public function testOmittedBaseTokensInjectAnEmptyList(): void
+    {
+        TestKernel::$rpcConfig = [
+            'cache' => [], 'docs' => ['validations' => []],
+            'security' => [
+                'protected_api' => true,
+                'providers' => ['internal' => ['api_groups' => ['bfa'], 'clients_tokens' => ['internal-token']]],
+            ],
+        ];
+        self::bootKernel();
+        self::assertSame([], self::getContainer()->getParameter('ufo_json_rpc.security.clients_tokens'));
+        self::assertSame(403, $this->request('/rpc', 'POST', 'ping', 'internal-token')[0]);
+        self::assertSame(200, $this->request('/rpc/bfa', 'POST', 'area.shared', 'internal-token')[0]);
+    }
+
     public function testSecuritySelectsGroupProviderAndFallsBackForOtherGroups(): void
     {
         TestKernel::$rpcConfig = [
@@ -217,4 +232,38 @@ class ApiGroupsTest extends KernelTestCase
         self::assertSame(200, $this->request('/rpc/bfa/v1', token: 'bfa-token')[0]);
         self::assertSame(403, $this->request('/rpc/bfa/v1/postman', token: 'base-token')[0]);
     }
+
+    public function testEnvTokensAreIsolatedByGroupForRequestsAndDocumentation(): void
+    {
+        $_ENV['RPC_TEST_INTERNAL_TOKEN'] = 'internal-env-token';
+        $_ENV['RPC_TEST_PUBLIC_TOKEN'] = 'public-env-token';
+        try {
+            TestKernel::$rpcConfig = [
+                'cache' => [], 'docs' => ['validations' => []],
+                'security' => [
+                    'protected_api' => true,
+                    'protected_doc' => true,
+                    'clients_tokens' => ['base-token'],
+                    'providers' => [
+                        'internal' => ['api_groups' => ['bfa'], 'clients_tokens' => ['%env(resolve:RPC_TEST_INTERNAL_TOKEN)%']],
+                        'public' => ['api_groups' => ['bff'], 'clients_tokens' => ['%env(resolve:RPC_TEST_PUBLIC_TOKEN)%']],
+                    ],
+                ],
+            ];
+            self::bootKernel();
+            $tokens = ['/rpc' => 'base-token', '/rpc/bfa' => 'internal-env-token', '/rpc/bff' => 'public-env-token'];
+            foreach ($tokens as $path => $validToken) {
+                foreach ($tokens as $token) {
+                    $expectedStatus = $token === $validToken ? 200 : 403;
+                    self::assertSame($expectedStatus, $this->request($path, 'POST', 'area.shared', $token)[0]);
+                    self::assertSame($expectedStatus, $this->request($path, token: $token)[0]);
+                    self::assertSame($expectedStatus, $this->request($path.'/postman', token: $token)[0]);
+                }
+            }
+        } finally {
+            self::ensureKernelShutdown();
+            unset($_ENV['RPC_TEST_INTERNAL_TOKEN'], $_ENV['RPC_TEST_PUBLIC_TOKEN']);
+        }
+    }
+
 }

@@ -27,6 +27,12 @@ class RpcSecurityProvidersPass implements CompilerPassInterface
         foreach ($container->getParameter(RpcSecurityProviderConfig::PARAMETER) as $name => $config) {
             $provider = new RpcSecurityProviderConfig((string)$name, $config);
             $id = $provider->service;
+            if ($id === null) {
+                $id = RpcSecurityProviderConfig::PARAMETER.'.'.$name;
+                $container->register($id, SimpleTokenValidator::class)->setArguments([
+                    '$tokens' => $provider->tokens,
+                ]);
+            }
             if (!$container->has($id)) {
                 throw new InvalidArgumentException('RPC token provider "'.$name.'" references unknown service "'.$id.'".');
             }

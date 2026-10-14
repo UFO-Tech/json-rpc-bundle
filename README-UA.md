@@ -178,6 +178,38 @@ ufo_json_rpc:
 `protected_api`, `protected_doc` і `token_name` спільні для всіх груп.
 Захищена документація використовує провайдера відповідної групи.
 
+Для простої перевірки токенів задайте окремі env-ключі для кожної групи
+замість реєстрації власних сервісів:
+
+```yaml
+ufo_json_rpc:
+    security:
+        protected_api: true
+        protected_doc: false
+        token_name: 'Ufo-RPC-Token'
+        clients_tokens:
+            - '%env(resolve:UFO_API_TOKEN)%'
+        providers:
+            internal:
+                api_groups: [internal]
+                clients_tokens:
+                    - '%env(resolve:UFO_INTERNAL_API_TOKEN)%'
+            public:
+                api_groups: [public]
+                clients_tokens:
+                    - '%env(resolve:UFO_PUBLIC_API_TOKEN)%'
+```
+
+Кожен провайдер має задавати рівно один параметр: `service` або `clients_tokens`.
+Для `clients_tokens` bundle створює окремий `SimpleTokenValidator`;
+реєструвати сервіс у застосунку не потрібно. Список може містити кілька ключів
+для ротації токенів. Порожній список відхиляє всі токени без базової перевірки.
+
+У цьому прикладі internal API приймає лише власні ключі, public API — власні.
+Базовий `UFO_API_TOKEN` використовується для `general` та інших груп без
+призначеного провайдера. Захищена документація використовує той самий вибір
+провайдера.
+
 ### Кастомний валідатор токенів без груп API
 
 Залиште один імпорт маршруту `/rpc` без `defaults.api_group`, а RPC-сервіси —

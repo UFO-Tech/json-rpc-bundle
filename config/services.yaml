@@ -48,6 +48,10 @@ services:
   Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity:
     class: Ufo\JsonRpcBundle\Security\TokenRpcSecurity
 
+  Ufo\JsonRpcBundle\Security\SimpleTokenValidator:
+    arguments:
+      $tokens: '%ufo_json_rpc.security.clients_tokens%'
+
   Ufo\JsonRpcBundle\Locker\UfoLockerStore:
     class: Ufo\JsonRpcBundle\Locker\UfoLockerStore
 

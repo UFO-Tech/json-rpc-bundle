@@ -29,6 +29,7 @@ class ConfigurationTest extends TestCase
         $this->assertTrue($normalized[RpcSecurityConfig::NAME][RpcSecurityConfig::PROTECTED_API]);
         $this->assertFalse($normalized[RpcSecurityConfig::NAME][RpcSecurityConfig::PROTECTED_DOC]);
         $this->assertSame(RpcSecurityConfig::DEFAULT_TOKEN_KEY, $normalized[RpcSecurityConfig::NAME][RpcSecurityConfig::TOKEN_NAME]);
+        $this->assertSame([], $normalized[RpcSecurityConfig::NAME][RpcSecurityConfig::TOKENS]);
         $this->assertSame(RpcDocsConfig::P_PROJECT_NAME_DEFAULT, $normalized[RpcDocsConfig::NAME][RpcDocsConfig::P_PROJECT_NAME]);
     }
 
@@ -66,4 +67,23 @@ class ConfigurationTest extends TestCase
             ],
         ]], $normalized[RpcAsyncConfig::NAME]);
     }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('invalidTokenProviders')]
+    public function testInvalidTokenProviderConfigurationIsRejected(array $provider): void
+    {
+        $this->expectException(\Symfony\Component\Config\Definition\Exception\InvalidConfigurationException::class);
+        (new Processor())->processConfiguration(new Configuration(), [[
+            'security' => ['providers' => ['internal' => $provider + ['api_groups' => ['internal']]]],
+        ]]);
+    }
+
+    public static function invalidTokenProviders(): array
+    {
+        return [
+            'neither service nor tokens' => [[]],
+            'both service and tokens' => [['service' => 'validator', 'clients_tokens' => ['token']]],
+            'empty token' => [['clients_tokens' => ['']]],
+        ];
+    }
+
 }
