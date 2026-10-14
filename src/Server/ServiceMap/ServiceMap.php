@@ -10,6 +10,8 @@ use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\Exceptions\ServiceNotFoundException;
 use Ufo\JsonRpcBundle\Package;
 use Ufo\RpcObject\RPC\Info;
+use Ufo\RpcObject\RPC\APIGroups;
+use Ufo\JsonRpcBundle\Server\ApiGroupContext;
 use Ufo\RpcObject\RpcTransport;
 
 use function array_key_exists;
@@ -33,7 +35,10 @@ class ServiceMap implements IServiceHolder
     public function __construct(
         #[Autowire(param: IServiceHolder::MAP)]
         protected array $serviceMapData,
-        protected RpcMainConfig $mainConfig
+        protected RpcMainConfig $mainConfig,
+        protected ?ApiGroupContext $apiGroupContext = null,
+        #[Autowire(param: IServiceHolder::GROUP_MAP)]
+        protected array $groupMapData = [],
     ) {}
 
 
@@ -84,13 +89,15 @@ class ServiceMap implements IServiceHolder
      */
     public function getServices(string $version = Info::DEFAULT_VERSION): array
     {
-        $services = $this->serviceMapData[$version]
+        $services = $this->currentMap()[$version]
                     ?? throw new RuntimeException('Version "'.$version.'" is not registered on RPC Service Map');
 
+        $key = $this->cacheVersion($version);
+        $this->services[$key] ??= [];
         foreach ($services as $serviceName => $data) {
-            $this->services[$version][$serviceName] ??= Service::fromArray($data);
+            $this->services[$key][$serviceName] ??= Service::fromArray($data);
         }
-        return $this->services[$version];
+        return $this->services[$key];
     }
 
     /**
@@ -101,8 +108,9 @@ class ServiceMap implements IServiceHolder
      */
     public function getService(string $serviceName, string $version = Info::DEFAULT_VERSION): Service
     {
-        return $this->services[$version][$serviceName] ??= Service::fromArray(
-            $this->serviceMapData[$version][$serviceName] ?? $this->errorMessage($serviceName, $version)
+        $key = $this->cacheVersion($version);
+        return $this->services[$key][$serviceName] ??= Service::fromArray(
+            $this->currentMap()[$version][$serviceName] ?? $this->errorMessage($serviceName, $version)
         );
     }
 
@@ -113,7 +121,19 @@ class ServiceMap implements IServiceHolder
 
     public function getVersions(): array
     {
-        return array_keys($this->serviceMapData);
+        return array_keys($this->currentMap());
+    }
+
+    private function currentMap(): array
+    {
+        $group = $this->apiGroupContext?->getGroup() ?? APIGroups::DEFAULT_GROUP;
+        return $this->groupMapData[$group] ?? ($group === APIGroups::DEFAULT_GROUP ? $this->serviceMapData : []);
+    }
+
+    private function cacheVersion(string $version): string
+    {
+        $group = $this->apiGroupContext?->getGroup() ?? APIGroups::DEFAULT_GROUP;
+        return $group === APIGroups::DEFAULT_GROUP ? $version : $group.':'.$version;
     }
 
 }

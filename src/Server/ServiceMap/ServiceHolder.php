@@ -8,6 +8,7 @@ use Throwable;
 use Ufo\JsonRpcBundle\Exceptions\ServiceNotFoundException;
 use Ufo\RpcError\WrongWayException;
 use Ufo\RpcObject\RPC\Info;
+use Ufo\JsonRpcBundle\Server\ApiGroupContext;
 
 class ServiceHolder implements IServiceHolder
 {
@@ -18,6 +19,7 @@ class ServiceHolder implements IServiceHolder
         #[AutowireIterator(IServiceHolder::TAG)]
         protected iterable $holders,
         protected CacheItemPoolInterface $cache,
+        protected ?ApiGroupContext $apiGroupContext = null,
     ) {}
 
     /**
@@ -36,21 +38,29 @@ class ServiceHolder implements IServiceHolder
      */
     protected function cachedService(string $serviceName, string $version): Service
     {
+        // Resolve membership before reading shared metadata. Custom holders keep
+        // their existing lookup behavior and receive the same request context.
+        $resolved = $this->apiGroupContext ? $this->findService($serviceName, $version) : null;
         $cacheKey = static::generateServiceCacheName($serviceName, $version);
 
         try {
-            return $this->cache->getItem($cacheKey)->get();
-        } catch (Throwable $e) {
-            foreach ($this->holders as $holder) {
-                /**
-                 * @var IServiceHolder $holder
-                 */
-                try {
-                    return $holder->getService($serviceName, $version);
-                } catch (ServiceNotFoundException) {}
+            $service = $this->cache->getItem($cacheKey)->get();
+            if ($service instanceof Service) {
+                return $service;
             }
-            throw new ServiceNotFoundException('Service "'.$serviceName.'" for version "'.$version.'" is not found on RPC Service Map');
+        } catch (Throwable) {}
+
+        return $resolved ?? $this->findService($serviceName, $version);
+    }
+
+    private function findService(string $serviceName, string $version): Service
+    {
+        foreach ($this->holders as $holder) {
+            try {
+                return $holder->getService($serviceName, $version);
+            } catch (ServiceNotFoundException) {}
         }
+        throw new ServiceNotFoundException('Service "'.$serviceName.'" for version "'.$version.'" is not found on RPC Service Map');
     }
 
     public static function generateServiceCacheName(string $serviceName, string $version): string

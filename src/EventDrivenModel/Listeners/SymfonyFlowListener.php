@@ -15,6 +15,9 @@ use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\Event\TerminateEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\Routing\RouterInterface;
+use Symfony\Component\Routing\Exception\ExceptionInterface as RoutingException;
+use Ufo\JsonRpcBundle\Server\ApiGroupContext;
+use Ufo\RpcObject\RPC\APIGroups;
 use Throwable;
 use Ufo\JsonRpcBundle\CliCommand\UfoRpcProcessCommand;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
@@ -32,7 +35,6 @@ use Ufo\JsonRpcBundle\Server\RequestPrepare\Holders\RpcFromHttp;
 use Ufo\JsonRpcBundle\Server\RpcRequestHandler;
 use Ufo\RpcError\RpcAsyncRequestException;
 use Ufo\RpcError\RpcBadRequestException;
-use Ufo\RpcError\RpcInvalidTokenException;
 use Ufo\RpcError\RpcJsonParseException;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcEvent;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcPreResponseEvent;
@@ -64,21 +66,29 @@ class SymfonyFlowListener
         protected RouterInterface $router,
         protected IRpcSecurity $rpcSecurity,
         protected RpcMainConfig $rpcConfig,
+        protected ?ApiGroupContext $apiGroupContext = null,
     ) {}
 
     public function initHttpRequest(RequestEvent $event): void
     {
         $request = $event->getRequest();
+        $route = $this->matchRoute($request);
+        $this->apiGroupContext?->reset();
+        if (!ApiController::isDocsRoute($route)) return;
 
-        if ($this->checkRpcRoute($request, null) && ($request->isMethod(Request::METHOD_OPTIONS) || $request->isXmlHttpRequest())) {
+        $this->apiGroupContext?->setGroup(
+            $route[ApiGroupContext::ROUTE_GROUP] ?? APIGroups::DEFAULT_GROUP,
+            $route[ApiGroupContext::ROUTE_NAME_PREFIX] ?? null
+        );
+
+        if (!ApiController::isApiRoute($route)) return;
+        if ($request->isMethod(Request::METHOD_OPTIONS) || $request->isXmlHttpRequest()) {
             $event->stopPropagation();
             $event->setResponse(new Response());
             return;
         }
 
-        if ($this->checkRpcRoute($request)) {
-            $route = $this->router->match($request->getPathInfo());
-
+        if ($request->isMethod(Request::METHOD_POST)) {
             $this->initRequest(
                 new HttpTokenHolder($this->rpcConfig, $request),
                 new RpcFromHttp($request, $route['ver'] ?? Info::DEFAULT_VERSION)
@@ -88,11 +98,23 @@ class SymfonyFlowListener
 
     protected function checkRpcRoute(Request $request, ?string $method = Request::METHOD_POST): bool
     {
-        $route = $this->router->match($request->getPathInfo());
-        $routeName = $route['_route'] ?? '';
-        return ($routeName === ApiController::API_ROUTE_VER || $routeName === ApiController::API_ROUTE)
-            && (!$method || $request->isMethod($method))
-        ;
+        return ApiController::isApiRoute($this->matchRoute($request))
+            && (!$method || $request->isMethod($method));
+    }
+
+    protected function matchRoute(Request $request): array
+    {
+        // Execution is intercepted before Symfony reaches the GET controller.
+        $context = $this->router->getContext();
+        $previousMethod = $context->getMethod();
+        $context->setMethod(Request::METHOD_GET);
+        try {
+            return $this->router->match($request->getPathInfo());
+        } catch (RoutingException) {
+            return [];
+        } finally {
+            $context->setMethod($previousMethod);
+        }
     }
 
     /**
@@ -134,6 +156,7 @@ class SymfonyFlowListener
         if ($event->getCommand()?->getName() === UfoRpcProcessCommand::COMMAND_NAME) {
             $input = $event->getInput();
             $json = trim($input->getArgument('json'), '"');
+            $this->apiGroupContext?->setGroup($input->getOption('api-group') ?? APIGroups::DEFAULT_GROUP);
 
             $this->initRequest(
                 new CliTokenHolder($this->rpcConfig, $input),
@@ -149,6 +172,7 @@ class SymfonyFlowListener
 
     protected function initRequest(IRpcTokenHolder $holder, IRpcRequestCarrier $carrier): void
     {
+        $this->eventFactory->reset();
         $this->rpcSecurity->setTokenHolder($holder);
         $this->requestCarrier->setCarrier($carrier);
         $this->rpcSecurity->isValidApiRequest();
@@ -156,8 +180,16 @@ class SymfonyFlowListener
 
     public function firePostResponseEvent(TerminateEvent|ConsoleTerminateEvent $event): void
     {
+        if ($event instanceof TerminateEvent) {
+            $carrier = $this->requestCarrier->getCarrier();
+            if (!$carrier instanceof RpcFromHttp || $carrier->getHttpRequest() !== $event->getRequest()) {
+                return;
+            }
+        }
         try {
-            if ($this->requestCarrier->getCarrier() instanceof RpcFromHttp) fastcgi_finish_request();
+            if ($this->requestCarrier->getCarrier() instanceof RpcFromHttp && function_exists('fastcgi_finish_request')) {
+                fastcgi_finish_request();
+            }
 
             $preResponse = $this->eventFactory->getEvent(RpcEvent::getEventFQSN(RpcEvent::PRE_RESPONSE));
             $event->stopPropagation();
@@ -172,7 +204,9 @@ class SymfonyFlowListener
             );
             $event->stopPropagation();
 
-        } catch (Throwable) {}
+        } catch (Throwable) {} finally {
+            $this->apiGroupContext?->reset();
+        }
     }
 
 }

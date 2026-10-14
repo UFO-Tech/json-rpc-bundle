@@ -9,6 +9,7 @@ final readonly class RpcSecurityConfig
     const string PROTECTED_DOC = 'protected_doc';
     const string TOKEN_NAME = 'token_name';
     const string TOKENS = 'clients_tokens';
+    const string PROVIDERS = 'providers';
     const string DEFAULT_TOKEN_KEY = 'Ufo-RPC-Token';
 
     public bool $protectedApi;
@@ -18,6 +19,9 @@ final readonly class RpcSecurityConfig
 
     public array $tokens;
 
+    /** @var array<string, RpcSecurityProviderConfig> */
+    public array $providers;
+
     public function __construct(array $rpcConfigs, public RpcMainConfig $parent)
     {
         $this->protectedApi = $rpcConfigs[self::PROTECTED_API] ?? false;
@@ -25,6 +29,10 @@ final readonly class RpcSecurityConfig
 
         $this->tokenName = $rpcConfigs[self::TOKEN_NAME] ?? self::DEFAULT_TOKEN_KEY;
         $this->tokens = $rpcConfigs[self::TOKENS] ?? [];
+        $providers = [];
+        foreach ($rpcConfigs[self::PROVIDERS] ?? [] as $name => $provider) {
+            $providers[$name] = new RpcSecurityProviderConfig($name, $provider);
+        }
+        $this->providers = $providers;
     }
-
 }

@@ -9,6 +9,7 @@ use Ufo\JsonRpcBundle\ConfigService\RpcCacheConfig;
 use Ufo\JsonRpcBundle\ConfigService\RpcDocsConfig;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\ConfigService\RpcSecurityConfig;
+use Ufo\JsonRpcBundle\ConfigService\RpcSecurityProviderConfig;
 use Ufo\RpcObject\RPC\Cache;
 
 /**
@@ -57,6 +58,18 @@ class Configuration implements ConfigurationInterface
                         ->end()
                         ->arrayNode(RpcSecurityConfig::TOKENS)
                             ->scalarPrototype()->end()
+                        ->end()
+                        ->arrayNode(RpcSecurityConfig::PROVIDERS)
+                            ->normalizeKeys(false)
+                            ->useAttributeAsKey(RpcSecurityProviderConfig::NAME)
+                            ->arrayPrototype()
+                                ->children()
+                                    ->scalarNode(RpcSecurityProviderConfig::SERVICE)->isRequired()->cannotBeEmpty()->end()
+                                    ->arrayNode(RpcSecurityProviderConfig::API_GROUPS)->isRequired()->requiresAtLeastOneElement()
+                                        ->scalarPrototype()->cannotBeEmpty()->end()
+                                    ->end()
+                                ->end()
+                            ->end()
                         ->end()
                     ->end()
                 ->end()

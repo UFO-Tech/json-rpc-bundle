@@ -5,13 +5,18 @@ namespace Ufo\JsonRpcBundle\Server\Async;
 use Closure;
 use DateTime;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Process\Process;
+use Symfony\Component\Process\PhpExecutableFinder;
+use Ufo\RpcObject\RPC\Info;
 use Symfony\Component\Serializer\SerializerInterface;
 use Throwable;
 use Ufo\JsonRpcBundle\CliCommand\UfoRpcProcessCommand;
 use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
 use Ufo\JsonRpcBundle\Security\TokenHolders\RpcAsyncTokenHolder;
 use Ufo\JsonRpcBundle\Server\RpcServer;
+use Ufo\JsonRpcBundle\Server\ApiGroupContext;
+use Ufo\RpcObject\RPC\APIGroups;
 use Ufo\RpcError\RpcAsyncRequestException;
 use Ufo\RpcObject\RpcAsyncRequest;
 use Ufo\RpcObject\RpcRequest;
@@ -46,6 +51,9 @@ class RpcAsyncProcessor
         protected SerializerInterface $serializer,
         protected IRpcSecurity $rpcSecurity,
         protected RpcCallbackProcessor $callbackProcessor,
+        protected ?ApiGroupContext $apiGroupContext = null,
+        #[Autowire('%kernel.project_dir%')]
+        protected ?string $projectDir = null,
     ) {}
 
     /**
@@ -67,11 +75,13 @@ class RpcAsyncProcessor
         ?float $timeout = 3600
     ): Process
     {
-        $console = ($_SERVER['SCRIPT_NAME']) === static::CONSOLE ? static::CONSOLE : '../'.static::CONSOLE;
+        $console = ($_SERVER['SCRIPT_NAME'] ?? '') === static::CONSOLE ? static::CONSOLE : '../'.static::CONSOLE;
         $start = [
-            $console,
+            ...($this->projectDir ? [(new PhpExecutableFinder())->find() ?: 'php', $this->projectDir.'/bin/console'] : [$console]),
             UfoRpcProcessCommand::COMMAND_NAME,
             (string)$request->getRawJson(),
+            '--api-group='.($this->apiGroupContext?->getGroup() ?? APIGroups::DEFAULT_GROUP),
+            '--ver='.($request->apiVersion ?? Info::DEFAULT_VERSION),
         ];
         if (!empty($tokenName) && !empty($token)) {
             $start[] = '--' . $tokenName . '=' . $token;
@@ -146,9 +156,14 @@ class RpcAsyncProcessor
 
     public function __invoke(RpcAsyncRequest $message): void
     {
-        $this->rpcSecurity->setTokenHolder(new RpcAsyncTokenHolder($message));
-        $this->rpcSecurity->isValidApiRequest();
-        $this->processAsync($message->getRpcRequest());
+        $this->apiGroupContext?->setGroup($message->apiGroup ?? APIGroups::DEFAULT_GROUP);
+        try {
+            $this->rpcSecurity->setTokenHolder(new RpcAsyncTokenHolder($message));
+            $this->rpcSecurity->isValidApiRequest();
+            $this->processAsync($message->rpcRequest);
+        } finally {
+            $this->apiGroupContext?->reset();
+        }
     }
 
     public function processAsync(RpcRequest $request): void

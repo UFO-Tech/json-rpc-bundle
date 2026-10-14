@@ -50,3 +50,211 @@ JSON-RPC 2.0 сервер для Symfony v.6.* і новіше
 Вичерпну документацію по встановленню, налаштуванню і використанню цієї бібліотеки ви знайдете на порталі документацій [UFO-Tech](https://docs.ufo-tech.space/?language=uk) (Universal Flexible Open Technologies)
 
 [JsonRpcBundle](https://docs.ufo-tech.space/bin/view/docs/JsonRpcBundle/?language=uk)
+
+## Кілька точок входу RPC API
+
+Один застосунок може публікувати кілька RPC API з окремими картами методів.
+Наприклад, public API надає клієнтам каталог товарів, а internal API
+дозволяє змінювати ціни. Метод перегляду каталогу спільний для обох API.
+Групу задає `defaults.api_group` в імпорті маршрутів; без цього параметра
+використовується `general`. URL задається незалежно через `prefix`.
+
+```yaml
+ufo_json_rpc:
+    resource: ../../vendor/ufo-tech/json-rpc-bundle/config/router.yaml
+    prefix: /rpc
+    trailing_slash_on_root: false
+
+ufo_json_rpc_internal:
+    resource: ../../vendor/ufo-tech/json-rpc-bundle/config/router.yaml
+    prefix: /rpc/internal
+    defaults:
+        api_group: internal
+    trailing_slash_on_root: false
+
+ufo_json_rpc_public:
+    resource: ../../vendor/ufo-tech/json-rpc-bundle/config/router.yaml
+    prefix: /rpc/public
+    defaults:
+        api_group: public
+    trailing_slash_on_root: false
+```
+
+Bundle автоматично додає до назв маршрутів префікси `general_`, `internal_`, `public_`.
+Ключ імпорту не є префіксом назви маршруту. Явний `name_prefix` не потрібен;
+якщо він заданий, він додається після префікса групи. Старі назви маршрутів
+загального API залишаються доступними як аліаси.
+
+`GET /rpc/internal` повертає OpenRPC, `GET /rpc/internal/postman` — Postman,
+`POST /rpc/internal` виконує RPC-запит. Версійні адреси мають вигляд
+`/rpc/internal/v2` та `/rpc/internal/v2/postman`. Документація містить лише методи
+й версії відповідної групи та URL цієї точки входу.
+
+### Групи методів
+
+У прикладі `catalog.list` доступний в internal і public API, а кожна група
+також має власні методи. `false` виключає дефолтну групу `general`
+зі списку груп класу.
+
+```php
+use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
+use Ufo\RpcObject\RPC;
+
+#[RPC\Info('catalog')]
+#[RPC\APIGroups(['internal', 'public'], false)]
+class CatalogApi implements IRpcService
+{
+    public function list(): array
+    {
+        return [['id' => 1, 'name' => 'Coffee']];
+    } // спільний для internal і public API
+
+    #[RPC\APIGroups(['internal'], false)]
+    public function updatePrice(int $productId, int $price): true { return true; } // лише internal
+
+    #[RPC\APIGroups(['public'], false)]
+    public function featured(): array { return [1]; } // лише public
+
+    #[RPC\APIGroups()]
+    public function status(): string { return 'ok'; } // лише general
+
+    #[RPC\APIGroups(['internal'], false)]
+    #[RPC\IgnoreApi]
+    public function rebuildIndex(): true { return true; } // не доступний через RPC
+}
+```
+
+
+| RPC-метод | General `/rpc` | Internal `/rpc/internal` | Public `/rpc/public` |
+| --- | --- | --- | --- |
+| `catalog.list` | Ні | Так | Так |
+| `catalog.updatePrice` | Ні | Так | Ні |
+| `catalog.featured` | Ні | Ні | Так |
+| `catalog.status` | Так | Ні | Ні |
+| `catalog.rebuildIndex` | Ні | Ні | Ні |
+
+Атрибут методу повністю замінює групи класу. Без атрибута на методі
+використовуються групи класу; без обох атрибутів — `new RPC\APIGroups()`.
+Параметр `withDefault` за замовчуванням додає `general`; `false` вимикає
+це додавання. `APIGroups([], false)` не публікує метод у жодній групі.
+`IgnoreApi` має найвищий пріоритет. `general` не є об'єднанням усіх API.
+
+Карти та успадкування версій розділені за групами. Метод іншої групи
+повертає `Method not found`, без переходу до загального API. Групу HTTP-запиту
+визначає маршрут, а не поле в JSON.
+
+### Провайдери токенів
+
+Чинні налаштування security залишаються сумісними. Без `providers`
+базовий `ITokenValidator` перевіряє всі точки входу. Стандартна реалізація
+використовує `clients_tokens`; перевизначення базового валідатора зберігається.
+
+```yaml
+ufo_json_rpc:
+    security:
+        protected_api: true
+        protected_doc: false
+        token_name: 'Ufo-RPC-Token'
+        clients_tokens:
+            - '%env(resolve:UFO_API_TOKEN)%'
+        providers:
+            internal:
+                service: App\Services\RpcSecurity\InternalTokenValidator
+                api_groups: [internal]
+            public:
+                service: App\Services\RpcSecurity\UserTokenValidator
+                api_groups: [public]
+```
+
+Сервіс провайдера реєструється у Symfony DI та реалізує
+`Ufo\JsonRpcBundle\Security\Interfaces\ITokenValidator` з методом
+`isValid(string $token): true`. Невалідний токен має спричинити
+`RpcInvalidTokenException`.
+
+Призначений провайдер замінює базову перевірку своєї групи. Після відхилення
+токена базова перевірка не запускається. Групи без провайдера використовують
+базовий валідатор. Два провайдери для однієї групи, відсутній сервіс або
+неправильний інтерфейс — помилка компіляції контейнера.
+`protected_api`, `protected_doc` і `token_name` спільні для всіх груп.
+Захищена документація використовує провайдера відповідної групи.
+
+### Кастомний валідатор токенів без груп API
+
+Залиште один імпорт маршруту `/rpc` без `defaults.api_group`, а RPC-сервіси —
+без атрибутів `APIGroups`. Кастомний валідатор підключається як базовий
+`ITokenValidator` через аліас Symfony-сервісу; блок `providers` не потрібен:
+
+```yaml
+# config/packages/ufo_json_rpc.yaml
+ufo_json_rpc:
+    security:
+        protected_api: true
+        protected_doc: false
+        token_name: 'Ufo-RPC-Token'
+```
+
+```yaml
+# config/services.yaml
+services:
+    App\Services\RpcSecurity\UserTokenValidator:
+        autowire: true
+
+    Ufo\JsonRpcBundle\Security\Interfaces\ITokenValidator:
+        alias: App\Services\RpcSecurity\UserTokenValidator
+```
+
+Кастомний валідатор перевіряє всі захищені точки входу без призначеного
+групового провайдера, включно з документацією, якщо `protected_doc: true`.
+`clients_tokens` не потрібен, якщо ваш валідатор не використовує цей параметр.
+
+Альтернативно, єдиний API неявно належить до `general`, тому йому можна
+явно призначити провайдера:
+
+```yaml
+ufo_json_rpc:
+    security:
+        protected_api: true
+        protected_doc: false
+        token_name: 'Ufo-RPC-Token'
+        providers:
+            user:
+                service: App\Services\RpcSecurity\UserTokenValidator
+                api_groups: [general]
+```
+
+У цьому варіанті зареєструйте валідатор як Symfony-сервіс; аліас інтерфейсу
+не потрібен. Відсутній `api_groups` або значення `[]` не призначає провайдера
+жодній групі й не робить його базовим валідатором.
+
+### CLI, batch та async
+
+CLI підтримує `--api-group=internal`; без опції використовується `general`.
+Усі елементи HTTP batch належать групі й версії маршруту; дочірні процеси
+отримують ці значення. Для Messenger потрібно передати групу явно:
+
+```php
+$message = new \Ufo\RpcObject\RpcAsyncRequest(
+    $request,
+    $token,
+    apiGroup: 'internal',
+);
+```
+
+Повідомлення без групи використовують `general`. Обробник встановлює групу
+до перевірки токена й виконання та скидає її після повідомлення, включно з
+помилками. Для HTTP група встановлюється безпосередньо в `ApiGroupContext`
+після визначення маршруту, до перевірки токена та виконання. Контекст зберігається
+до завершення відкладеної обробки й скидається після неї.
+
+### Спільний кеш і відповідальність розробника
+
+Кеш залишається спільним для всіх груп, з чинними ключами. Група не додається
+до ключів кешу метаданих сервісів або RPC-відповідей.
+
+**Однойменні RPC-методи в різних групах API, реалізовані різними класами,
+є нештатним використанням сервера.** Через спільний кеш одна група може
+отримати кешований результат або метадані іншої реалізації. Відповідальність
+за такі конфлікти та коректність результатів лежить на розробнику застосунку,
+який використовує сервер. Для незалежних реалізацій використовуйте різні
+RPC-назви. Конфлікт однакових назв у межах однієї групи й версії відхиляється
+з урахуванням чинних правил успадкування класів.

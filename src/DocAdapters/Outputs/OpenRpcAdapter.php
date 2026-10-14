@@ -6,6 +6,7 @@ use Symfony\Component\Routing\RouterInterface;
 use Ufo\DTO\Helpers\TypeHintResolver as T;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\Controller\ApiController;
+use Ufo\JsonRpcBundle\Server\ApiGroupContext;
 use Ufo\JsonRpcBundle\DocAdapters\Outputs\OpenRpc\OpenRpcSpecBuilder;
 use Ufo\JsonRpcBundle\DocAdapters\Traits\JsonSchemaDtoFormatTrait;
 use Ufo\JsonRpcBundle\Package;
@@ -38,11 +39,13 @@ class OpenRpcAdapter
         protected ChainParamConvertor $paramConvertor,
         protected RouterInterface $router,
         protected EnumsHolder $enumsHolder,
+        protected ?ApiGroupContext $apiGroupContext = null,
     ) {}
 
     public function adapt(bool $fullInfo = true, string $version = Info::DEFAULT_VERSION): array
     {
         $this->version = $version;
+        $this->schemas = [];
         $this->buildSignature();
         $this->buildServer();
         if ($fullInfo) {
@@ -74,10 +77,14 @@ class OpenRpcAdapter
     protected function buildServer(): void
     {
         $http = RpcTransport::fromArray($this->mainConfig->url);
+        $route = $this->version === Info::DEFAULT_VERSION ? ApiController::API_ROUTE : ApiController::API_ROUTE_VER;
+        $path = $this->router->generate($this->apiGroupContext?->getRouteName($route) ?? $route, $this->version === Info::DEFAULT_VERSION ? [] : ['ver' => $this->version]);
+        $transport = $this->serviceMap->getTransport();
+        $transport['sync']['path'] = $path;
         $this->rpcSpecBuilder->addServer(
-            $http->getDomainUrl() . $this->router->generate(ApiController::API_ROUTE),
+            $http->getDomainUrl() . $path,
             $this->serviceMap->getEnvelope(),
-            $this->serviceMap->getTransport(),
+            $transport,
             rpcEnv: Package::ufoEnvironment()
         );
     }

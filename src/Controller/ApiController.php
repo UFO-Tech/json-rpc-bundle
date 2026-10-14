@@ -11,6 +11,8 @@ use Ufo\JsonRpcBundle\DocAdapters\Outputs\OpenRpcAdapter;
 use Ufo\JsonRpcBundle\DocAdapters\Outputs\PostmanAdapter;
 use Ufo\RpcObject\RPC\Info;
 
+use function in_array;
+use function is_array;
 use function json_encode;
 
 use const JSON_PRETTY_PRINT;
@@ -28,7 +30,14 @@ class ApiController extends AbstractController
 
     const array API_DOC_ROUTES = [
         self::API_ROUTE,
-        self::POSTMAN_ROUTE
+        self::POSTMAN_ROUTE,
+        self::API_ROUTE_VER,
+        self::POSTMAN_ROUTE_VER
+    ];
+
+    const array API_ROUTES = [
+        self::API_ROUTE,
+        self::API_ROUTE_VER,
     ];
 
     /**
@@ -36,19 +45,36 @@ class ApiController extends AbstractController
      * @param Request $request
      * @return Response
      */
-    #[Route('/{ver<v\d+>}', name: self::API_ROUTE . '_ver', methods: ["GET"], priority: 90, format: 'json')]
-    #[Route('', name: self::API_ROUTE, defaults: ['ver' => Info::DEFAULT_VERSION], methods: ["GET"], priority: 100, format: 'json')]
+    #[Route('/{ver<v\d+>}', name: self::API_ROUTE . '_ver', defaults: ['_rpc_route' => self::API_ROUTE_VER], methods: ['GET'], priority: 90, format: 'json')]
+    #[Route('', name: self::API_ROUTE, defaults: ['ver' => Info::DEFAULT_VERSION, '_rpc_route' => self::API_ROUTE], methods: ['GET'], priority: 100, format: 'json')]
     public function openrpc(OpenRpcAdapter $openRpcAdapter, Request $request): Response
     {
         $result = $openRpcAdapter->adapt(!$request->query->has('info'), $request->attributes->get('ver'));
         return new JsonResponse(json_encode($result, JSON_PRETTY_PRINT), json: true);
     }
 
-    #[Route('/{ver<v\d+>}/postman', name: self::POSTMAN_ROUTE_VER, methods: ["GET"], format: 'json')]
-    #[Route('/postman', name: self::POSTMAN_ROUTE, defaults: ['ver' => Info::DEFAULT_VERSION], methods: ["GET"], format: 'json')]
+    #[Route('/{ver<v\d+>}/postman', name: self::POSTMAN_ROUTE_VER, defaults: ['_rpc_route' => self::POSTMAN_ROUTE_VER], methods: ['GET'], format: 'json')]
+    #[Route('/postman', name: self::POSTMAN_ROUTE, defaults: ['ver' => Info::DEFAULT_VERSION, '_rpc_route' => self::POSTMAN_ROUTE], methods: ['GET'], format: 'json')]
     public function postman(PostmanAdapter $postmanAdapter, Request $request): Response
     {
         $result = $postmanAdapter->adapt($request->attributes->get('ver'));
         return new JsonResponse(json_encode($result, JSON_PRETTY_PRINT), json: true);
+    }
+
+    public static function isDocsRoute(array|string $route): bool
+    {
+        if (is_array($route)) $route = static::routeFromArray($route);
+        return in_array($route, ApiController::API_DOC_ROUTES, strict: true);
+    }
+
+    public static function isApiRoute(array|string $route): bool
+    {
+        if (is_array($route)) $route = static::routeFromArray($route);
+        return in_array($route, ApiController::API_ROUTES, strict: true);
+    }
+
+    public static function routeFromArray(array $route): string
+    {
+        return $route['_rpc_route'] ?? $route['_route'] ?? '';
     }
 }

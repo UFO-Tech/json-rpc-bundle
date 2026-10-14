@@ -35,7 +35,7 @@ class RpcFromCli implements IRpcRequestCarrier
     protected function prepare(): void
     {
         if ($this->checkBatchRequest($this->inputJson)) {
-            $this->batchRequest = RpcBatchRequest::fromJson($this->inputJson);
+            $this->batchRequest = $this->prepareBatch($this->inputJson, $this->version);
         } else {
             $this->requestObject = RpcRequest::fromJson($this->inputJson, $this->version);
         }

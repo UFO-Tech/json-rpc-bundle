@@ -10,6 +10,7 @@ use Ufo\JsonRpcBundle\EventDrivenModel\RpcEventFactory;
 use Ufo\JsonRpcBundle\Exceptions\ServiceNotFoundException;
 use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
 use Ufo\JsonRpcBundle\Server\RequestPrepare\RequestCarrier;
+use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\RpcError\RpcAsyncRequestException;
 use Ufo\RpcError\RpcBadRequestException;
 use Ufo\RpcError\RpcMethodNotFoundExceptionRpc;
@@ -20,6 +21,7 @@ use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcAsyncOutputEvent;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcEvent;
 use Ufo\RpcError\RpcTokenNotSentException;
 use Ufo\RpcError\WrongWayException;
+use Ufo\RpcObject\RPC\Info;
 use Ufo\RpcObject\RpcNotificationRequest;
 use Ufo\RpcObject\RpcRequest;
 use Ufo\RpcObject\RpcResponse;
@@ -44,6 +46,7 @@ class RpcRequestHandler
         protected RpcResponseContextBuilder $contextBuilder,
         protected RpcEventFactory $eventFactory,
         protected IRpcSecurity $rpcSecurity,
+        protected ?RpcMainConfig $rpcConfig = null,
     ) {}
 
     /**
@@ -190,7 +193,7 @@ class RpcRequestHandler
         );
 
         $singleRequest->setResponse($response);
-        $service = $this->rpcServer->serviceHolder->getService($singleRequest->getMethod());
+        $service = $this->rpcServer->serviceHolder->getService($singleRequest->getMethod(), $singleRequest->apiVersion ?? Info::DEFAULT_VERSION);
         $this->eventFactory->fire(RpcEvent::PRE_RESPONSE,
             $response,
             $singleRequest,

@@ -4,6 +4,7 @@ namespace Ufo\JsonRpcBundle\EventDrivenModel;
 
 use Symfony\Component\HttpClient\Exception\EventSourceException;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
+use Symfony\Contracts\Service\ResetInterface;
 use Throwable;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\BaseRpcEvent;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcAsyncRequestEvent;
@@ -16,7 +17,7 @@ use function array_filter;
 use function current;
 use function is_string;
 
-class RpcEventFactory
+class RpcEventFactory implements ResetInterface
 {
     /**
      * @var RpcEvent[]
@@ -80,4 +81,9 @@ class RpcEventFactory
             throw new EventSourceException('No event found for ' . $eventFQCN);
         return current($filteredEvents);
     }
+    public function reset(): void
+    {
+        $this->eventsPool = [];
+    }
+
 }

@@ -7,6 +7,8 @@ use Ufo\RpcError\RpcInvalidTokenException;
 use Ufo\RpcError\RpcTokenNotSentException;
 use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
 use Ufo\JsonRpcBundle\Security\Interfaces\ITokenValidator;
+use Ufo\JsonRpcBundle\Server\ApiGroupContext;
+use Ufo\RpcObject\RPC\APIGroups;
 
 class TokenRpcSecurity implements IRpcSecurity
 {
@@ -24,6 +26,8 @@ class TokenRpcSecurity implements IRpcSecurity
     public function __construct(
         protected RpcMainConfig $rpcConfig,
         protected ITokenValidator $tokenValidator,
+        protected ?ApiGroupContext $apiGroupContext = null,
+        protected ?TokenValidatorRegistry $validatorRegistry = null,
     ) {}
 
     public function setTokenHolder(IRpcTokenHolder $holder): self
@@ -40,7 +44,7 @@ class TokenRpcSecurity implements IRpcSecurity
     public function isValidDocRequest(): true
     {
         if ($this->rpcConfig->securityConfig->protectedDoc) {
-            $this->tokenValidator->isValid($this->getTokenHolder()->getToken());
+            $this->getValidator()->isValid($this->getTokenHolder()->getToken());
         }
         return true;
     }
@@ -53,7 +57,7 @@ class TokenRpcSecurity implements IRpcSecurity
     public function isValidApiRequest(): true
     {
         if ($this->rpcConfig->securityConfig->protectedApi) {
-            $this->tokenValidator->isValid($this->getTokenHolder()->getToken());
+            $this->getValidator()->isValid($this->getTokenHolder()->getToken());
         }
         return true;
     }
@@ -61,6 +65,14 @@ class TokenRpcSecurity implements IRpcSecurity
     public function getTokenHolder(): IRpcTokenHolder
     {
         return $this->holder ?? throw new RpcTokenNotSentException();
+    }
+
+    private function getValidator(): ITokenValidator
+    {
+        return $this->validatorRegistry?->getValidator(
+            $this->apiGroupContext?->getGroup() ?? APIGroups::DEFAULT_GROUP,
+            $this->tokenValidator
+        ) ?? $this->tokenValidator;
     }
 
 }

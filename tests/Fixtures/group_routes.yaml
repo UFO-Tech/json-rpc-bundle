@@ -1,0 +1,16 @@
+general:
+    resource: ../../config/router.yaml
+    prefix: /rpc
+    trailing_slash_on_root: false
+bfa:
+    resource: ../../config/router.yaml
+    prefix: /rpc/bfa
+    defaults:
+        api_group: bfa
+    trailing_slash_on_root: false
+bff:
+    resource: ../../config/router.yaml
+    prefix: /rpc/bff
+    defaults:
+        api_group: bff
+    trailing_slash_on_root: false

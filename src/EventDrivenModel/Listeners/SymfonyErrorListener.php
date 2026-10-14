@@ -14,6 +14,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\Routing\RouterInterface;
+use Symfony\Component\Routing\Exception\ExceptionInterface as RoutingException;
 use Throwable;
 use Ufo\JsonRpcBundle\CliCommand\UfoRpcProcessCommand;
 use Ufo\JsonRpcBundle\Controller\ApiController;
@@ -59,9 +60,19 @@ class SymfonyErrorListener
         protected RouterInterface $router,
     ) {}
 
+    private function rpcRoute(ExceptionEvent $event): string
+    {
+        try {
+            $route = $this->router->match($event->getRequest()->getPathInfo());
+            return ApiController::routeFromArray($route);
+        } catch (RoutingException) {
+            return '';
+        }
+    }
+
     public function requestJsonParseError(ExceptionEvent $event): void
     {
-        if (!in_array(($this->router->match($event->getRequest()->getPathInfo())['_route'] ?? ''), [ApiController::API_ROUTE, ApiController::API_ROUTE_VER])) return;
+        if (!in_array($this->rpcRoute($event), [ApiController::API_ROUTE, ApiController::API_ROUTE_VER])) return;
 
         $exception = $event->getThrowable();
         if (!$exception instanceof RpcJsonParseException) return;
@@ -86,7 +97,7 @@ class SymfonyErrorListener
 
     public function documentationError(ExceptionEvent $event): void
     {
-        $route = $this->router->match($event->getRequest()->getPathInfo())['_route'] ?? '';
+        $route = $this->rpcRoute($event);
         if (!in_array($route, ApiController::API_DOC_ROUTES)) return;
         if ($event->getRequest()->getMethod() !== Request::METHOD_GET) return;
 
@@ -101,7 +112,7 @@ class SymfonyErrorListener
 
     public function otherErrors(ExceptionEvent $event): void
     {
-        if (!in_array(($this->router->match($event->getRequest()->getPathInfo())['_route'] ?? ''), [ApiController::API_ROUTE, ApiController::API_ROUTE_VER])) return;
+        if (!ApiController::isApiRoute($this->rpcRoute($event))) return;
 
         $exception = $event->getThrowable();
         if ($exception instanceof StopHandler) return;
@@ -148,7 +159,6 @@ class SymfonyErrorListener
         $this->writeResponse($event, $result);
 
     }
-
 
     protected function getHttpCodeFromException(Throwable $e): int
     {

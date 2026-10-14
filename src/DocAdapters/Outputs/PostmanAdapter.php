@@ -4,6 +4,7 @@ namespace Ufo\JsonRpcBundle\DocAdapters\Outputs;
 use Symfony\Component\Routing\RouterInterface;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\Controller\ApiController;
+use Ufo\JsonRpcBundle\Server\ApiGroupContext;
 use Ufo\JsonRpcBundle\DocAdapters\Outputs\Postman\Blocks\Method;
 use Ufo\JsonRpcBundle\DocAdapters\Outputs\Postman\PostmanSpecBuilder;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
@@ -22,7 +23,8 @@ class PostmanAdapter
     public function __construct(
         protected ServiceMap $serviceMap,
         protected RpcMainConfig $mainConfig,
-        protected RouterInterface $router
+        protected RouterInterface $router,
+        protected ?ApiGroupContext $apiGroupContext = null,
     ) {}
 
     public function adapt(string $version = Info::DEFAULT_VERSION): array
@@ -46,9 +48,9 @@ class PostmanAdapter
     protected function buildServer(): void
     {
         $http = RpcTransport::fromArray($this->mainConfig->url);
-        $path = $this->router->generate(ApiController::API_ROUTE);
+        $path = $this->router->generate($this->apiGroupContext?->getRouteName(ApiController::API_ROUTE) ?? ApiController::API_ROUTE);
         if ($this->version !== Info::DEFAULT_VERSION) {
-            $path = $this->router->generate(ApiController::API_ROUTE_VER, ['ver' => $this->version]);
+            $path = $this->router->generate($this->apiGroupContext?->getRouteName(ApiController::API_ROUTE_VER) ?? ApiController::API_ROUTE_VER, ['ver' => $this->version]);
         }
         $this->postmanSpecBuilder->addVariable('base_url', $http->getDomainUrl());
 

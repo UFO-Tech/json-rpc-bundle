@@ -8,6 +8,7 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\RpcObject\RPC\Info;
+use Ufo\RpcObject\RPC\APIGroups;
 
 use function strtolower;
 
@@ -45,6 +46,12 @@ class UfoRpcProcessCommand extends Command
                 'async',
                 mode: InputOption::VALUE_OPTIONAL,
                 description: 'As async command',
+            )
+            ->addOption(
+                'api-group',
+                mode: InputOption::VALUE_REQUIRED,
+                description: 'RPC API group',
+                default: APIGroups::DEFAULT_GROUP
             )
             ->addOption(
                 'ver',

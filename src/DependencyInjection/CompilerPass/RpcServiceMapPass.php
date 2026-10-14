@@ -39,6 +39,8 @@ use Ufo\JsonRpcBundle\Validations\JsonSchema\JsonSchemaNormalizer;
 use Ufo\JsonRpcBundle\Validations\JsonSchema\JsonSchemaPropertyNormalizer;
 use Ufo\RpcError\RpcInternalException;
 use Ufo\RpcObject\Transformer\Transformer;
+use Ufo\RpcObject\RPC\APIGroups;
+use Ufo\JsonRpcBundle\Server\ApiGroupContext;
 
 use function array_diff_key;
 use function array_flip;
@@ -66,6 +68,8 @@ class RpcServiceMapPass implements CompilerPassInterface
      * @var array<string, Service>
      */
     protected array $serviceMap = [];
+
+    protected array $groupMaps = [];
 
     /**
      * @var array<string, object>
@@ -107,6 +111,11 @@ class RpcServiceMapPass implements CompilerPassInterface
         $this->registration(IServiceHolder::LOCATOR, $rpcClassRef);
         $this->registration(IServiceHolder::ARG_LOCATOR, $methodLocators);
         $this->container->setParameter(IServiceHolder::MAP, $this->getServicesForMap());
+        $maps = [];
+        foreach (array_unique([APIGroups::DEFAULT_GROUP, ...array_keys($this->groupMaps)]) as $group) {
+            $maps[$group] = $this->getServicesForMap($group);
+        }
+        $this->container->setParameter(IServiceHolder::GROUP_MAP, $maps);
         DTOTransformer::reset();
     }
 
@@ -124,13 +133,13 @@ class RpcServiceMapPass implements CompilerPassInterface
     /**
      * @throws RpcInternalException
      */
-    public function getServicesForMap(): array
+    public function getServicesForMap(string $group = APIGroups::DEFAULT_GROUP): array
     {
         $servicesData = [];
         $excludeByVersion = [];
         $versions = [];
 
-        foreach ($this->serviceMap as $service) {
+        foreach (($this->groupMaps[$group] ?? ($group === APIGroups::DEFAULT_GROUP ? $this->serviceMap : [])) as $service) {
             $serviceName = $service->getName();
             $ver = $service->apiClassInfo->version;
             $versions[$ver] = $ver;
@@ -320,19 +329,24 @@ class RpcServiceMapPass implements CompilerPassInterface
             $refClass,
             $this->getServiceFiller()
         );
+        $classGroups = $refClass->getAttributes(APIGroups::class)[0] ?? null;
         foreach ($reflection->getMethods() as $service) {
-            $name = $service->getName() . ':' . $service->apiClassInfo->version;
-            if (($this->serviceMap[$name] ?? false)
-                && !is_subclass_of($service->getProcedureFQCN(), $this->serviceMap[$name]->getProcedureFQCN())
-            ) {
-                if (is_subclass_of($this->serviceMap[$name]->getProcedureFQCN(), $service->getProcedureFQCN())) {
-                    continue;
-                } else {
-                    throw new RuntimeException('Attempt to register a service "'. $service->getName() .'" already registered detected');
-
+            $methodGroups = $refClass->getMethod($service->getMethodName())->getAttributes(APIGroups::class)[0] ?? null;
+            $groups = ($methodGroups ?? $classGroups)?->newInstance() ?? new APIGroups();
+            foreach ($groups->groups as $group) {
+                $name = $service->getName() . ':' . $service->apiClassInfo->version;
+                $existing = $this->groupMaps[$group][$name] ?? null;
+                if ($existing && !is_subclass_of($service->getProcedureFQCN(), $existing->getProcedureFQCN())) {
+                    if (is_subclass_of($existing->getProcedureFQCN(), $service->getProcedureFQCN())) {
+                        continue;
+                    }
+                    throw new RuntimeException('Attempt to register a service "'.$service->getName().'" already registered in API group "'.$group.'" detected');
+                }
+                $this->groupMaps[$group][$name] = $service;
+                if ($group === APIGroups::DEFAULT_GROUP) {
+                    $this->serviceMap[$name] = $service;
                 }
             }
-            $this->serviceMap[$name] = $service;
         }
     }
 

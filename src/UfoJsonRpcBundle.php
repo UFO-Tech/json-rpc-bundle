@@ -8,6 +8,7 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\HttpKernel\DependencyInjection\RegisterControllerArgumentLocatorsPass;
 use Ufo\JsonRpcBundle\DependencyInjection\CompilerPass\RpcRegisterControllerArgumentLocatorsPass;
 use Ufo\JsonRpcBundle\DependencyInjection\CompilerPass\RpcServiceMapPass;
+use Ufo\JsonRpcBundle\DependencyInjection\CompilerPass\RpcSecurityProvidersPass;
 use Ufo\RpcObject\Transformer\DTOTransformerBundleBootTrait;
 
 class UfoJsonRpcBundle extends Bundle
@@ -31,6 +32,7 @@ class UfoJsonRpcBundle extends Bundle
         $container
             ->addCompilerPass(new RpcRegisterControllerArgumentLocatorsPass())
             ->addCompilerPass(new RpcServiceMapPass())
+            ->addCompilerPass(new RpcSecurityProvidersPass())
         ;
     }
 

@@ -9,6 +9,7 @@ use Ufo\RpcError\RpcJsonParseException;
 use Ufo\RpcError\WrongWayException;
 use Ufo\RpcObject\RpcBatchRequest;
 use Ufo\RpcObject\RpcRequest;
+use Ufo\RpcObject\RPC\Info;
 
 class RpcFromHttp implements IRpcRequestCarrier
 {
@@ -23,7 +24,7 @@ class RpcFromHttp implements IRpcRequestCarrier
      */
     public function __construct(
         protected Request $request,
-        protected string $version = RpcRequest::DEFAULT_VERSION
+        protected string $version = Info::DEFAULT_VERSION
     )
     {
         $this->prepare();
@@ -35,7 +36,7 @@ class RpcFromHttp implements IRpcRequestCarrier
     protected function prepare(): void
     {
         if ($this->checkBatchRequest($this->request->getContent())) {
-            $this->batchRequest = RpcBatchRequest::fromJson($this->request->getContent());
+            $this->batchRequest = $this->prepareBatch($this->request->getContent(), $this->version);
         } else {
             $this->requestObject = RpcRequest::fromJson($this->request->getContent(), $this->version);
         }

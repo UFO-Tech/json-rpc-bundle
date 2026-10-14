@@ -3,3 +3,18 @@ ufo_json_rpc:
     resource: ../../vendor/ufo-tech/json-rpc-bundle/config/router.yaml
     prefix: /rpc
     trailing_slash_on_root: false
+
+#    Example for use api groups
+#    ufo_json_rpc_public:
+#        resource: ../../vendor/ufo-tech/json-rpc-bundle/config/router.yaml
+#        prefix: /api
+#        defaults:
+#            api_group: public
+#        trailing_slash_on_root: false
+#
+#    ufo_json_rpc_internal:
+#        resource: ../../vendor/ufo-tech/json-rpc-bundle/config/router.yaml
+#        prefix: /secret-api
+#        defaults:
+#            api_group: internal
+#        trailing_slash_on_root: false
