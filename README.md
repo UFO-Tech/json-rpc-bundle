@@ -72,6 +72,42 @@ and follows the group prefix. Legacy general API route names remain aliases.
 and `/rpc/internal/v2/postman`. Each document contains only its group's methods
 and versions, with that entry point's URL.
 
+### Route loaders for API adapters
+
+`Routing\ApiYamlFileLoader` owns API-group validation, context switching before
+route generation, restoration after success or failure, route-name prefixes,
+priorities and legacy `general` aliases. Adapters can extend `RpcYamlFileLoader`
+to retain RPC import handling and add their own import recognition:
+
+```php
+use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
+use Ufo\JsonRpcBundle\Routing\RpcYamlFileLoader;
+
+#[AutoconfigureTag('routing.loader', ['priority' => 200])]
+class AdapterYamlFileLoader extends RpcYamlFileLoader
+{
+    protected function getRouteNamePrefixAttribute(array $config, string $path): ?string
+    {
+        if ($this->isResourceImport($config['resource'], $path, __DIR__.'/../../config/router.yaml')) {
+            return '_adapter_name_prefix';
+        }
+
+        return parent::getRouteNamePrefixAttribute($config, $path);
+    }
+}
+```
+
+The returned key stores the effective group/name prefix in route defaults;
+`null` leaves the import untouched. Override `isApiRoute(Route $route, string
+$prefixAttribute): bool` when only some imported routes belong to the adapter.
+For a loader that does not need RPC handling, extend `ApiYamlFileLoader` directly.
+
+With autowiring and autoconfiguration enabled, the inherited constructor supplies
+the file locator, environment and shared `ApiGroupContext`; adapters do not need
+to repeat these arguments in service configuration. Keep route registration in
+the adapter's own Symfony loader or override Symfony's `parseRoute` hook: the
+selected group is already active while the API's routing resource is imported.
+
 ### Method groups
 
 The class below shares `catalog.list` between internal and public API, while

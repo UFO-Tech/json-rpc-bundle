@@ -90,6 +90,42 @@ Bundle автоматично додає до назв маршрутів пре
 `/rpc/internal/v2` та `/rpc/internal/v2/postman`. Документація містить лише методи
 й версії відповідної групи та URL цієї точки входу.
 
+### Завантажувачі маршрутів для API-адаптерів
+
+`Routing\ApiYamlFileLoader` містить спільну логіку: валідацію API-групи,
+встановлення контексту до генерації маршрутів, відновлення після успіху чи
+помилки, префікси назв, пріоритети та старі аліаси `general`. Адаптер може
+успадкувати `RpcYamlFileLoader`, зберігши обробку RPC-імпортів і додавши власні:
+
+```php
+use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
+use Ufo\JsonRpcBundle\Routing\RpcYamlFileLoader;
+
+#[AutoconfigureTag('routing.loader', ['priority' => 200])]
+class AdapterYamlFileLoader extends RpcYamlFileLoader
+{
+    protected function getRouteNamePrefixAttribute(array $config, string $path): ?string
+    {
+        if ($this->isResourceImport($config['resource'], $path, __DIR__.'/../../config/router.yaml')) {
+            return '_adapter_name_prefix';
+        }
+
+        return parent::getRouteNamePrefixAttribute($config, $path);
+    }
+}
+```
+
+Повернений ключ зберігає префікс групи/назв у defaults маршруту; `null` залишає
+імпорт без змін. Перевизначте `isApiRoute(Route $route, string $prefixAttribute):
+bool`, якщо адаптер має обробляти лише частину імпортованих маршрутів. Якщо
+обробка RPC-імпортів не потрібна, успадковуйте `ApiYamlFileLoader` безпосередньо.
+
+За ввімкнених autowiring та autoconfiguration успадкований конструктор отримує
+file locator, середовище та спільний `ApiGroupContext`; повторювати ці аргументи
+в сервісній конфігурації адаптера не потрібно. Реєстрацію маршрутів залишайте
+у власному Symfony loader або перевизначайте Symfony hook `parseRoute`:
+під час імпорту routing-ресурсу API потрібна група вже встановлена.
+
 ### Групи методів
 
 У прикладі `catalog.list` доступний в internal і public API, а кожна група
