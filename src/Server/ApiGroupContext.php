@@ -16,9 +16,9 @@ class ApiGroupContext implements ResetInterface
     private string $group = APIGroups::DEFAULT_GROUP;
     private ?string $routeNamePrefix = null;
 
-    public static function validateGroup(mixed $group): string
+    public static function validateGroup(string $group): string
     {
-        if (!is_string($group) || trim($group) === '') {
+        if (trim($group) === '') {
             throw new InvalidArgumentException('RPC API group must be a non-empty string.');
         }
         return $group;
@@ -27,6 +27,11 @@ class ApiGroupContext implements ResetInterface
     public function getGroup(): string
     {
         return $this->group;
+    }
+
+    public function isDefault(): bool
+    {
+        return $this->group === APIGroups::DEFAULT_GROUP;
     }
 
     public function setGroup(string $group, ?string $routeNamePrefix = null): void

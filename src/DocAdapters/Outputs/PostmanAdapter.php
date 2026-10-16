@@ -5,58 +5,28 @@ use Symfony\Component\Routing\RouterInterface;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\Controller\ApiController;
 use Ufo\JsonRpcBundle\Server\ApiGroupContext;
-use Ufo\JsonRpcBundle\DocAdapters\Outputs\Postman\Blocks\Method;
 use Ufo\JsonRpcBundle\DocAdapters\Outputs\Postman\PostmanSpecBuilder;
-use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMap;
-use Ufo\RpcObject\RPC\Info;
-use Ufo\RpcObject\RpcTransport;
 
-use function explode;
-
-class PostmanAdapter
+class PostmanAdapter extends AbstractPostmanAdapter
 {
-    protected PostmanSpecBuilder $postmanSpecBuilder;
-    protected string $version = Info::DEFAULT_VERSION;
+    protected const string PREFIX = 'RPC';
+    protected const string ROUTE = ApiController::API_ROUTE;
+    protected const string ROUTE_VER = ApiController::API_ROUTE_VER;
 
     public function __construct(
         protected ServiceMap $serviceMap,
-        protected RpcMainConfig $mainConfig,
-        protected RouterInterface $router,
-        protected ?ApiGroupContext $apiGroupContext = null,
-    ) {}
-
-    public function adapt(string $version = Info::DEFAULT_VERSION): array
-    {
-        $this->version = $version;
-        $this->buildSignature();
-        $this->buildServer();
-        $this->buildServices();
-        return $this->postmanSpecBuilder->build();
+        RpcMainConfig $mainConfig,
+        RouterInterface $router,
+        ApiGroupContext $apiGroupContext,
+    ) {
+        parent::__construct($mainConfig, $router, $apiGroupContext);
     }
 
-    protected function buildSignature(): void
+    protected function createSpecBuilder(string $name, string $description, string $version): PostmanSpecBuilder
     {
-        $this->postmanSpecBuilder = PostmanSpecBuilder::createBuilder(
-            name: 'RPC: ' . $this->mainConfig->docsConfig->projectName,
-            description: $this->mainConfig->docsConfig->projectDesc,
-            version: $this->version,
-        );
-    }
-
-    protected function buildServer(): void
-    {
-        $http = RpcTransport::fromArray($this->mainConfig->url);
-        $path = $this->router->generate($this->apiGroupContext?->getRouteName(ApiController::API_ROUTE) ?? ApiController::API_ROUTE);
-        if ($this->version !== Info::DEFAULT_VERSION) {
-            $path = $this->router->generate($this->apiGroupContext?->getRouteName(ApiController::API_ROUTE_VER) ?? ApiController::API_ROUTE_VER, ['ver' => $this->version]);
-        }
-        $this->postmanSpecBuilder->addVariable('base_url', $http->getDomainUrl());
-
-        $this->postmanSpecBuilder->addServer(
-            $http->getDomainUrl() . $path,
-        );
+        return PostmanSpecBuilder::createBuilder($name, $description, $version);
     }
 
     protected function buildServices(): void
@@ -68,36 +38,16 @@ class PostmanAdapter
 
     protected function buildService(Service $service): void
     {
-        $variableApiToken = $this->postmanSpecBuilder->addVariable('apiToken', '!changeMe!');
-        $headers = [
-            [
-                'key' => 'Content-Type',
-                'value' => 'application/json',
-            ],
-            [
-                'key' => $this->mainConfig->securityConfig->tokenName,
-                'value' => '{{' . $variableApiToken->key . '}}',
-            ]
-        ];
-
         $method = $this->postmanSpecBuilder->buildMethod(
             $service->getName(),
             $service->getDescription(),
-            $headers,
+            $this->buildHeaders(),
             $service->procedure
         );
 
         foreach ($service->getParams() as $param) {
             $this->buildParam($method, $param);
         }
-    }
-
-    protected function buildParam(Method $method, ParamDefinition $param): void
-    {
-        $this->postmanSpecBuilder->buildParam(
-            $method,
-            $param
-        );
     }
 
 }

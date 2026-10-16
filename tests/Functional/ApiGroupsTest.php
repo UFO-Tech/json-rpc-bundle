@@ -94,7 +94,16 @@ class ApiGroupsTest extends KernelTestCase
             self::assertStringContainsString('/rpc/'.$group, str_replace('\\/', '/', $json));
             self::assertStringNotContainsString('area.generalOnly', $json);
             if ($group === 'bff') self::assertStringNotContainsString('area.privateMethod', $json);
+            self::assertStringContainsString('['.$group.']', $postman['info']['name']);
         }
+    }
+
+    public function testPostmanNameHasNoGroupMarkForDefaultGroup(): void
+    {
+        self::bootKernel();
+        [$status, $postman] = $this->request('/rpc/postman');
+        self::assertSame(200, $status);
+        self::assertStringNotContainsString('[general]', $postman['info']['name']);
     }
 
     public function testVersionsRemainIndependentAcrossGroups(): void
