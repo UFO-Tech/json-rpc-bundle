@@ -116,6 +116,7 @@ class RpcRequestHandlerTest extends TestCase
                 new RpcResponseContextBuilder(),
                 $this->createMock(RpcEventFactory::class),
                 $this->createBaseConstructorArgs()[7],
+                new \Ufo\JsonRpcBundle\ConfigService\RpcMainConfig([], 'test'),
             ])
             ->onlyMethods(['provideSingleRequestToResponse', 'responseToArray'])
             ->getMock()
@@ -161,7 +162,8 @@ class RpcRequestHandlerTest extends TestCase
             $this->createMock(RpcCallbackProcessor::class),
             new RpcResponseContextBuilder(),
             $this->createMock(RpcEventFactory::class),
-            $this->createMock(IRpcSecurity::class)
+            $this->createMock(IRpcSecurity::class),
+            new \Ufo\JsonRpcBundle\ConfigService\RpcMainConfig([], 'test'),
         );
 
         $this->assertSame(['id' => '1', 'result' => ['ok' => true]], $handler->responseToArray($response));
@@ -186,7 +188,8 @@ class RpcRequestHandlerTest extends TestCase
             $this->createMock(RpcCallbackProcessor::class),
             new RpcResponseContextBuilder(),
             $eventFactory,
-            $this->createMock(IRpcSecurity::class)
+            $this->createMock(IRpcSecurity::class),
+            new \Ufo\JsonRpcBundle\ConfigService\RpcMainConfig([], 'test'),
         );
 
         $this->assertSame($response, $handler->provideSingleRequestToResponse($request));
@@ -233,7 +236,8 @@ class RpcRequestHandlerTest extends TestCase
             $this->createMock(RpcCallbackProcessor::class),
             new RpcResponseContextBuilder(),
             $eventFactory,
-            $this->createMock(IRpcSecurity::class)
+            $this->createMock(IRpcSecurity::class),
+            new \Ufo\JsonRpcBundle\ConfigService\RpcMainConfig([], 'test'),
         );
 
         $response = $handler->provideSingleRequestToResponse($request);
@@ -263,6 +267,7 @@ class RpcRequestHandlerTest extends TestCase
             new RpcResponseContextBuilder(),
             $this->createMock(RpcEventFactory::class),
             $rpcSecurity,
+            new \Ufo\JsonRpcBundle\ConfigService\RpcMainConfig([], 'test'),
         ];
     }
 }

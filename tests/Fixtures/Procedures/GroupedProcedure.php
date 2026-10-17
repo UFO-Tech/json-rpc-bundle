@@ -15,6 +15,9 @@ class GroupedProcedure implements IRpcService
 
     public function shared(): string { return 'shared'; }
 
+    #[RPC\Cache(environments: ['test'])]
+    public function cached(): string { return 'fresh'; }
+
     #[RPC\APIGroups(['bfa'], false)]
     public function privateMethod(): string { ++self::$privateExecutions; return 'bfa'; }
 

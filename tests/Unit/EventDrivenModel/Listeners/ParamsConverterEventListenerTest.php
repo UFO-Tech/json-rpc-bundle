@@ -11,6 +11,7 @@ use Ufo\DTO\Factory\DefaultDTOTransformerFactory;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcErrorEvent;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcEvent;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcPreExecuteEvent;
+use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcPreResponseEvent;
 use Ufo\JsonRpcBundle\EventDrivenModel\Listeners\ParamsConverterEventListener;
 use Ufo\JsonRpcBundle\EventDrivenModel\RpcEventFactory;
 use Ufo\JsonRpcBundle\ParamConvertors\ChainParamConvertor;
@@ -26,6 +27,7 @@ use Ufo\RpcError\ConstraintsImposedException;
 use Ufo\RpcObject\RPC\DTO;
 use Ufo\RpcObject\RPC\Info;
 use Ufo\RpcObject\RpcRequest;
+use Ufo\RpcObject\RpcResponse;
 
 class ParamsConverterEventListenerTest extends TestCase
 {
@@ -146,6 +148,106 @@ class ParamsConverterEventListenerTest extends TestCase
             ],
             $exception->getConstraintsImposed()
         );
+    }
+
+    public function testRuntimeResponseFormatIsBuiltOncePerResultClass(): void
+    {
+        $listener = $this->createListener();
+        $service = new Service('main.order', ListenerFixtureProcedure::class, new Info('main'));
+
+        $first = $this->objectToScalar($listener, $service, new OrderDto(new PersonDto('Ann', 30)));
+        $cache = (new \ReflectionProperty($listener, 'runtimeResponseInfo'))->getValue($listener);
+        $second = $this->objectToScalar($listener, $service, new OrderDto(new PersonDto('Bob', 40)));
+        $cacheAfter = (new \ReflectionProperty($listener, 'runtimeResponseInfo'))->getValue($listener);
+
+        $this->assertSame(['name' => 'Ann', 'age' => 30], $first['customer']);
+        $this->assertSame(['name' => 'Bob', 'age' => 40], $second['customer']);
+        $this->assertSame([OrderDto::class], array_keys($cacheAfter));
+        $this->assertSame($cache[OrderDto::class], $cacheAfter[OrderDto::class]);
+    }
+
+    public function testResponseInfoFromServiceMapIsUsedWithoutRuntimeReflection(): void
+    {
+        $listener = $this->createListener();
+        $service = new Service('main.order', ListenerFixtureProcedure::class, new Info('main'));
+        $responseInfo = new DTO(OrderDto::class);
+        new DtoReflector($responseInfo, $this->paramConvertor);
+        $service->setResponseInfo($responseInfo);
+
+        $result = $this->objectToScalar($listener, $service, new OrderDto(new PersonDto('Ann', 30)));
+
+        $this->assertSame(['name' => 'Ann', 'age' => 30], $result['customer']);
+        $this->assertSame([], (new \ReflectionProperty($listener, 'runtimeResponseInfo'))->getValue($listener));
+    }
+
+    public function testResponseFormatIsReusedFromMetadataCacheByNextRequest(): void
+    {
+        $pool = new \Symfony\Component\Cache\Adapter\PhpFilesAdapter('', 0, sys_get_temp_dir().'/ufo-rpc-meta-'.bin2hex(random_bytes(6)));
+        $service = new Service('main.order', ListenerFixtureProcedure::class, new Info('main'));
+        $builds = 0;
+
+        // Two listener instances = two FPM requests sharing cache.system.
+        $first = $this->objectToScalar($this->countingListener($builds, $pool), $service, new OrderDto(new PersonDto('Ann', 30)));
+        $second = $this->objectToScalar($this->countingListener($builds, $pool), $service, new OrderDto(new PersonDto('Bob', 40)));
+
+        $this->assertSame(1, $builds);
+        $this->assertSame(['name' => 'Ann', 'age' => 30], $first['customer']);
+        $this->assertSame(['name' => 'Bob', 'age' => 40], $second['customer']);
+        $pool->clear();
+    }
+
+    public function testContainerRebuildInvalidatesMetadataCache(): void
+    {
+        $pool = new \Symfony\Component\Cache\Adapter\ArrayAdapter();
+        $service = new Service('main.order', ListenerFixtureProcedure::class, new Info('main'));
+        $builds = 0;
+
+        $this->objectToScalar($this->countingListener($builds, $pool, 'build-1'), $service, new OrderDto(new PersonDto('Ann', 30)));
+        $this->objectToScalar($this->countingListener($builds, $pool, 'build-2'), $service, new OrderDto(new PersonDto('Ann', 30)));
+
+        $this->assertSame(2, $builds);
+    }
+
+    public function testMetadataCacheIsNotUsedInDebug(): void
+    {
+        $pool = $this->createMock(\Psr\Cache\CacheItemPoolInterface::class);
+        $pool->expects($this->never())->method('getItem');
+        $service = new Service('main.order', ListenerFixtureProcedure::class, new Info('main'));
+        $builds = 0;
+
+        $result = $this->objectToScalar($this->countingListener($builds, $pool, debug: true), $service, new OrderDto(new PersonDto('Ann', 30)));
+
+        $this->assertSame(1, $builds);
+        $this->assertSame(['name' => 'Ann', 'age' => 30], $result['customer']);
+    }
+
+    private function countingListener(int &$builds, \Psr\Cache\CacheItemPoolInterface $pool, string $buildId = 'build-1', bool $debug = false): ParamsConverterEventListener
+    {
+        $metadataCache = new \Ufo\JsonRpcBundle\Server\RpcCache\RpcMetadataCache($pool, $buildId, $debug);
+        return new class($builds, $this->paramConvertor, new RpcEventFactory($this->dispatcher), $metadataCache) extends ParamsConverterEventListener {
+            private int $builds;
+
+            public function __construct(int &$builds, ...$args)
+            {
+                $this->builds = &$builds;
+                parent::__construct(...$args);
+            }
+
+            protected function buildResponseInfo(string $resultClass): DTO
+            {
+                $this->builds++;
+                return parent::buildResponseInfo($resultClass);
+            }
+        };
+    }
+
+    private function objectToScalar(ParamsConverterEventListener $listener, Service $service, object $result): array
+    {
+        $request = new RpcRequest(1, $service->name);
+        $request->setResponse(new RpcResponse(1, $result, requestObject: $request));
+        $listener->objectToScalar(new RpcPreResponseEvent($request->getResponseObject(), $request, $service));
+
+        return $request->getResponseObject()->getResult();
     }
 
     private function singleFiredException(): \Throwable

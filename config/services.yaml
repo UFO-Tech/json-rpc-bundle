@@ -18,6 +18,7 @@ services:
       - '../src/UfoJsonRpcBundle.php'
       - '../src/Package.php'
       - '../src/Server/ServiceMap/Service.php'
+      - '../src/Server/ServiceMap/ServiceTranslation.php'
       - '../src/ConfigService/RpcAsyncConfig.php'
       - '../src/ConfigService/RpcAsyncInfo.php'
       - '../src/ConfigService/RpcCacheConfig.php'

@@ -55,9 +55,9 @@ class ApiGroupsTest extends KernelTestCase
         $map = self::getContainer()->get(ServiceMap::class);
         $context = self::getContainer()->get(ApiGroupContext::class);
         $expected = [
-            'general' => ['area.shared', 'area.generalOnly', 'ping'],
-            'bfa' => ['area.shared', 'area.privateMethod'],
-            'bff' => ['area.shared'],
+            'general' => ['area.shared', 'area.cached', 'area.generalOnly', 'ping'],
+            'bfa' => ['area.shared', 'area.cached', 'area.privateMethod'],
+            'bff' => ['area.shared', 'area.cached'],
         ];
         foreach ($expected as $group => $methods) {
             $context->setGroup($group);
@@ -80,7 +80,7 @@ class ApiGroupsTest extends KernelTestCase
     public function testOpenRpcAndPostmanDocumentOnlyTheirGroup(): void
     {
         self::bootKernel();
-        foreach (['bfa' => ['area.shared', 'area.privateMethod'], 'bff' => ['area.shared']] as $group => $expected) {
+        foreach (['bfa' => ['area.shared', 'area.cached', 'area.privateMethod'], 'bff' => ['area.shared', 'area.cached']] as $group => $expected) {
             [$status, $doc] = $this->request('/rpc/'.$group);
             self::assertSame(200, $status);
             $methods = array_column($doc['methods'], 'name');
@@ -114,7 +114,9 @@ class ApiGroupsTest extends KernelTestCase
         self::assertSame('shared', $this->request('/rpc/bff', 'POST', 'area.shared')[1]['result']);
         [$status, $doc] = $this->request('/rpc/bfa/v2');
         self::assertSame(200, $status);
-        self::assertSame(['area.shared'], array_column($doc['methods'], 'name'));
+        $methods = array_column($doc['methods'], 'name');
+        sort($methods);
+        self::assertSame(['area.cached', 'area.shared'], $methods);
         self::assertSame('http://localhost/rpc/bfa/v2', $doc['servers'][0]['url']);
         [$status, $postman] = $this->request('/rpc/bfa/v2/postman');
         self::assertSame(200, $status);
@@ -136,6 +138,118 @@ class ApiGroupsTest extends KernelTestCase
         self::assertSame(-32601, $results[2]['error']['code']);
     }
 
+    private function batchConfig(array $batch): array
+    {
+        return [
+            'cache' => [],
+            'security' => ['protected_api' => false, 'protected_doc' => false],
+            'docs' => ['project_name' => 'test-rpc', 'validations' => []],
+            'batch' => $batch,
+        ];
+    }
+
+    public function testInlineBatchGivesTheSameResultsAsProcessMode(): void
+    {
+        TestKernel::$rpcConfig = $this->batchConfig(['process' => false]);
+        self::bootKernel();
+        $request = Request::create('http://localhost/rpc/bfa/v2', 'POST', server: ['HTTP_UFO_RPC_TOKEN' => 'batch-token'], content: json_encode([
+            ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'area.shared'],
+            ['jsonrpc' => '2.0', 'id' => 2, 'method' => 'area.privateMethod'],
+            ['jsonrpc' => '2.0', 'id' => 3, 'method' => 'area.missing'],
+        ]));
+        $response = self::$kernel->handle($request);
+        self::assertSame(200, $response->getStatusCode());
+        $results = array_column(json_decode($response->getContent(), true), null, 'id');
+        self::assertSame('v2', $results[1]['result'], json_encode($results));
+        self::assertSame(-32601, $results[2]['error']['code']);
+        self::assertSame(-32601, $results[3]['error']['code']);
+    }
+
+    /**
+     * Separate process: the notification runs inside this PHP process, and the static
+     * Transformer::getDefault() serializer of rpc-objects then breaks the next kernel booted in the
+     * same process (RpcNotificationRequest is routed to DateTimeNormalizer). Real requests are not
+     * affected: one kernel per process under FPM; with one kernel serving many requests it works.
+     */
+    #[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+    public function testInlineBatchExecutesNotificationOnce(): void
+    {
+        TestKernel::$rpcConfig = $this->batchConfig(['process' => false]);
+        self::bootKernel();
+        \Ufo\JsonRpcBundle\Tests\Fixtures\Procedures\GroupedProcedure::$privateExecutions = 0;
+        $request = Request::create('http://localhost/rpc/bfa', 'POST', content: json_encode([
+            ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'area.shared'],
+            ['jsonrpc' => '2.0', 'method' => 'area.privateMethod'],
+        ]));
+        $response = self::$kernel->handle($request);
+        self::$kernel->terminate($request, $response);
+
+        self::assertSame(200, $response->getStatusCode());
+        self::assertSame(1, \Ufo\JsonRpcBundle\Tests\Fixtures\Procedures\GroupedProcedure::$privateExecutions);
+        // JSON-RPC 2.0: no response object for the notification.
+        self::assertSame([['id' => 1, 'result' => 'shared', 'jsonrpc' => '2.0']], json_decode($response->getContent(), true));
+    }
+
+    #[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+    public function testInlineBatchOfNotificationsOnlyReturnsNoContent(): void
+    {
+        TestKernel::$rpcConfig = $this->batchConfig(['process' => false]);
+        self::bootKernel();
+        \Ufo\JsonRpcBundle\Tests\Fixtures\Procedures\GroupedProcedure::$privateExecutions = 0;
+        $response = self::$kernel->handle(Request::create('http://localhost/rpc/bfa', 'POST', content: json_encode([
+            ['jsonrpc' => '2.0', 'method' => 'area.privateMethod'],
+            ['jsonrpc' => '2.0', 'method' => 'area.privateMethod'],
+        ])));
+
+        self::assertSame(204, $response->getStatusCode());
+        self::assertSame('', $response->getContent());
+        self::assertSame(2, \Ufo\JsonRpcBundle\Tests\Fixtures\Procedures\GroupedProcedure::$privateExecutions);
+    }
+
+    /**
+     * No token header on purpose: an unprotected API must accept a process-mode batch without a token.
+     */
+    public function testProcessBatchSkipsNotificationInResponse(): void
+    {
+        self::bootKernel();
+        $response = self::$kernel->handle(Request::create('http://localhost/rpc/bfa', 'POST', content: json_encode([
+            ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'area.shared'],
+            ['jsonrpc' => '2.0', 'method' => 'area.privateMethod'],
+        ])));
+
+        self::assertSame(200, $response->getStatusCode());
+        self::assertSame([['id' => 1, 'result' => 'shared', 'jsonrpc' => '2.0']], json_decode($response->getContent(), true));
+    }
+
+    public function testProcessBatchOfNotificationsOnlyReturnsNoContent(): void
+    {
+        self::bootKernel();
+        $response = self::$kernel->handle(Request::create('http://localhost/rpc/bfa', 'POST', content: json_encode([
+            ['jsonrpc' => '2.0', 'method' => 'area.privateMethod'],
+            ['jsonrpc' => '2.0', 'method' => 'area.shared'],
+        ])));
+
+        self::assertSame(204, $response->getStatusCode());
+        self::assertSame('', $response->getContent());
+    }
+
+    public function testDisabledBatchReturnsOneError(): void
+    {
+        TestKernel::$rpcConfig = $this->batchConfig(['enabled' => false]);
+        self::bootKernel();
+        [$status, $body] = $this->request('/rpc', 'POST', 'ping');
+        self::assertSame('PONG', $body['result'], 'single requests still work');
+
+        $response = self::$kernel->handle(Request::create('http://localhost/rpc', 'POST', content: json_encode([
+            ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'ping'],
+            ['jsonrpc' => '2.0', 'id' => 2, 'method' => 'ping'],
+        ])));
+        $body = json_decode($response->getContent(), true);
+        self::assertSame(-32600, $body['error']['code']);
+        self::assertSame('Batch requests are disabled', $body['error']['message']);
+        self::assertSame(\Ufo\JsonRpcBundle\EventDrivenModel\Listeners\SymfonyErrorListener::BATCH_DISABLED, $body['id']);
+    }
+
     public function testCliSelectsGroupAndDefaultsToGeneral(): void
     {
         self::bootKernel();
@@ -153,6 +267,60 @@ class ApiGroupsTest extends KernelTestCase
             'command' => 'ufo:rpc:process',
             'json' => json_encode(['jsonrpc' => '2.0', 'id' => 2, 'method' => 'ping']),
         ]), $output);
+        self::assertSame('PONG', json_decode($output->fetch(), true)['result']);
+    }
+
+    public function testCliReadsRequestFromStdin(): void
+    {
+        self::bootKernel();
+        $application = new \Symfony\Bundle\FrameworkBundle\Console\Application(self::$kernel);
+        $application->setAutoExit(false);
+        $output = new \Symfony\Component\Console\Output\BufferedOutput();
+        $stdin = fopen('php://memory', 'r+');
+        fwrite($stdin, json_encode(['jsonrpc' => '2.0', 'id' => 1, 'method' => 'ping']));
+        rewind($stdin);
+        $input = new \Symfony\Component\Console\Input\ArrayInput([
+            'command' => 'ufo:rpc:process',
+            'json' => \Ufo\JsonRpcBundle\CliCommand\UfoRpcProcessCommand::JSON_FROM_STDIN,
+        ]);
+        $input->setStream($stdin);
+        $application->run($input, $output);
+        self::assertSame('PONG', json_decode($output->fetch(), true)['result']);
+    }
+
+    public function testDocsAreCachedWithEtagOutsideDebug(): void
+    {
+        self::bootKernel(['debug' => false]);
+        $first = self::$kernel->handle(Request::create('http://localhost/rpc/bfa'));
+        $second = self::$kernel->handle(Request::create('http://localhost/rpc/bfa'));
+        self::assertSame(200, $first->getStatusCode());
+        self::assertNotNull($first->getEtag());
+        self::assertSame($first->getEtag(), $second->getEtag());
+        self::assertSame($first->getContent(), $second->getContent());
+
+        $notModified = self::$kernel->handle(Request::create('http://localhost/rpc/bfa', server: ['HTTP_IF_NONE_MATCH' => $first->getEtag()]));
+        self::assertSame(304, $notModified->getStatusCode());
+
+        $otherGroup = self::$kernel->handle(Request::create('http://localhost/rpc/bff'));
+        self::assertNotSame($first->getEtag(), $otherGroup->getEtag());
+        self::assertNotSame($first->getContent(), $otherGroup->getContent());
+    }
+
+    public function testCliReadsRequestFromEnv(): void
+    {
+        self::bootKernel();
+        $application = new \Symfony\Bundle\FrameworkBundle\Console\Application(self::$kernel);
+        $application->setAutoExit(false);
+        $output = new \Symfony\Component\Console\Output\BufferedOutput();
+        putenv(\Ufo\JsonRpcBundle\CliCommand\UfoRpcProcessCommand::REQUEST_ENV.'='.json_encode(['jsonrpc' => '2.0', 'id' => 1, 'method' => 'ping']));
+        try {
+            $application->run(new \Symfony\Component\Console\Input\ArrayInput([
+                'command' => 'ufo:rpc:process',
+                'json' => \Ufo\JsonRpcBundle\CliCommand\UfoRpcProcessCommand::JSON_FROM_ENV,
+            ]), $output);
+        } finally {
+            putenv(\Ufo\JsonRpcBundle\CliCommand\UfoRpcProcessCommand::REQUEST_ENV);
+        }
         self::assertSame('PONG', json_decode($output->fetch(), true)['result']);
     }
 
@@ -180,14 +348,17 @@ class ApiGroupsTest extends KernelTestCase
         self::bootKernel();
         $cache = self::getContainer()->get(\Ufo\JsonRpcBundle\Server\RpcCache\RpcCacheService::class);
         $pool = self::getContainer()->get('rpc.cache.pool');
-        $shared = new \Ufo\RpcObject\RpcRequest(1, 'area.shared');
+        $shared = new \Ufo\RpcObject\RpcRequest(1, 'area.cached');
         try {
             $cache->saveCacheResponse($shared, new \Ufo\RpcObject\RpcResponse(
                 $shared->getId(), 'cached', cache: new \Ufo\RpcObject\RPC\Cache(environments: ['test'])
             ));
-            self::assertSame('cached', $this->request('/rpc/bfa', 'POST', 'area.shared')[1]['result']);
-            self::assertSame('cached', $this->request('/rpc/bff', 'POST', 'area.shared')[1]['result']);
-            self::assertSame('cached', $this->request('/rpc', 'POST', 'area.shared')[1]['result']);
+            // The same implementation is shared between API groups (BFFs).
+            self::assertSame('cached', $this->request('/rpc/bfa', 'POST', 'area.cached')[1]['result']);
+            self::assertSame('cached', $this->request('/rpc/bff', 'POST', 'area.cached')[1]['result']);
+            self::assertSame('cached', $this->request('/rpc', 'POST', 'area.cached')[1]['result']);
+            // Methods without #[Cache] never read the cache.
+            self::assertSame('shared', $this->request('/rpc/bfa', 'POST', 'area.shared')[1]['result']);
         } finally {
             $pool->deleteItem($cache->getCacheKey($shared));
         }

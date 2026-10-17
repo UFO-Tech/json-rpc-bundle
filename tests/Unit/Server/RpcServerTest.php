@@ -21,7 +21,10 @@ class RpcServerTest extends TestCase
 {
     public function testHandleReturnsCachedResponseWhenAvailable(): void
     {
-        $request = $this->createMock(RpcRequest::class);
+        $request = $this->getMockBuilder(RpcRequest::class)
+            ->setConstructorArgs([1, 'main.ping'])
+            ->onlyMethods(['getRpcParams', 'hasError', 'setResponse'])
+            ->getMock();
         $request->method('getRpcParams')->willReturn(null);
         $request->method('hasError')->willReturn(false);
         $request->expects($this->once())->method('setResponse');
@@ -43,7 +46,10 @@ class RpcServerTest extends TestCase
 
     public function testHandleFallsBackToRpcExecutionWhenCacheMissed(): void
     {
-        $request = $this->createMock(RpcRequest::class);
+        $request = $this->getMockBuilder(RpcRequest::class)
+            ->setConstructorArgs([1, 'main.ping'])
+            ->onlyMethods(['getRpcParams', 'hasError', 'setResponse'])
+            ->getMock();
         $request->method('getRpcParams')->willReturn(null);
         $request->method('hasError')->willReturn(false);
         $request->expects($this->once())->method('setResponse');
@@ -70,7 +76,10 @@ class RpcServerTest extends TestCase
 
     public function testHandleDoesNotSaveCacheForErrorRequest(): void
     {
-        $request = $this->createMock(RpcRequest::class);
+        $request = $this->getMockBuilder(RpcRequest::class)
+            ->setConstructorArgs([1, 'main.ping'])
+            ->onlyMethods(['getRpcParams', 'hasError', 'setResponse'])
+            ->getMock();
         $request->method('getRpcParams')->willReturn(null);
         $request->method('hasError')->willReturn(true);
         $request->expects($this->once())->method('setResponse');
@@ -164,5 +173,34 @@ class RpcServerTest extends TestCase
 
         $this->assertSame($response, $server->handleRpcRequest($request));
     }
-}
 
+    public function testPreResponseListenerIsAddedOnceAcrossCalls(): void
+    {
+        $service = new Service('main.ping', 'App\\Rpc\\DummyProcedure', new Info('main'));
+        $holder = $this->createMock(IServiceHolder::class);
+        $holder->method('getService')->willReturn($service);
+
+        $dispatcher = new \Symfony\Component\EventDispatcher\EventDispatcher();
+        $eventFactory = $this->createMock(RpcEventFactory::class);
+        $eventFactory->method('addListener')->willReturnCallback(
+            fn(string $eventName, callable $callback, int $priority) => $dispatcher->addListener($eventName, $callback, $priority)
+        );
+        $eventFactory->method('fire')->willReturnCallback(
+            function (string $eventName, RpcRequest $request) use ($dispatcher, $service): RpcEvent {
+                $response = new RpcResponse($request->getId(), 'pong '.$request->getId(), requestObject: $request);
+                $request->setResponse($response);
+                $dispatcher->dispatch(new RpcPreResponseEvent($response, $request, $service), RpcEvent::PRE_RESPONSE);
+                return new RpcEvent([]);
+            }
+        );
+
+        $server = new RpcServer($holder, $eventFactory, $this->createMock(RpcCacheService::class));
+        foreach ([1, 2, 3] as $id) {
+            $request = RpcRequest::fromArray(['id' => $id, 'jsonrpc' => '2.0', 'method' => 'main.ping']);
+            $server->newRequest($request);
+            $this->assertSame('pong '.$id, $server->handleRpcRequest($request)->getResult());
+        }
+
+        $this->assertCount(1, $dispatcher->getListeners(RpcEvent::PRE_RESPONSE));
+    }
+}

@@ -13,6 +13,7 @@ use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcPreExecuteEvent;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcPreResponseEvent;
 use Ufo\JsonRpcBundle\EventDrivenModel\RpcEventFactory;
 use Ufo\JsonRpcBundle\ParamConvertors\ChainParamConvertor;
+use Ufo\JsonRpcBundle\Server\RpcCache\RpcMetadataCache;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\DtoReflector;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\RpcError\ConstraintsImposedException;
@@ -33,10 +34,20 @@ use function str_starts_with;
 #[AsEventListener(RpcEvent::PRE_RESPONSE, method: 'objectToScalar', priority: 1000)]
 class ParamsConverterEventListener
 {
+    /**
+     * Response formats for methods whose declared return type is not a concrete class
+     * (object, mixed, interface, union), keyed by the actual result class. Building one with
+     * DtoReflector reads and tokenizes the class file, so it is kept in memory for the process
+     * and in the metadata cache across requests.
+     *
+     * @var array<class-string, DTO>
+     */
+    protected array $runtimeResponseInfo = [];
 
     public function __construct(
         protected ChainParamConvertor $paramConvertor,
         protected RpcEventFactory $eventFactory,
+        protected ?RpcMetadataCache $metadataCache = null,
     ) {}
 
     public function objectToScalar(RpcPreResponseEvent $event): void
@@ -44,10 +55,8 @@ class ParamsConverterEventListener
         $result = $event->rpcRequest->getResponseObject()->getResult(true);
         $service = $event->service;
         if (!$result || !$service || !is_object($result)) return;
-        if (!$responseInfo = $service->getResponseInfo()) {
-            $responseInfo = new DTO($result::class);
-            new DtoReflector($responseInfo, $this->paramConvertor);
-        }
+        $responseInfo = $service->getResponseInfo()
+            ?? ($this->runtimeResponseInfo[$result::class] ??= $this->reflectResponseInfo($result::class));
 
         $replacementParams = [];
         foreach ($responseInfo->getFormat() as $paramName => $type) {
@@ -74,6 +83,19 @@ class ParamsConverterEventListener
                 $result
             ));
         }
+    }
+
+    protected function reflectResponseInfo(string $resultClass): DTO
+    {
+        $build = fn() => $this->buildResponseInfo($resultClass);
+        return $this->metadataCache?->get('response_info.'.$resultClass, DTO::class, $build) ?? $build();
+    }
+
+    protected function buildResponseInfo(string $resultClass): DTO
+    {
+        $responseInfo = new DTO($resultClass);
+        new DtoReflector($responseInfo, $this->paramConvertor);
+        return $responseInfo;
     }
 
     public function dataToDTOTransform(RpcPreExecuteEvent $event): void

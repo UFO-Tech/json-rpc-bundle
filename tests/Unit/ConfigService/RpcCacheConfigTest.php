@@ -22,6 +22,7 @@ class RpcCacheConfigTest extends TestCase
 
         $this->assertSame(Cache::T_MINUTE, $config->ttl);
         $this->assertSame(RpcCacheConfig::P_PREFIX, $config->prefix);
+        $this->assertNull($config->pool);
     }
 
     public function testUsesProvidedValues(): void
@@ -29,10 +30,12 @@ class RpcCacheConfigTest extends TestCase
         $config = new RpcCacheConfig([
             RpcCacheConfig::TTL => 120,
             RpcCacheConfig::PREFIX => 'custom_prefix',
+            RpcCacheConfig::POOL => 'cache.app',
         ], $this->rpcMainConfig);
 
         $this->assertSame(120, $config->ttl);
         $this->assertSame('custom_prefix', $config->prefix);
+        $this->assertSame('cache.app', $config->pool);
     }
 }
 

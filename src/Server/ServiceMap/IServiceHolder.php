@@ -14,6 +14,8 @@ interface IServiceHolder
     const string ARG_LOCATOR = self::SERVICE . '_argument_locator';
     const string MAP = self::SERVICE . '_map';
     const string GROUP_MAP = self::MAP . '_groups';
+    const string LOCALES = self::SERVICE . '_locales';
+    const string MAP_HASH = self::MAP . '_hash';
 
     /**
      * @param string $serviceName

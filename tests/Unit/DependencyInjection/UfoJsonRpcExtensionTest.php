@@ -5,6 +5,7 @@ namespace Ufo\JsonRpcBundle\Tests\Unit\DependencyInjection;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Ufo\JsonRpcBundle\ConfigService\RpcAsyncConfig;
+use Ufo\JsonRpcBundle\ConfigService\RpcCacheConfig;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\DependencyInjection\UfoJsonRpcExtension;
 use Ufo\RpcError\RpcBadParamException;
@@ -26,6 +27,26 @@ class UfoJsonRpcExtensionTest extends TestCase
         $this->assertTrue($container->hasParameter(RpcMainConfig::NAME));
         $this->assertFalse($container->getParameter(RpcMainConfig::NAME . '.security.protected_api'));
         $this->assertTrue($container->hasDefinition('Ufo\\JsonRpcBundle\\ConfigService\\RpcMainConfig'));
+    }
+
+    public function testDefaultCachePoolIsKeptWhenPoolIsNotConfigured(): void
+    {
+        $container = new ContainerBuilder();
+        (new UfoJsonRpcExtension())->load([[]], $container);
+
+        $this->assertTrue($container->hasDefinition(RpcCacheConfig::POOL_SERVICE));
+        $this->assertFalse($container->hasAlias(RpcCacheConfig::POOL_SERVICE));
+    }
+
+    public function testConfiguredCachePoolReplacesDefaultPool(): void
+    {
+        foreach (['cache.app', '@cache.app'] as $pool) {
+            $container = new ContainerBuilder();
+            (new UfoJsonRpcExtension())->load([[RpcCacheConfig::NAME => [RpcCacheConfig::POOL => $pool]]], $container);
+
+            $this->assertFalse($container->hasDefinition(RpcCacheConfig::POOL_SERVICE));
+            $this->assertSame('cache.app', (string)$container->getAlias(RpcCacheConfig::POOL_SERVICE));
+        }
     }
 
     public function testPrependMapsAllowedAsyncTransportToFrameworkMessenger(): void

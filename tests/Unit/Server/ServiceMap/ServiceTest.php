@@ -7,6 +7,7 @@ use Ufo\DTO\DTOTransformer;
 use Ufo\DTO\Factory\DefaultDTOTransformerFactory;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
+use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceTranslation;
 use Ufo\RpcObject\RPC\AssertionsCollection;
 use Ufo\RpcObject\RPC\Info;
 
@@ -18,7 +19,7 @@ class ServiceTest extends TestCase
 
         $this->assertSame('ping', $service->getMethodName());
         $this->assertSame('main', $service->procedure);
-        $this->assertSame('main.ping', $service->getName());
+        $this->assertSame('main.ping', $service->name);
         $this->assertSame('App\\Rpc\\DummyProcedure', $service->getProcedureFQCN());
     }
 
@@ -99,16 +100,6 @@ class ServiceTest extends TestCase
         ], Service::validateParamType(['int', 'string']));
     }
 
-    public function testAddParamsWithInvalidEntriesThrowsTypeErrorForCurrentImplementation(): void
-    {
-        $service = $this->createService('main.ping');
-
-        $this->expectException(\TypeError::class);
-        $service->addParams([
-            ['type' => 'int'],
-        ]);
-    }
-
     public function testParamsDtoAndResponseInfoDefaults(): void
     {
         $service = $this->createService('main.ping');
@@ -116,6 +107,69 @@ class ServiceTest extends TestCase
         $this->assertSame([], $service->getParamsDto());
         $this->assertNull($service->getResponseInfo());
         $this->assertNull($service->getReturnItems());
+    }
+
+    public function testTitleAndDescriptionFallBackToServiceDefaultsWithoutTranslations(): void
+    {
+        $service = $this->createService('main.ping');
+        $service->setDescription('Ping method');
+        $service->setTitle('Ping');
+
+        $this->assertSame('Ping', $service->getTitle());
+        $this->assertSame('Ping method', $service->getDescription());
+
+        $this->assertSame('Ping', $service->getTitle('uk'));
+        $this->assertSame('Ping method', $service->getDescription('uk'));
+    }
+
+    public function testKnownLocaleReturnsItsOwnTranslation(): void
+    {
+        $service = $this->createService('main.ping');
+
+        $service->addTranslation(new ServiceTranslation('uk', title: 'Пінг', description: 'Метод пінгу'));
+        $service->addTranslation(new ServiceTranslation('fr', title: 'Ping FR', description: 'Methode ping'));
+
+        $this->assertSame('Пінг', $service->getTitle('uk'));
+        $this->assertSame('Метод пінгу', $service->getDescription('uk'));
+
+        $this->assertSame('Ping FR', $service->getTitle('fr'));
+        $this->assertSame('Methode ping', $service->getDescription('fr'));
+    }
+
+    public function testUnknownLocaleFallsBackToFirstAddedTranslation(): void
+    {
+        $service = $this->createService('main.ping');
+
+        $service->addTranslation(new ServiceTranslation('uk', title: 'Пінг', description: 'Метод пінгу'));
+        $service->addTranslation(new ServiceTranslation('fr', title: 'Ping FR', description: 'Methode ping'));
+
+        $this->assertSame('Пінг', $service->getTitle('de'));
+        $this->assertSame('Метод пінгу', $service->getDescription('de'));
+    }
+
+    public function testAddTranslationOverwritesExistingLocale(): void
+    {
+        $service = $this->createService('main.ping');
+        $service->addTranslation(new ServiceTranslation('uk', title: 'Пінг', description: 'Старий опис'));
+        $service->addTranslation(new ServiceTranslation('uk', title: 'Пінг2', description: 'Новий опис'));
+
+        $this->assertSame('Пінг2', $service->getTitle('uk'));
+        $this->assertSame('Новий опис', $service->getDescription('uk'));
+    }
+
+    public function testTranslationsRoundTripThroughArray(): void
+    {
+        \Ufo\DTO\TransformerBootstrapper::boot();
+
+        $service = $this->createService('main.ping');
+        $service->setDescription('Ping method');
+        $service->addTranslation(new ServiceTranslation('uk', title: 'Пінг', description: 'Метод пінгу'));
+
+        $restored = Service::fromArray($service->toArray(false));
+
+        $this->assertSame('Пінг', $restored->getTitle('uk'));
+        $this->assertSame('Метод пінгу', $restored->getDescription('uk'));
+        $this->assertSame('Ping method', $restored->getDescription());
     }
 
     private function createService(string $name): Service

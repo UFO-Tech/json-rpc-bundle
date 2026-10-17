@@ -31,7 +31,7 @@ class ApiGroupAsyncTest extends TestCase
             self::assertSame('bfa', $context->getGroup());
             return new RpcResponse($request->getId(), 'ok');
         });
-        $processor = new RpcAsyncProcessor($server, Transformer::getDefault(), $security, $this->createMock(RpcCallbackProcessor::class), $context);
+        $processor = new RpcAsyncProcessor($server, Transformer::getDefault(), $security, $this->createMock(RpcCallbackProcessor::class), $context, new \Ufo\JsonRpcBundle\ConfigService\RpcMainConfig([], 'test'));
         ob_start();
         try {
             $processor(new RpcAsyncRequest($request, 'token', apiGroup: 'bfa'));
@@ -48,7 +48,7 @@ class ApiGroupAsyncTest extends TestCase
         $security->method('isValidApiRequest')->willThrowException(new \RuntimeException('rejected'));
         $server = $this->createMock(RpcServer::class);
         $server->expects($this->never())->method('handle');
-        $processor = new RpcAsyncProcessor($server, Transformer::getDefault(), $security, $this->createMock(RpcCallbackProcessor::class), $context);
+        $processor = new RpcAsyncProcessor($server, Transformer::getDefault(), $security, $this->createMock(RpcCallbackProcessor::class), $context, new \Ufo\JsonRpcBundle\ConfigService\RpcMainConfig([], 'test'));
         try {
             $processor(new RpcAsyncRequest(new RpcRequest(1, 'area.shared'), apiGroup: 'bfa'));
             self::fail('Expected token rejection');

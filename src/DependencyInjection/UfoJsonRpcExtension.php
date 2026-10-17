@@ -9,12 +9,14 @@ use Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface;
 use Symfony\Component\DependencyInjection\Extension\Extension;
 use Symfony\Component\DependencyInjection\Loader;
 use Ufo\JsonRpcBundle\ConfigService\RpcAsyncConfig;
+use Ufo\JsonRpcBundle\ConfigService\RpcCacheConfig;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\DependencyInjection\Attribute\RequiresExtension;
 use Ufo\RpcError\RpcBadParamException;
 use Ufo\RpcObject\RpcAsyncRequest;
 
 use function is_null;
+use function ltrim;
 
 /**
  * This is the class that loads and manages your bundle configuration.
@@ -54,7 +56,18 @@ class UfoJsonRpcExtension extends Extension implements PrependExtensionInterface
 
         $loader = new Loader\YamlFileLoader($this->container, new FileLocator(__DIR__.'/../../config'));
         $loader->load('services.yaml');
+        $this->useCachePool($config[RpcCacheConfig::NAME][RpcCacheConfig::POOL] ?? null);
         $this->removeServicesWithMissingExtensions();
+    }
+
+    /**
+     * `cache.pool` replaces the default filesystem pool (local to each server) with any cache pool service,
+     * e.g. a shared Redis pool. `ttl` and `prefix` apply only to the default pool.
+     */
+    protected function useCachePool(?string $pool): void
+    {
+        if (!$pool) return;
+        $this->container->setAlias(RpcCacheConfig::POOL_SERVICE, ltrim($pool, '@'));
     }
 
     public function prepend(ContainerBuilder $container): void

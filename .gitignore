@@ -23,3 +23,6 @@
 /sdk/
 /bin/test.php
 /MakefileCustom
+/.mcp.json
+
+/.features/

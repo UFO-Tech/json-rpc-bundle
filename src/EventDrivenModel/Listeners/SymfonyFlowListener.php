@@ -7,6 +7,7 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\ConsoleEvents;
 use Symfony\Component\Console\Event\ConsoleCommandEvent;
 use Symfony\Component\Console\Event\ConsoleTerminateEvent;
+use Symfony\Component\Console\Input\StreamableInputInterface;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -15,13 +16,14 @@ use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\Event\TerminateEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\Routing\RouterInterface;
-use Symfony\Component\Routing\Exception\ExceptionInterface as RoutingException;
 use Ufo\JsonRpcBundle\Server\ApiGroupContext;
+use Ufo\JsonRpcBundle\Server\Async\RpcDetachedSlots;
 use Ufo\RpcObject\RPC\APIGroups;
 use Throwable;
 use Ufo\JsonRpcBundle\CliCommand\UfoRpcProcessCommand;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\Controller\ApiController;
+use Ufo\JsonRpcBundle\EventDrivenModel\Listeners\Traits\RpcRouteMatcherTrait;
 use Ufo\JsonRpcBundle\EventDrivenModel\RpcEventFactory;
 use Ufo\JsonRpcBundle\Exceptions\ServiceNotFoundException;
 use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
@@ -45,7 +47,10 @@ use Ufo\RpcError\WrongWayException;
 use Ufo\RpcObject\RPC\Info;
 
 use function fastcgi_finish_request;
+use function getenv;
+use function ignore_user_abort;
 use function json_encode;
+use function stream_get_contents;
 use function trim;
 
 use const JSON_PRETTY_PRINT;
@@ -59,6 +64,8 @@ use const JSON_UNESCAPED_UNICODE;
 #[AsEventListener(ConsoleEvents::TERMINATE, method: 'firePostResponseEvent', priority: 1000000)]
 class SymfonyFlowListener
 {
+    use RpcRouteMatcherTrait;
+
     public function __construct(
         protected RequestCarrier $requestCarrier,
         protected RpcEventFactory $eventFactory,
@@ -67,6 +74,7 @@ class SymfonyFlowListener
         protected IRpcSecurity $rpcSecurity,
         protected RpcMainConfig $rpcConfig,
         protected ?ApiGroupContext $apiGroupContext = null,
+        protected ?RpcDetachedSlots $detachedSlots = null,
     ) {}
 
     public function initHttpRequest(RequestEvent $event): void
@@ -100,21 +108,6 @@ class SymfonyFlowListener
     {
         return ApiController::isApiRoute($this->matchRoute($request))
             && (!$method || $request->isMethod($method));
-    }
-
-    protected function matchRoute(Request $request): array
-    {
-        // Execution is intercepted before Symfony reaches the GET controller.
-        $context = $this->router->getContext();
-        $previousMethod = $context->getMethod();
-        $context->setMethod(Request::METHOD_GET);
-        try {
-            return $this->router->match($request->getPathInfo());
-        } catch (RoutingException) {
-            return [];
-        } finally {
-            $context->setMethod($previousMethod);
-        }
     }
 
     /**
@@ -155,13 +148,29 @@ class SymfonyFlowListener
     {
         if ($event->getCommand()?->getName() === UfoRpcProcessCommand::COMMAND_NAME) {
             $input = $event->getInput();
-            $json = trim($input->getArgument('json'), '"');
+            $json = match ($input->getArgument('json')) {
+                UfoRpcProcessCommand::JSON_FROM_STDIN => stream_get_contents(($input instanceof StreamableInputInterface ? $input->getStream() : null) ?? STDIN),
+                UfoRpcProcessCommand::JSON_FROM_ENV => (string)getenv(UfoRpcProcessCommand::REQUEST_ENV),
+                default => $input->getArgument('json'),
+            };
+            if (null !== $slot = $input->getOption(UfoRpcProcessCommand::DETACHED_SLOT)) {
+                $this->detachedSlots?->hold((int)$slot);
+            }
+            $json = trim($json, '"');
             $this->apiGroupContext?->setGroup($input->getOption('api-group') ?? APIGroups::DEFAULT_GROUP);
 
             $this->initRequest(
                 new CliTokenHolder($this->rpcConfig, $input),
                 new RpcFromCli($json, $input->getOption('ver'))
             );
+            // A detached process executes the request only if it takes it over from the worker first;
+            // otherwise the worker has already executed it itself (hand-over timeout).
+            $ticket = $input->getOption(UfoRpcProcessCommand::DETACHED_TICKET);
+            if ($ticket !== null && !$this->detachedSlots?->claim($ticket)) {
+                $event->getCommand()?->setCode(fn() => Command::SUCCESS);
+                $event->stopPropagation();
+                return;
+            }
             $result = $this->requestHandler->handle();
 
             $event->getOutput()->writeln(json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
@@ -190,9 +199,13 @@ class SymfonyFlowListener
             if ($this->requestCarrier->getCarrier() instanceof RpcFromHttp && function_exists('fastcgi_finish_request')) {
                 fastcgi_finish_request();
             }
+            // The client may already be gone: the work after the response must finish anyway
+            // (without FPM PHP aborts the script on the first output to a closed connection).
+            if ($event instanceof TerminateEvent) {
+                ignore_user_abort(true);
+            }
 
             $preResponse = $this->eventFactory->getEvent(RpcEvent::getEventFQSN(RpcEvent::PRE_RESPONSE));
-            $event->stopPropagation();
             /**
              * @var RpcPreResponseEvent $preResponse
              */
@@ -202,8 +215,6 @@ class SymfonyFlowListener
                 $preResponse->rpcRequest,
                 $preResponse->service,
             );
-            $event->stopPropagation();
-
         } catch (Throwable) {} finally {
             $this->apiGroupContext?->reset();
         }

@@ -23,11 +23,14 @@ use Ufo\JsonRpcBundle\Exceptions\StopHandler;
 use Ufo\JsonRpcBundle\Server\RequestPrepare\RequestCarrier;
 use Ufo\JsonRpcBundle\Server\RpcRequestHandler;
 use Ufo\RpcError\ExceptionToArrayTransformer;
+use Ufo\JsonRpcBundle\Exceptions\BatchIsDisabledException;
 use Ufo\RpcError\RpcBadRequestException;
 use Ufo\RpcError\RpcInvalidTokenException;
 use Ufo\RpcError\RpcJsonParseException;
 use Ufo\RpcError\RpcTokenNotSentException;
 use Ufo\RpcObject\RpcError;
+use Ufo\RpcObject\RpcNotificationRequest;
+use Ufo\RpcObject\RpcRequest;
 use Ufo\RpcObject\RpcResponse;
 
 use function in_array;
@@ -49,6 +52,7 @@ class SymfonyErrorListener
     const string API_DOC_ERROR = 'api_doc_error';
     const string INVALID_JSON_FORMAT = 'invalid_json_format';
     const string EMPTY_BATCH = 'empty_batch_request';
+    const string BATCH_DISABLED = 'batch_is_disabled';
 
     public function __construct(
         protected RpcEventFactory $eventFactory,
@@ -119,23 +123,43 @@ class SymfonyErrorListener
 
         try {
             $batch = $this->requestCarrier->getBatchRequestObject()->getCollection();
-            if (empty($batch) && $exception instanceof RpcBadRequestException) {
-                $response = $this->createResponse(static::EMPTY_BATCH, $exception);
-                $result = $this->requestHandler->responseToArray($response);
-            } else {
-                $result = [];
-                foreach ($batch as $rpcObject) {
-                    $resp = $rpcObject->getResponseObject() ?? $this->createResponse($rpcObject->getId(), $exception);
-                    $result[] = $this->requestHandler->responseToArray($resp);
-                }
-            }
-        } catch (Throwable $e) {
-            $rpcObject = $this->requestCarrier->getRequestObject();
-            $resp = $rpcObject->getResponseObject() ?? $this->createResponse($rpcObject->getId(), $exception);
-            $result = $this->requestHandler->responseToArray($resp);
+        } catch (Throwable) {
+            $this->sendResponse($event, $this->itemsToArray([$this->requestCarrier->getRequestObject()], $exception)[0] ?? []);
+            return;
         }
 
-        $this->sendResponse($event, $result);
+        $this->sendResponse($event, match (true) {
+            $exception instanceof BatchIsDisabledException => $this->wholeBatchError(static::BATCH_DISABLED, $exception),
+            empty($batch) && $exception instanceof RpcBadRequestException => $this->wholeBatchError(static::EMPTY_BATCH, $exception),
+            default => $this->itemsToArray($batch, $exception),
+        });
+    }
+
+    /**
+     * The batch is rejected as a whole: one error object instead of an array of responses.
+     */
+    protected function wholeBatchError(string $id, Throwable $exception): array
+    {
+        return $this->requestHandler->responseToArray($this->createResponse($id, $exception));
+    }
+
+    /**
+     * Response of every item: its own response if it already has one, otherwise the error.
+     * JSON-RPC 2.0: notifications get no response object.
+     *
+     * @param RpcRequest[] $items
+     * @return array[]
+     */
+    protected function itemsToArray(array $items, Throwable $exception): array
+    {
+        $result = [];
+        foreach ($items as $item) {
+            if ($item instanceof RpcNotificationRequest) continue;
+            $result[] = $this->requestHandler->responseToArray(
+                $item->getResponseObject() ?? $this->createResponse($item->getId(), $exception)
+            );
+        }
+        return $result;
     }
 
     public function cliRpcError(ConsoleErrorEvent $event): void
@@ -170,9 +194,15 @@ class SymfonyErrorListener
         };
     }
 
+    /**
+     * An empty result means only notifications were involved: 204 without a body.
+     */
     protected function sendResponse(ExceptionEvent $event, array $result): void
     {
-        $event->setResponse(new JsonResponse($result, $this->getHttpCodeFromException($event->getThrowable())));
+        $event->setResponse($result === []
+            ? new Response('', Response::HTTP_NO_CONTENT)
+            : new JsonResponse($result, $this->getHttpCodeFromException($event->getThrowable()))
+        );
         $event->stopPropagation();
         $event->allowCustomResponseCode();
     }

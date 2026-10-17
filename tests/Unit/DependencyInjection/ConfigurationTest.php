@@ -5,6 +5,7 @@ namespace Ufo\JsonRpcBundle\Tests\Unit\DependencyInjection;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Config\Definition\Processor;
 use Ufo\JsonRpcBundle\ConfigService\RpcAsyncConfig;
+use Ufo\JsonRpcBundle\ConfigService\RpcBatchConfig;
 use Ufo\JsonRpcBundle\ConfigService\RpcCacheConfig;
 use Ufo\JsonRpcBundle\ConfigService\RpcDocsConfig;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
@@ -26,6 +27,7 @@ class ConfigurationTest extends TestCase
         $this->assertSame(RpcMainConfig::NAME, Configuration::TREE_BUILDER_NAME);
         $this->assertSame(Cache::T_MINUTE, $normalized[RpcCacheConfig::NAME][RpcCacheConfig::TTL]);
         $this->assertSame(RpcCacheConfig::P_PREFIX, $normalized[RpcCacheConfig::NAME][RpcCacheConfig::PREFIX]);
+        $this->assertNull($normalized[RpcCacheConfig::NAME][RpcCacheConfig::POOL]);
         $this->assertTrue($normalized[RpcSecurityConfig::NAME][RpcSecurityConfig::PROTECTED_API]);
         $this->assertFalse($normalized[RpcSecurityConfig::NAME][RpcSecurityConfig::PROTECTED_DOC]);
         $this->assertSame(RpcSecurityConfig::DEFAULT_TOKEN_KEY, $normalized[RpcSecurityConfig::NAME][RpcSecurityConfig::TOKEN_NAME]);
@@ -86,4 +88,41 @@ class ConfigurationTest extends TestCase
         ];
     }
 
+
+    public function testBatchDefaults(): void
+    {
+        $normalized = (new Processor())->processConfiguration(new Configuration(), [[]]);
+
+        $this->assertSame([
+            RpcBatchConfig::ENABLED => true,
+            RpcBatchConfig::PROCESS => true,
+            RpcBatchConfig::PROCESS_COUNT => RpcBatchConfig::DEFAULT_PROCESS_COUNT,
+        ], $normalized[RpcBatchConfig::NAME]);
+    }
+
+    public function testBatchProcessCountIsLimited(): void
+    {
+        foreach ([0, RpcBatchConfig::MAX_PROCESS_COUNT + 1] as $count) {
+            try {
+                (new Processor())->processConfiguration(new Configuration(), [[
+                    RpcBatchConfig::NAME => [RpcBatchConfig::PROCESS_COUNT => $count],
+                ]]);
+                $this->fail('process_count '.$count.' must be rejected');
+            } catch (\Symfony\Component\Config\Definition\Exception\InvalidConfigurationException) {
+                $this->addToAssertionCount(1);
+            }
+        }
+    }
+
+    public function testNotificationDefaultsAndLimits(): void
+    {
+        $normalized = (new Processor())->processConfiguration(new Configuration(), [[]]);
+        $this->assertSame([
+            \Ufo\JsonRpcBundle\ConfigService\RpcNotificationConfig::PROCESS => false,
+            \Ufo\JsonRpcBundle\ConfigService\RpcNotificationConfig::PROCESS_COUNT => 2,
+        ], $normalized['notification']);
+
+        $this->expectException(\Symfony\Component\Config\Definition\Exception\InvalidConfigurationException::class);
+        (new Processor())->processConfiguration(new Configuration(), [['notification' => ['process_count' => 11]]]);
+    }
 }

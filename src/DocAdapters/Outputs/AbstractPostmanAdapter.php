@@ -1,6 +1,7 @@
 <?php
 namespace Ufo\JsonRpcBundle\DocAdapters\Outputs;
 
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Routing\RouterInterface;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\Server\ApiGroupContext;
@@ -23,6 +24,7 @@ abstract class AbstractPostmanAdapter
         protected RpcMainConfig $mainConfig,
         protected RouterInterface $router,
         protected ApiGroupContext $apiGroupContext,
+        protected ?RequestStack $requestStack = null,
     ) {}
 
     public function adapt(string $version = Info::DEFAULT_VERSION): array

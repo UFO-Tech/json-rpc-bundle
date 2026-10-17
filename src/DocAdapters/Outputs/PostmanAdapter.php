@@ -1,6 +1,7 @@
 <?php
 namespace Ufo\JsonRpcBundle\DocAdapters\Outputs;
 
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Routing\RouterInterface;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\Controller\ApiController;
@@ -20,8 +21,9 @@ class PostmanAdapter extends AbstractPostmanAdapter
         RpcMainConfig $mainConfig,
         RouterInterface $router,
         ApiGroupContext $apiGroupContext,
+        ?RequestStack $requestStack = null,
     ) {
-        parent::__construct($mainConfig, $router, $apiGroupContext);
+        parent::__construct($mainConfig, $router, $apiGroupContext, $requestStack);
     }
 
     protected function createSpecBuilder(string $name, string $description, string $version): PostmanSpecBuilder
@@ -39,8 +41,8 @@ class PostmanAdapter extends AbstractPostmanAdapter
     protected function buildService(Service $service): void
     {
         $method = $this->postmanSpecBuilder->buildMethod(
-            $service->getName(),
-            $service->getDescription(),
+            $service->name,
+            $service->getDescription($this->requestStack?->getCurrentRequest()?->getLocale()),
             $this->buildHeaders(),
             $service->procedure
         );

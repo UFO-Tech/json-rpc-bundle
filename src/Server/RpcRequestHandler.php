@@ -2,22 +2,25 @@
 
 namespace Ufo\JsonRpcBundle\Server;
 
-use Closure;
+use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
 use Symfony\Component\Serializer\SerializerInterface;
 use Ufo\JsonRpcBundle\EventDrivenModel\RpcEventFactory;
+use Ufo\JsonRpcBundle\Exceptions\BatchIsDisabledException;
 use Ufo\JsonRpcBundle\Exceptions\ServiceNotFoundException;
 use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
 use Ufo\JsonRpcBundle\Server\RequestPrepare\RequestCarrier;
+use Ufo\JsonRpcBundle\ConfigService\RpcBatchConfig;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
+use Ufo\JsonRpcBundle\Server\Batch\IBatchStrategy;
 use Ufo\RpcError\RpcAsyncRequestException;
 use Ufo\RpcError\RpcBadRequestException;
+use Ufo\RpcError\RpcInternalException;
 use Ufo\RpcError\RpcMethodNotFoundExceptionRpc;
 use Ufo\RpcError\RpcRuntimeException;
 use Ufo\JsonRpcBundle\Server\Async\RpcAsyncProcessor;
 use Ufo\JsonRpcBundle\Server\Async\RpcCallbackProcessor;
-use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcAsyncOutputEvent;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcEvent;
 use Ufo\RpcError\RpcTokenNotSentException;
 use Ufo\RpcError\WrongWayException;
@@ -46,7 +49,10 @@ class RpcRequestHandler
         protected RpcResponseContextBuilder $contextBuilder,
         protected RpcEventFactory $eventFactory,
         protected IRpcSecurity $rpcSecurity,
-        protected ?RpcMainConfig $rpcConfig = null,
+        protected RpcMainConfig $rpcConfig,
+        /** @var iterable<IBatchStrategy> */
+        #[AutowireIterator(IBatchStrategy::TAG)]
+        protected iterable $batchStrategies = [],
     ) {}
 
     /**
@@ -58,16 +64,22 @@ class RpcRequestHandler
      * @throws RpcTokenNotSentException
      * @throws ServiceNotFoundException
      * @throws WrongWayException
-     * @throws WrongWayException
+     * @throws WrongWayException|RpcInternalException
      */
     public function handle(): array
     {
         try {
             $requestObj = $this->requestCarrier->getBatchRequestObject();
+            $batchConfig = $this->rpcConfig->batchConfig;
+            if (!$batchConfig->enabled) {
+                throw new BatchIsDisabledException();
+            }
             if (empty($requestObj->getCollection()))
                 throw new RpcBadRequestException('Can`t process empty batch request');
-            $this->processQueue($requestObj->getReadyToHandle(), $this->closureSetResponse());
+            $this->batchStrategy($batchConfig)->handle($requestObj, $this);
             foreach ($requestObj->provideUnprocessedRequests() as $unprocessedRequest) {
+                // A notification whose dependency failed is neither executed nor answered.
+                if ($unprocessedRequest instanceof RpcNotificationRequest) continue;
                 $response = $this->provideSingleRequestToResponse($unprocessedRequest);
                 $requestObj->addResponse($response, $this->responseToArray($response));
             }
@@ -81,44 +93,18 @@ class RpcRequestHandler
     }
 
     /**
-     * @param array $queue
-     * @param Closure|null $callback
-     * @throws RpcAsyncRequestException
-     * @throws RpcTokenNotSentException
+     * Picks the batch execution strategy for batch.process (process or inline).
+     *
+     * @throws RpcInternalException
      */
-    protected function processQueue(array &$queue, ?Closure $callback): void
+    protected function batchStrategy(RpcBatchConfig $config): IBatchStrategy
     {
-        foreach ($queue as $key => &$singleRequest) {
-            /**
-             * @var RpcRequest $singleRequest
-             */
-            $singleRequest->refreshRawJson($this->serializer);
-            $this->asyncProcessor->createProcesses(
-                $singleRequest,
-                tokenName: strtolower($this->rpcSecurity->getTokenHolder()->getTokenKey()),
-                token: $this->rpcSecurity->getTokenHolder()->getToken(),
-                timeout: $singleRequest->getRpcParams()->getTimeout()
-            );
-            unset($queue[$key]);
-        }
-        $this->asyncProcessor->process($callback);
-    }
-
-    protected function closureSetResponse(): Closure
-    {
-        return function (string $output, RpcRequest $request) {
-            /** @var RpcAsyncOutputEvent $event */
-            $event = $this->eventFactory->fire(
-                RpcEvent::OUTPUT_ASYNC,
-                $request,
-                $this->requestCarrier->getBatchRequestObject(),
-                $output
-            );
-            $batchRequest = $event->batchRequest;
-            if ($batchRequest->getReadyToHandle()) {
-                $this->processQueue($batchRequest->getReadyToHandle(), $this->closureSetResponse());
+        foreach ($this->batchStrategies as $strategy) {
+            if ($strategy->supports($config)) {
+                return $strategy;
             }
-        };
+        }
+        throw new RpcInternalException('No batch strategy supports the configured batch mode');
     }
 
     /**

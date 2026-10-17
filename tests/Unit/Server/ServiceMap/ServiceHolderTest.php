@@ -2,10 +2,12 @@
 
 namespace Ufo\JsonRpcBundle\Tests\Unit\Server\ServiceMap;
 
+use PHPUnit\Framework\Attributes\IgnoreDeprecations;
 use PHPUnit\Framework\TestCase;
 use Psr\Cache\CacheItemInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Ufo\JsonRpcBundle\Exceptions\ServiceNotFoundException;
+use Ufo\JsonRpcBundle\Server\ApiGroupContext;
 use Ufo\JsonRpcBundle\Server\ServiceMap\IServiceHolder;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceHolder;
@@ -14,7 +16,8 @@ use Ufo\RpcObject\RPC\Info;
 
 class ServiceHolderTest extends TestCase
 {
-    public function testGenerateServiceCacheName(): void
+    #[IgnoreDeprecations]
+    public function testGenerateServiceCacheNameIsKeptForBackwardCompatibility(): void
     {
         $this->assertSame(
             'service_ping_v1',
@@ -22,26 +25,12 @@ class ServiceHolderTest extends TestCase
         );
     }
 
-    public function testGetServiceReturnsCachedService(): void
-    {
-        $service = $this->createService('main.ping');
-        $cacheItem = $this->createMock(CacheItemInterface::class);
-        $cacheItem->expects($this->once())->method('get')->willReturn($service);
-
-        $cache = $this->createMock(CacheItemPoolInterface::class);
-        $cache->expects($this->once())->method('getItem')->willReturn($cacheItem);
-
-        $holder = new ServiceHolder([], $cache);
-
-        $this->assertSame($service, $holder->getService('main.ping', 'v1'));
-    }
-
-    public function testGetServiceFallsBackToTaggedHoldersWhenCacheFails(): void
+    public function testGetServiceResolvesFromHoldersWithoutTouchingCache(): void
     {
         $service = $this->createService('main.ping');
 
         $cache = $this->createMock(CacheItemPoolInterface::class);
-        $cache->expects($this->once())->method('getItem')->willThrowException(new \RuntimeException('cache down'));
+        $cache->expects($this->never())->method('getItem');
 
         $fallbackHolder = $this->createMock(IServiceHolder::class);
         $fallbackHolder->expects($this->once())
@@ -49,9 +38,27 @@ class ServiceHolderTest extends TestCase
             ->with('main.ping', 'v1')
             ->willReturn($service);
 
-        $holder = new ServiceHolder([$fallbackHolder], $cache);
+        $holder = new ServiceHolder([$fallbackHolder], $cache, new ApiGroupContext());
 
         $this->assertSame($service, $holder->getService('main.ping', 'v1'));
+    }
+
+    public function testStaleServiceInCacheIsIgnored(): void
+    {
+        $stale = $this->createService('main.ping');
+        $actual = $this->createService('main.ping');
+
+        $cacheItem = $this->createMock(CacheItemInterface::class);
+        $cacheItem->method('get')->willReturn($stale);
+        $cache = $this->createMock(CacheItemPoolInterface::class);
+        $cache->method('getItem')->willReturn($cacheItem);
+
+        $fallbackHolder = $this->createMock(IServiceHolder::class);
+        $fallbackHolder->method('getService')->willReturn($actual);
+
+        $holder = new ServiceHolder([$fallbackHolder], $cache);
+
+        $this->assertSame($actual, $holder->getService('main.ping', 'v1'));
     }
 
     public function testGetServiceThrowsWhenNotFoundAnywhere(): void

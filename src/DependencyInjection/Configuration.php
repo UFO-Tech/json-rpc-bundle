@@ -5,9 +5,11 @@ namespace Ufo\JsonRpcBundle\DependencyInjection;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 use Ufo\JsonRpcBundle\ConfigService\RpcAsyncConfig;
+use Ufo\JsonRpcBundle\ConfigService\RpcBatchConfig;
 use Ufo\JsonRpcBundle\ConfigService\RpcCacheConfig;
 use Ufo\JsonRpcBundle\ConfigService\RpcDocsConfig;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
+use Ufo\JsonRpcBundle\ConfigService\RpcNotificationConfig;
 use Ufo\JsonRpcBundle\ConfigService\RpcSecurityConfig;
 use Ufo\JsonRpcBundle\ConfigService\RpcSecurityProviderConfig;
 use Ufo\RpcObject\RPC\Cache;
@@ -35,6 +37,33 @@ class Configuration implements ConfigurationInterface
 
         $rootNode
             ->children()
+                ->arrayNode(RpcBatchConfig::NAME)->addDefaultsIfNotSet()
+                    ->children()
+                        ->booleanNode(RpcBatchConfig::ENABLED)
+                            ->defaultTrue()
+                        ->end()
+                        ->booleanNode(RpcBatchConfig::PROCESS)
+                            ->defaultTrue()
+                        ->end()
+                        ->integerNode(RpcBatchConfig::PROCESS_COUNT)
+                            ->defaultValue(RpcBatchConfig::DEFAULT_PROCESS_COUNT)
+                            ->min(1)
+                            ->max(RpcBatchConfig::MAX_PROCESS_COUNT)
+                        ->end()
+                    ->end()
+                ->end()
+                ->arrayNode(RpcNotificationConfig::NAME)->addDefaultsIfNotSet()
+                    ->children()
+                        ->booleanNode(RpcNotificationConfig::PROCESS)
+                            ->defaultFalse()
+                        ->end()
+                        ->integerNode(RpcNotificationConfig::PROCESS_COUNT)
+                            ->defaultValue(RpcNotificationConfig::DEFAULT_PROCESS_COUNT)
+                            ->min(1)
+                            ->max(RpcNotificationConfig::MAX_PROCESS_COUNT)
+                        ->end()
+                    ->end()
+                ->end()
                 ->arrayNode(RpcCacheConfig::NAME)->ignoreExtraKeys(false)
                     ->children()
                         ->integerNode(RpcCacheConfig::TTL)
@@ -42,6 +71,9 @@ class Configuration implements ConfigurationInterface
                         ->end()
                         ->scalarNode(RpcCacheConfig::PREFIX)
                             ->defaultValue(RpcCacheConfig::P_PREFIX)
+                        ->end()
+                        ->scalarNode(RpcCacheConfig::POOL)
+                            ->defaultNull()
                         ->end()
                     ->end()
                 ->end()

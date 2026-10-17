@@ -2,10 +2,9 @@
 
 namespace Ufo\JsonRpcBundle\Server\ServiceMap;
 
+use Deprecated;
 use ReflectionException;
 use TypeError;
-use Ufo\DTO\ArrayConvertibleTrait;
-use Ufo\DTO\DTOTransformer;
 use Ufo\DTO\ServiceTransformer;
 use Ufo\DTO\SmartArrayConvertibleTrait;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\DtoReflector;
@@ -19,15 +18,9 @@ use Ufo\RpcObject\RPC\DTO;
 use Ufo\RpcObject\RPC\Info;
 use Ufo\DTO\JsonSerializableTrait;
 
-use function array_key_exists;
-use function array_map;
-use function class_exists;
-use function count;
-use function end;
 use function explode;
 use function implode;
 use function is_array;
-use function is_object;
 use function json_encode;
 
 class Service implements IArrayConvertible, IArrayConstructible
@@ -35,6 +28,12 @@ class Service implements IArrayConvertible, IArrayConstructible
     use JsonSerializableTrait, SmartArrayConvertibleTrait;
 
     protected string $description = '';
+    protected ?string $title = null;
+
+    /**
+     * @var array<string, ServiceTranslation>
+     */
+    protected array $translations = [];
 
     protected array $return = [];
 
@@ -129,14 +128,49 @@ class Service implements IArrayConvertible, IArrayConstructible
         return $this->methodName;
     }
 
+    /**
+     * @deprecated Since v10.0, will be removed in v11.0.
+     *             Use the public property {@see Service::$name} instead.
+     * @todo Remove in version 11.0.0
+     */
+    #[Deprecated]
     public function getName(): string
     {
         return $this->name;
     }
 
-    public function getDescription(): string
+    public function getDescription(?string $locale = null): string
     {
-        return $this->description;
+        return $this->getTranslation($locale)?->description ?? $this->description;
+    }
+
+    public function setTitle(string $title): static
+    {
+        $this->title = $title;
+
+        return $this;
+    }
+
+    public function getTitle(?string $locale = null): ?string
+    {
+        return $this->getTranslation($locale)?->title ?? $this->title;
+    }
+
+    public function addTranslation(ServiceTranslation $translation): static
+    {
+        $this->translations[0] ??= $translation;
+        $this->translations[$translation->locale] = $translation;
+
+        return $this;
+    }
+
+    protected function getTranslation(?string $locale): ?ServiceTranslation
+    {
+        if ($locale === null) {
+            return null;
+        }
+
+        return $this->translations[$locale] ?? $this->translations[0] ?? null;
     }
 
     public function getThrows(): array
@@ -166,31 +200,6 @@ class Service implements IArrayConvertible, IArrayConstructible
             ...$this->schema,
             ...$schema
         ];
-
-        return $this;
-    }
-
-    /**
-     * Add params.
-     *
-     * Each param should be an array, and should include the key 'type'.
-     *
-     * @param array $params
-     * @return self
-     * @throws RpcInternalException
-     */
-    public function addParams(array $params): static
-    {
-        foreach ($params as $options) {
-            if (!is_array($options)) {
-                continue;
-            }
-            if (!array_key_exists('type', $options)) {
-                continue;
-            }
-            $type = $options['type'];
-            $this->addParam($type, $options);
-        }
 
         return $this;
     }
@@ -305,7 +314,7 @@ class Service implements IArrayConvertible, IArrayConstructible
     public function toJson(): string
     {
         return json_encode([
-            $this->getName() => $this->toArray(),
+            $this->name => $this->toArray(),
         ]);
     }
 

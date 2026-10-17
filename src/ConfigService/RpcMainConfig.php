@@ -24,6 +24,10 @@ final readonly class RpcMainConfig
 
     public RpcAsyncConfig $asyncConfig;
 
+    public RpcBatchConfig $batchConfig;
+
+    public RpcNotificationConfig $notificationConfig;
+
     public array $url;
 
     public array $sdkVendors;
@@ -41,6 +45,8 @@ final readonly class RpcMainConfig
         $this->securityConfig = new RpcSecurityConfig($configs[RpcSecurityConfig::NAME], $this);
         $this->docsConfig = new RpcDocsConfig($configs[RpcDocsConfig::NAME], $this);
         $this->asyncConfig = new RpcAsyncConfig($configs[RpcAsyncConfig::NAME], $this);
+        $this->batchConfig = new RpcBatchConfig($configs[RpcBatchConfig::NAME] ?? [], $this);
+        $this->notificationConfig = new RpcNotificationConfig($configs[RpcNotificationConfig::NAME] ?? [], $this);
         $url = $requestStack?->getCurrentRequest()?->getUri() ?? "";
         $this->url = parse_url($url) ?? [];
 

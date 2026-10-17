@@ -1,8 +1,18 @@
 # config/packages/ufo_json_rpc.yaml
 ufo_json_rpc:
+#  batch:
+#    enabled: true         # default
+#    process: true         # default if false - inline without parallel
+#    process_count: 5      # maximum 10 default 2
+
+#  notification:
+#    process: false        # default; true - notifications and $rpc.callback of a single request run in a ufo:rpc:process detached from the HTTP worker
+#    process_count: 5      # maximum 10 default 2; when all are busy it runs inline
+
   cache:
     ttl: 60
     prefix: 'rpc_cache'
+    # pool: 'cache.app'               # Optional cache pool service (e.g. shared Redis) instead of the local filesystem pool
 
   security:
     protected_api: true               # Protection API requests

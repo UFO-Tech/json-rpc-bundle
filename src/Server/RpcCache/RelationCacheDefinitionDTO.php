@@ -39,8 +39,8 @@ final class RelationCacheDefinitionDTO
 
     public function checkWarmUpsMethod(Service $service, RpcRequest $request): void
     {
-        if (in_array($service->getName(), $this->warmUpsMethods)) {
-            $this->setWarmupRequest($service->getName(), $request);
+        if (in_array($service->name, $this->warmUpsMethods)) {
+            $this->setWarmupRequest($service->name, $request);
         }
     }
 

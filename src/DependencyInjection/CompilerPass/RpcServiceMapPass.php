@@ -21,6 +21,7 @@ use Symfony\Component\DependencyInjection\Exception\LogicException;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\ExpressionLanguage\Expression;
 use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\Yaml\Yaml;
 use Symfony\Contracts\Cache\CacheInterface;
 use Throwable;
 use Ufo\DTO\DTOTransformer;
@@ -33,6 +34,7 @@ use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\Fillers\ChainServiceFiller;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\Fillers\IServiceFiller;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\UfoReflectionProcedure;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
+use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceTranslation;
 use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Generator;
 use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Interfaces\IConstraintGenerator;
 use Ufo\JsonRpcBundle\Validations\JsonSchema\JsonSchemaNormalizer;
@@ -46,13 +48,18 @@ use function array_diff_key;
 use function array_flip;
 use function array_keys;
 use function array_merge;
+use function array_search;
 use function array_unique;
+use function array_unshift;
 use function class_exists;
 use function enum_exists;
+use function glob;
 use function in_array;
 use function interface_exists;
+use function is_array;
 use function is_string;
 use function is_subclass_of;
+use function preg_match;
 use function usort;
 
 class RpcServiceMapPass implements CompilerPassInterface
@@ -77,12 +84,26 @@ class RpcServiceMapPass implements CompilerPassInterface
     protected array $compiledServices = [];
 
     /**
+     * @var array<string, array<string, array{title?: string, description?: string}>>
+     */
+    protected array $translations = [];
+
+    protected string $defaultLocale = 'en';
+
+    /**
      * @throws ReflectionException|RpcInternalException
      */
     public function process(ContainerBuilder $container): void
     {
         $this->container = $container;
         $this->compileStaticDTOTransformer();
+        $this->defaultLocale = $container->hasParameter('kernel.default_locale')
+            ? $container->getParameter('kernel.default_locale')
+            : 'en';
+        $projectDir = $container->getParameter('kernel.project_dir');
+        $this->translations = $this->readTranslations($projectDir);
+        // Rebuild the container (in debug) when RPC translation files are added, removed or changed.
+        $container->fileExists($projectDir.'/translations', '/^rpc\.[a-zA-Z0-9_]+\.ya?ml$/');
 
         $rpcServices = $container->findTaggedServiceIds(IRpcService::TAG);
         $rpcClassRef = []; // ServiceLocator
@@ -116,6 +137,13 @@ class RpcServiceMapPass implements CompilerPassInterface
             $maps[$group] = $this->getServicesForMap($group);
         }
         $this->container->setParameter(IServiceHolder::GROUP_MAP, $maps);
+        $this->container->setParameter(IServiceHolder::LOCALES, $this->getLocales());
+        // Fingerprint of everything the documentation is built from: changes whenever methods or the map change.
+        $this->container->setParameter(IServiceHolder::MAP_HASH, md5(serialize([
+            $this->container->getParameter(IServiceHolder::MAP),
+            $maps,
+            $this->getLocales(),
+        ])));
         DTOTransformer::reset();
     }
 
@@ -140,7 +168,7 @@ class RpcServiceMapPass implements CompilerPassInterface
         $versions = [];
 
         foreach (($this->groupMaps[$group] ?? ($group === APIGroups::DEFAULT_GROUP ? $this->serviceMap : [])) as $service) {
-            $serviceName = $service->getName();
+            $serviceName = $service->name;
             $ver = $service->apiClassInfo->version;
             $versions[$ver] = $ver;
             $servicesData[$ver][$serviceName] = $service->toArray(false);
@@ -323,6 +351,73 @@ class RpcServiceMapPass implements CompilerPassInterface
         return $this->compiledServices[$serviceId] = $reflection->newInstanceArgs($params);
     }
 
+    /**
+     * Reads per-locale RPC translation files from `<projectDir>/translations/rpc.<locale>.yaml|yml`.
+     *
+     * @return array<string, array<string, array{title?: string, description?: string}>>
+     */
+    protected function readTranslations(string $projectDir): array
+    {
+        // GLOB_BRACE is a glibc extension, not guaranteed on every libc (e.g. musl/Alpine)
+        // — two plain globs instead, merged.
+        $files = [
+            ...glob($projectDir.'/translations/rpc.*.yaml') ?: [],
+            ...glob($projectDir.'/translations/rpc.*.yml') ?: [],
+        ];
+
+        $translations = [];
+        foreach ($files as $file) {
+            if (preg_match('/rpc\.([a-zA-Z0-9_]+)\.ya?ml$/', $file, $matches)) {
+                $data = Yaml::parseFile($file) ?? [];
+                $translations[$matches[1]] = is_array($data) ? $data : [];
+            }
+        }
+
+        return $translations;
+    }
+
+    /**
+     * Locales that have RPC translation files, the default locale (`kernel.default_locale`) first.
+     *
+     * @return string[]
+     */
+    protected function getLocales(): array
+    {
+        $locales = array_keys($this->translations);
+        $defaultIndex = array_search($this->defaultLocale, $locales, true);
+        if ($defaultIndex !== false) {
+            unset($locales[$defaultIndex]);
+            array_unshift($locales, $this->defaultLocale);
+        }
+
+        return $locales;
+    }
+
+    /**
+     * Fills $service translations from the loaded translation files.
+     * The default locale (`kernel.default_locale`), if present, is added first
+     * so it becomes the fallback for locales that have no translation of their own.
+     */
+    protected function applyTranslations(Service $service): void
+    {
+        if (!$this->translations) {
+            return;
+        }
+
+        foreach ($this->getLocales() as $locale) {
+            $data = $this->translations[$locale][$service->name] ?? null;
+            if (!is_array($data)) {
+                continue;
+            }
+
+            $service->addTranslation(new ServiceTranslation(
+                $locale,
+                $data['title'] ?? $service->getTitle() ?? $service->name,
+                $data['description'] ?? $service->getDescription(),
+            ));
+        }
+    }
+
     public function processServiceMap(ReflectionClass $refClass): void
     {
         $reflection = new UfoReflectionProcedure(
@@ -331,16 +426,17 @@ class RpcServiceMapPass implements CompilerPassInterface
         );
         $classGroups = $refClass->getAttributes(APIGroups::class)[0] ?? null;
         foreach ($reflection->getMethods() as $service) {
+            $this->applyTranslations($service);
             $methodGroups = $refClass->getMethod($service->getMethodName())->getAttributes(APIGroups::class)[0] ?? null;
             $groups = ($methodGroups ?? $classGroups)?->newInstance() ?? new APIGroups();
             foreach ($groups->groups as $group) {
-                $name = $service->getName() . ':' . $service->apiClassInfo->version;
+                $name = $service->name . ':' . $service->apiClassInfo->version;
                 $existing = $this->groupMaps[$group][$name] ?? null;
                 if ($existing && !is_subclass_of($service->getProcedureFQCN(), $existing->getProcedureFQCN())) {
                     if (is_subclass_of($existing->getProcedureFQCN(), $service->getProcedureFQCN())) {
                         continue;
                     }
-                    throw new RuntimeException('Attempt to register a service "'.$service->getName().'" already registered in API group "'.$group.'" detected');
+                    throw new RuntimeException('Attempt to register a service "'.$service->name.'" already registered in API group "'.$group.'" detected');
                 }
                 $this->groupMaps[$group][$name] = $service;
                 if ($group === APIGroups::DEFAULT_GROUP) {

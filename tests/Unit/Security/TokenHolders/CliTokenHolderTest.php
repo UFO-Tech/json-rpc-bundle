@@ -6,6 +6,7 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Input\InputInterface;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\ConfigService\RpcSecurityConfig;
+use Ufo\JsonRpcBundle\CliCommand\UfoRpcProcessCommand;
 use Ufo\JsonRpcBundle\Security\TokenHolders\CliTokenHolder;
 use Ufo\JsonRpcBundle\Tests\Unit\ConfigHolderTrait;
 use Ufo\RpcError\RpcTokenNotSentException;
@@ -44,6 +45,28 @@ class CliTokenHolderTest extends TestCase
         $this->expectException(RpcTokenNotSentException::class);
         $this->expectExceptionMessage('Token not set!'.PHP_EOL.'This protected command, use option --auth_token');
         $this->cliTokenHolder->getToken();
+    }
+
+    public function testGetTokenFallsBackToEnvWhenOptionIsMissing(): void
+    {
+        $this->inputMock->method('getOption')->with('auth_token')->willReturn(null);
+        putenv(UfoRpcProcessCommand::TOKEN_ENV.'=env_token');
+        try {
+            $this->assertSame('env_token', $this->cliTokenHolder->getToken());
+        } finally {
+            putenv(UfoRpcProcessCommand::TOKEN_ENV);
+        }
+    }
+
+    public function testOptionTakesPrecedenceOverEnv(): void
+    {
+        $this->inputMock->method('getOption')->with('auth_token')->willReturn('option_token');
+        putenv(UfoRpcProcessCommand::TOKEN_ENV.'=env_token');
+        try {
+            $this->assertSame('option_token', $this->cliTokenHolder->getToken());
+        } finally {
+            putenv(UfoRpcProcessCommand::TOKEN_ENV);
+        }
     }
 
 }

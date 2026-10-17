@@ -19,6 +19,28 @@ use function strtolower;
 class UfoRpcProcessCommand extends Command
 {
     const string COMMAND_NAME = 'ufo:rpc:process';
+    /**
+     * Passed instead of the json argument: the request is read from stdin (keeps it out of the process list).
+     */
+    const string JSON_FROM_STDIN = '-';
+    /**
+     * Passed instead of the json argument: the request is read from the REQUEST_ENV variable.
+     * Used by a detached process, whose stdin is /dev/null.
+     */
+    const string JSON_FROM_ENV = '@env';
+    const string REQUEST_ENV = 'UFO_RPC_REQUEST';
+    /**
+     * Slot of RpcDetachedSlots held by a detached process while it runs.
+     */
+    const string DETACHED_SLOT = 'detached-slot';
+    /**
+     * Hand-over ticket of RpcDetachedSlots: the request is executed only if this process claims it.
+     */
+    const string DETACHED_TICKET = 'detached-ticket';
+    /**
+     * Env variable with the security token, used when the token option is not given (keeps it out of the process list).
+     */
+    const string TOKEN_ENV = 'UFO_RPC_TOKEN';
 
     public function __construct(
         protected RpcMainConfig $rpcConfig,
@@ -33,13 +55,13 @@ class UfoRpcProcessCommand extends Command
             ->addArgument(
                 'json',
                 mode: InputArgument::OPTIONAL,
-                description: 'Json request object for provide',
+                description: 'Json request object for provide, or "'.self::JSON_FROM_STDIN.'" to read it from stdin',
                 default: '[]'
             )
             ->addOption(
                 strtolower($this->rpcConfig->securityConfig->tokenName),
                 mode: $this->rpcConfig->securityConfig->protectedApi ? InputOption::VALUE_REQUIRED : InputOption::VALUE_OPTIONAL,
-                description: 'Security token',
+                description: 'Security token (or env '.self::TOKEN_ENV.')',
                 default: $this->rpcConfig->securityConfig->protectedApi ? '' : null,
             )
             ->addOption(
@@ -58,6 +80,16 @@ class UfoRpcProcessCommand extends Command
                 mode: InputOption::VALUE_OPTIONAL,
                 description: 'API version',
                 default: Info::DEFAULT_VERSION
+            )
+            ->addOption(
+                self::DETACHED_SLOT,
+                mode: InputOption::VALUE_REQUIRED,
+                description: 'Detached process slot (internal)',
+            )
+            ->addOption(
+                self::DETACHED_TICKET,
+                mode: InputOption::VALUE_REQUIRED,
+                description: 'Detached process hand-over ticket (internal)',
             )
         ;
     }

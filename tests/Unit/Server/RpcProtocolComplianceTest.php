@@ -292,7 +292,8 @@ class RpcProtocolComplianceTest extends TestCase
             $this->createMock(RpcCallbackProcessor::class),
             new RpcResponseContextBuilder(),
             $eventFactory,
-            $security
+            $security,
+            new RpcMainConfig([], 'test'),
         );
         $router = $this->createMock(RouterInterface::class);
         $router->method('match')->willReturn(['_route' => ApiController::API_ROUTE]);

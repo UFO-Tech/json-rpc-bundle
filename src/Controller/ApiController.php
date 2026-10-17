@@ -40,24 +40,19 @@ class ApiController extends AbstractController
         self::API_ROUTE_VER,
     ];
 
-    /**
-     * @param OpenRpcAdapter $openRpcAdapter
-     * @param Request $request
-     * @return Response
-     */
     #[Route('/{ver<v\d+>}', name: self::API_ROUTE . '_ver', defaults: ['_rpc_route' => self::API_ROUTE_VER], methods: ['GET'], priority: 90, format: 'json')]
     #[Route('', name: self::API_ROUTE, defaults: ['ver' => Info::DEFAULT_VERSION, '_rpc_route' => self::API_ROUTE], methods: ['GET'], priority: 100, format: 'json')]
-    public function openrpc(OpenRpcAdapter $openRpcAdapter, Request $request): Response
+    public function openrpc(string $ver, OpenRpcAdapter $openRpcAdapter, Request $request): Response
     {
-        $result = $openRpcAdapter->adapt(!$request->query->has('info'), $request->attributes->get('ver'));
+        $result = $openRpcAdapter->adapt(!$request->query->has('info'), $ver);
         return new JsonResponse(json_encode($result, JSON_PRETTY_PRINT), json: true);
     }
 
     #[Route('/{ver<v\d+>}/postman', name: self::POSTMAN_ROUTE_VER, defaults: ['_rpc_route' => self::POSTMAN_ROUTE_VER], methods: ['GET'], format: 'json')]
     #[Route('/postman', name: self::POSTMAN_ROUTE, defaults: ['ver' => Info::DEFAULT_VERSION, '_rpc_route' => self::POSTMAN_ROUTE], methods: ['GET'], format: 'json')]
-    public function postman(PostmanAdapter $postmanAdapter, Request $request): Response
+    public function postman(string $ver, PostmanAdapter $postmanAdapter): Response
     {
-        $result = $postmanAdapter->adapt($request->attributes->get('ver'));
+        $result = $postmanAdapter->adapt($ver);
         return new JsonResponse(json_encode($result, JSON_PRETTY_PRINT), json: true);
     }
 

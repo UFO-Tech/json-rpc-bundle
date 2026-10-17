@@ -2,6 +2,7 @@
 namespace Ufo\JsonRpcBundle\DocAdapters\Outputs;
 
 use PSX\OpenRPC\Method;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Routing\RouterInterface;
 use Ufo\DTO\Helpers\TypeHintResolver as T;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
@@ -40,6 +41,7 @@ class OpenRpcAdapter
         protected RouterInterface $router,
         protected EnumsHolder $enumsHolder,
         protected ?ApiGroupContext $apiGroupContext = null,
+        protected ?RequestStack $requestStack = null,
     ) {}
 
     public function adapt(bool $fullInfo = true, string $version = Info::DEFAULT_VERSION): array
@@ -98,9 +100,11 @@ class OpenRpcAdapter
 
     protected function buildService(Service $service): void
     {
+        $locale = $this->requestStack?->getCurrentRequest()?->getLocale();
         $method = $this->rpcSpecBuilder->buildMethod(
-            $service->getName(),
-            $service->getDescription()
+            $service->name,
+            $service->getTitle($locale),
+            $service->getDescription($locale)
         );
         array_map(
             fn(ParamDefinition $param) => $this->buildParam($method, $param, $service),

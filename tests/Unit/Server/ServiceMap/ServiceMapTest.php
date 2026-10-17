@@ -145,4 +145,62 @@ class ServiceMapTest extends TestCase
         $property->setAccessible(true);
         $property->setValue($object, $value);
     }
+
+    /** @var array<class-string<\Ufo\DTO\DTOTransformer>> */
+    private array $bootedTransformers = [];
+
+    protected function tearDown(): void
+    {
+        foreach ($this->bootedTransformers as $transformer) {
+            $transformer::reset();
+        }
+        $this->bootedTransformers = [];
+    }
+
+    private function serviceData(string $fqcn): array
+    {
+        foreach ([\Ufo\DTO\DTOTransformer::class, \Ufo\DTO\ServiceTransformer::class] as $transformer) {
+            if (!$transformer::isInitialized()) {
+                $transformer::boot(\Ufo\DTO\Factory\DefaultDTOTransformerFactory::default()->create($transformer));
+                $this->bootedTransformers[] = $transformer;
+            }
+        }
+        return (new Service('main.ping', $fqcn, new Info('main')))->toArray();
+    }
+
+    public function testHydratedServiceIsReusedFromMetadataCacheByNextRequest(): void
+    {
+        $pool = new \Symfony\Component\Cache\Adapter\ArrayAdapter();
+        $config = new RpcMainConfig([], 'test');
+        $data = $this->serviceData('App\\Rpc\\Ping');
+
+        $first = new ServiceMap([Info::DEFAULT_VERSION => ['main.ping' => $data]], $config, metadataCache: new \Ufo\JsonRpcBundle\Server\RpcCache\RpcMetadataCache($pool, 'b1'));
+        $first->getService('main.ping');
+
+        // Next request: same container build, map data deliberately different - the cached object must be used.
+        $changed = $this->serviceData('App\\Rpc\\Changed');
+        $second = new ServiceMap([Info::DEFAULT_VERSION => ['main.ping' => $changed]], $config, metadataCache: new \Ufo\JsonRpcBundle\Server\RpcCache\RpcMetadataCache($pool, 'b1'));
+
+        $this->assertSame('App\\Rpc\\Ping', $second->getService('main.ping')->procedureFQCN);
+    }
+
+    public function testApiGroupsAreCachedSeparately(): void
+    {
+        $pool = new \Symfony\Component\Cache\Adapter\ArrayAdapter();
+        $config = new RpcMainConfig([], 'test');
+        $groupMaps = [
+            'bfa' => [Info::DEFAULT_VERSION => ['main.ping' => $this->serviceData('App\\Rpc\\BfaPing')]],
+            'bff' => [Info::DEFAULT_VERSION => ['main.ping' => $this->serviceData('App\\Rpc\\BffPing')]],
+        ];
+        $context = new \Ufo\JsonRpcBundle\Server\ApiGroupContext();
+        $cache = new \Ufo\JsonRpcBundle\Server\RpcCache\RpcMetadataCache($pool, 'b1');
+
+        $context->setGroup('bfa');
+        $bfa = (new ServiceMap([], $config, $context, $groupMaps, metadataCache: $cache))->getService('main.ping');
+        $context->setGroup('bff');
+        $bff = (new ServiceMap([], $config, $context, $groupMaps, metadataCache: $cache))->getService('main.ping');
+
+        $this->assertSame('App\\Rpc\\BfaPing', $bfa->procedureFQCN);
+        $this->assertSame('App\\Rpc\\BffPing', $bff->procedureFQCN);
+    }
 }

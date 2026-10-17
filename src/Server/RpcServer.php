@@ -6,6 +6,7 @@ use Ufo\JsonRpcBundle\EventDrivenModel\RpcEventFactory;
 use Ufo\JsonRpcBundle\Exceptions\ServiceNotFoundException;
 use Ufo\JsonRpcBundle\Server\RpcCache\RpcCacheService;
 use Ufo\JsonRpcBundle\Server\ServiceMap\IServiceHolder;
+use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcEvent;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcPreResponseEvent;
 use Ufo\RpcError\RpcMethodNotFoundExceptionRpc;
@@ -17,6 +18,7 @@ class RpcServer
 {
     protected ?RpcRequest $requestObject = null;
     protected RpcResponse $responseObject;
+    protected bool $responseListenerAdded = false;
 
     public function __construct(
         readonly public IServiceHolder $serviceHolder,
@@ -34,20 +36,25 @@ class RpcServer
      * @return RpcResponse
      * @throws RpcMethodNotFoundExceptionRpc
      */
-    public function handleRpcRequest(RpcRequest $request): RpcResponse
+    public function handleRpcRequest(RpcRequest $request, ?Service $service = null): RpcResponse
     {
         $method = $request->getMethod();
         try {
-            $service = $this->serviceHolder->getService($method, $request->apiVersion);
+            $service ??= $this->serviceHolder->getService($method, $request->apiVersion);
         } catch (ServiceNotFoundException $e) {
             throw new RpcMethodNotFoundExceptionRpc($e->getMessage());
         }
 
-        $this->eventFactory->addListener(
-            RpcEvent::PRE_RESPONSE,
-            $this->onRpcResponseCallback(),
-            -100000
-        );
+        // Once per instance: the listener only stores the response, and adding it on every call
+        // makes the listener list grow without bound in long-running workers.
+        if (!$this->responseListenerAdded) {
+            $this->eventFactory->addListener(
+                RpcEvent::PRE_RESPONSE,
+                $this->onRpcResponseCallback(),
+                -100000
+            );
+            $this->responseListenerAdded = true;
+        }
 
         $this->eventFactory->fire(
             RpcEvent::PRE_EXECUTE,
@@ -74,14 +81,20 @@ class RpcServer
     public function handle(RpcRequest $singleRequest): RpcResponse
     {
         $this->newRequest($singleRequest);
+        // Resolved once: the cache needs the implementation for its key and to skip non-cacheable methods.
         try {
-            if ($singleRequest->getRpcParams()?->ignoreCache ?? false) throw new WrongWayException();
-            $response = $this->cache->getCacheResponse($singleRequest);
-        } catch (WrongWayException) {
-            $response = $this->handleRpcRequest($singleRequest);
+            $service = $this->serviceHolder->getService($singleRequest->getMethod(), $singleRequest->apiVersion);
+        } catch (ServiceNotFoundException) {
+            $service = null;
         }
-        if (!$singleRequest->hasError()) {
-            $this->cache->saveCacheResponse($singleRequest, $response);
+        try {
+            if (!$service || ($singleRequest->getRpcParams()?->ignoreCache ?? false)) throw new WrongWayException();
+            $response = $this->cache->getCacheResponse($singleRequest, $service);
+        } catch (WrongWayException) {
+            $response = $this->handleRpcRequest($singleRequest, $service);
+        }
+        if (!$singleRequest->hasError() && $service) {
+            $this->cache->saveCacheResponse($singleRequest, $response, $service);
         }
 
         $singleRequest->setResponse($response);
