@@ -31,5 +31,5 @@ Major 9 (2025-10-01 — 2026-01-20) rebuilds the bundle's type handling on `ufo-
 5. Add a `cache: { ttl, prefix }` section; the response cache now lives in its own filesystem pool `rpc.cache.pool`.
 6. `RpcCacheService::invalidateRelationsCache()` → `addRelationsRequestToCache()`.
 7. `$rpc.callback` requests: the immediate result is now `{"async": true, "callback": "<url>"}`; the method runs after the response (requires PHP-FPM for HTTP), and the caller's headers — including the RPC token — are forwarded to the callback URL.
-8. In 9.2.1 the OpenRPC output no longer marks methods as `deprecated`.
+8. In 9.2.1 the OpenRPC output no longer marks methods as `deprecated`. **Fixed in [10.3.1](../10.x/10.3/README.md#1031).**
 9. Clear the Symfony cache after upgrading.

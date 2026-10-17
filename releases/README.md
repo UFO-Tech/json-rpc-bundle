@@ -6,7 +6,7 @@ What was added in every version and how to use it. Each minor version has its ow
 
 | Version | Released | Highlights |
 | --- | --- | --- |
-| [10.3](10.x/10.3/README.md) | 2026-10-18 | Batch modes (inline / limited processes), JSON-RPC notification rules in batch, docs cache with `ETag`, translated method titles, response cache keyed by implementation, 2.4–4.2× throughput |
+| [10.3](10.x/10.3/README.md) | 2026-10-18 | 10.3.1: XHR calls, `#[Autowire]` in method arguments, `concat`, `deprecated` in OpenRPC fixed. Batch modes (inline / limited processes), JSON-RPC notification rules in batch, docs cache with `ETag`, translated method titles, response cache keyed by implementation, 2.4–4.2× throughput |
 | [10.2](10.x/10.2/README.md) | 2026-10-15 | API groups: several entry points (public, internal, BFF) with own methods, versions, docs; token validation per group (`security.providers`) |
 | [10.1](10.x/10.1/README.md) | 2026-09-25 | Symfony 8 support, JSON-RPC notifications (`204`, run after the response), strict JSON-RPC 2.0 checks with per-parameter errors |
 | [10.0](10.x/10.0/README.md) | 2026-02-26 | API versions side by side (`/rpc/v2`, `removedMethods`), cleaner OpenRPC/Postman, automatic parameter conversion incl. Doctrine entities |

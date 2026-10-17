@@ -104,7 +104,8 @@ class OpenRpcAdapter
         $method = $this->rpcSpecBuilder->buildMethod(
             $service->name,
             $service->getTitle($locale),
-            $service->getDescription($locale)
+            $service->getDescription($locale),
+            $service->isDeprecated(),
         );
         array_map(
             fn(ParamDefinition $param) => $this->buildParam($method, $param, $service),

@@ -52,7 +52,7 @@ curl 'https://example.com/api?info'
 ## Зміни та виправлення
 
 - 9.2.0 — `RpcServer::$serviceHolder` тепер `readonly public`. `RpcCallbackProcessor` залежить від `RequestCarrier`; `AsyncServerEventListener` — від `RpcAsyncProcessor`.
-- 9.2.1 — Підтримка `GET ?info`. `OpenRpcAdapter` більше не передає прапорець deprecated у `OpenRpcSpecBuilder::buildMethod()`, тому в 9.2.1 методи не позначаються `deprecated` в OpenRPC, навіть якщо мають `@deprecated` / `#[\Deprecated]` (прапорець і далі збирається в `Service::isDeprecated()`). У `composer.json` додано другого автора.
+- 9.2.1 — Підтримка `GET ?info`. `OpenRpcAdapter` більше не передає прапорець deprecated у `OpenRpcSpecBuilder::buildMethod()`, тому в 9.2.1 методи не позначаються `deprecated` в OpenRPC, навіть якщо мають `@deprecated` / `#[\Deprecated]` (прапорець і далі збирається в `Service::isDeprecated()`). У `composer.json` додано другого автора. **Виправлено в [10.3.1](../../10.x/10.3/README-UA.md#1031).**
 
 ## Примітки до оновлення
 

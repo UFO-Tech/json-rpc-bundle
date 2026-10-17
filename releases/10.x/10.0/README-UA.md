@@ -84,7 +84,7 @@ class OrderApi implements IRpcService
 
 10.0.0 додав підтримку `#[Autowire]` для аргументів RPC-методів (значення беруться з локатора методу `rpc.service_argument_locator`; такі аргументи не потрапляють у документацію).
 
-**Відома проблема:** починаючи з 10.0.1 (і досі в 10.2.3) `RpcServiceMapPass::processParams()` пропускає кожен типізований параметр (`if ($typeName || ...) continue;`), тому `#[Autowire]` в аргументах методу не реєструється. Використовуйте інʼєкцію через конструктор.
+**Відома проблема:** починаючи з 10.0.1 (і досі в 10.2.3) `RpcServiceMapPass::processParams()` пропускає кожен типізований параметр (`if ($typeName || ...) continue;`), тому `#[Autowire]` в аргументах методу не реєструється. Використовуйте інʼєкцію через конструктор. **Виправлено в [10.3.1](../10.3/README-UA.md#1031).**
 
 ## Зміни та виправлення
 
@@ -106,4 +106,4 @@ class OrderApi implements IRpcService
 - Видалено: `ServiceMapFactory`, `ServiceLocator`, `ServiceMap::addService()`, `getTarget()`, `getDescription()`. Перенесено: `RpcFromCli` / `RpcFromHttp` до `Server\RequestPrepare\Holders`.
 - `Service`: конструктор вимагає `Info $apiClassInfo`; `name`, `procedureFQCN`, `methodName`, `procedure` — public readonly; `getResponseInfo()` повертає `RPC\DTO` замість `ResultAsDTO`. `getName()` працює; `#[Deprecated]` він позначений лише в 10.3 (використовуйте властивість `name`).
 - Дії `ApiController` перейменовано: `serverAction()` → `openrpc()`, `postmanAction()` → `postman()`.
-- `RPC\Info(concat: ...)` з 10.0 не застосовується до назв методів (завжди `.`). Схоже на ненавмисну зміну; перевірте, якщо використовуєте власний `concat`.
+- `RPC\Info(concat: ...)` з 10.0 не застосовується до назв методів (завжди `.`). Схоже на ненавмисну зміну; перевірте, якщо використовуєте власний `concat`. **Виправлено в [10.3.1](../10.3/README-UA.md#1031).**

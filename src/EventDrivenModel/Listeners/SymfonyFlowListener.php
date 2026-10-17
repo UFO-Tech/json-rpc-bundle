@@ -90,7 +90,8 @@ class SymfonyFlowListener
         );
 
         if (!ApiController::isApiRoute($route)) return;
-        if ($request->isMethod(Request::METHOD_OPTIONS) || $request->isXmlHttpRequest()) {
+        // CORS preflight only: an XHR request (X-Requested-With: XMLHttpRequest) is a regular RPC call.
+        if ($request->isMethod(Request::METHOD_OPTIONS)) {
             $event->stopPropagation();
             $event->setResponse(new Response());
             return;

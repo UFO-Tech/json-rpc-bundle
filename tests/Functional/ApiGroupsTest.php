@@ -324,6 +324,71 @@ class ApiGroupsTest extends KernelTestCase
         self::assertSame('PONG', json_decode($output->fetch(), true)['result']);
     }
 
+    public function testXmlHttpRequestIsHandledAsRegularCall(): void
+    {
+        self::bootKernel();
+        $request = Request::create('http://localhost/rpc', 'POST', server: ['HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest'], content: json_encode(['jsonrpc' => '2.0', 'id' => 1, 'method' => 'ping']));
+        $response = self::$kernel->handle($request);
+        self::assertSame('PONG', json_decode($response->getContent(), true)['result']);
+
+        $preflight = self::$kernel->handle(Request::create('http://localhost/rpc', 'OPTIONS'));
+        self::assertSame(200, $preflight->getStatusCode());
+        self::assertSame('', $preflight->getContent());
+    }
+
+    private function cliCall(string $group, array $body): array
+    {
+        return json_decode($this->cliOutput($group, $body), true);
+    }
+
+    private function cliOutput(string $group, array $body): string
+    {
+        $application = new \Symfony\Bundle\FrameworkBundle\Console\Application(self::$kernel);
+        $application->setAutoExit(false);
+        $output = new \Symfony\Component\Console\Output\BufferedOutput();
+        $application->run(new \Symfony\Component\Console\Input\ArrayInput([
+            'command' => 'ufo:rpc:process',
+            'json' => json_encode(['jsonrpc' => '2.0', 'id' => 1] + $body),
+            '--api-group' => $group,
+        ]), $output);
+        return $output->fetch();
+    }
+
+    public function testAutowiredMethodArgumentsAreInjected(): void
+    {
+        self::bootKernel();
+        // Custom separator from #[RPC\Info(concat: '_')].
+        self::assertStringContainsString('Router', $this->cliCall('tools', ['method' => 'tools_router'])['result']);
+        self::assertSame('ann:router', $this->cliCall('tools', ['method' => 'tools_greet', 'params' => ['name' => 'ann']])['result']);
+        self::assertSame('bob:router', $this->cliCall('tools', ['method' => 'tools_greet', 'params' => ['bob']])['result']);
+        // The default "." separator does not apply (in debug the CLI also prints the trace, so not pure JSON).
+        self::assertStringContainsString('"code": -32601', $this->cliOutput('tools', ['method' => 'tools.router']));
+    }
+
+    public function testDeprecatedMethodIsMarkedInOpenRpc(): void
+    {
+        self::bootKernel();
+        $container = self::getContainer();
+        $container->get(ApiGroupContext::class)->setGroup('tools');
+        $service = $container->get(ServiceMap::class)->getService('tools_old');
+        self::assertTrue($service->isDeprecated());
+
+        $router = $this->createMock(\Symfony\Component\Routing\RouterInterface::class);
+        $router->method('generate')->willReturn('/rpc/tools');
+        $adapter = new \Ufo\JsonRpcBundle\DocAdapters\Outputs\OpenRpcAdapter(
+            $container->get(ServiceMap::class),
+            $container->get(\Ufo\JsonRpcBundle\ConfigService\RpcMainConfig::class),
+            $container->get(\Ufo\JsonRpcBundle\ParamConvertors\ChainParamConvertor::class),
+            $router,
+            $container->get(\Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\EnumProcessor\EnumsHolder::class),
+            $container->get(ApiGroupContext::class),
+        );
+        // As ApiController does: the spec objects are published as JSON.
+        $methods = array_column(json_decode(json_encode($adapter->adapt()), true)['methods'], null, 'name');
+        self::assertTrue($methods['tools_old']['deprecated'] ?? false);
+        self::assertArrayNotHasKey('deprecated', $methods['tools_router']);
+    }
+
     public function testDeferredNotificationKeepsGroupAfterHttpResponse(): void
     {
         self::bootKernel();

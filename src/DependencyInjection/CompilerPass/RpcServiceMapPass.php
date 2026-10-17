@@ -455,7 +455,7 @@ class RpcServiceMapPass implements CompilerPassInterface
             if (!$paramType || $paramType instanceof ReflectionUnionType) continue;
 
             $typeName = $paramType->getName();
-            if ($typeName || enum_exists($typeName)) continue;
+            if (!$typeName || enum_exists($typeName)) continue;
 
 
             $autowireAttr = $param->getAttributes(Autowire::class, ReflectionAttribute::IS_INSTANCEOF)[0] ?? null;

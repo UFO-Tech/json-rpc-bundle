@@ -26,6 +26,7 @@ class GroupedKernel extends TestKernel
         parent::configureContainer($c);
         $c->services()->set(GroupedProcedure::class)->autowire()->autoconfigure()->public();
         $c->services()->set(GroupedV2Procedure::class)->autowire()->autoconfigure()->public();
+        $c->services()->set(\Ufo\JsonRpcBundle\Tests\Fixtures\Procedures\ToolsProcedure::class)->autowire()->autoconfigure()->public();
         $c->services()->set(GroupTokenValidator::class)->autowire()->autoconfigure()->public();
     }
 

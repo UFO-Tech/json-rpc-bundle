@@ -38,8 +38,8 @@ Breaking changes in 10.0:
 - **Documentation output changed**: tags are procedure aliases, errors come from `@throws`, enums are `$ref`s, Postman collection name and variables changed (`AccessToken` removed). Tools that parse the documents may need updates.
 - **`Package`** now extends `Ufo\Packages\UfoPackage` (static helpers are inherited; new dependency `ufo-tech/packages`).
 - **Install template** route prefix `/api` → `/rpc` (your existing route file is not changed).
-- **Behaviour**: invalid DTO parameters now return an error instead of passing the raw array; `RPC\Info(concat: ...)` is no longer applied to method names (looks unintentional).
+- **Behaviour**: invalid DTO parameters now return an error instead of passing the raw array; `RPC\Info(concat: ...)` is no longer applied to method names (looks unintentional). **Fixed in [10.3.1](10.3/README.md#1031).**
 
 Later minors add requirements and smaller breaks: PHP 8.4 and `rpc-exceptions` ^2 in [10.1](10.1/README.md#upgrade-notes), `SimpleTokenValidator` constructor and group-prefixed route names in [10.2](10.2/README.md#upgrade-notes), constructor and batch changes in [10.3](10.3/README.md#upgrade-notes).
 
-Known issue across 10.0.1–10.2.3: `#[Autowire]` on RPC method arguments is not registered (see [10.0](10.0/README.md#service-injection-into-rpc-method-arguments)); use constructor injection.
+Known issue across 10.0.1–10.2.3: `#[Autowire]` on RPC method arguments is not registered (see [10.0](10.0/README.md#service-injection-into-rpc-method-arguments)); use constructor injection. **Fixed in [10.3.1](10.3/README.md#1031).**

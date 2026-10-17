@@ -84,7 +84,7 @@ Custom convertors implement `Ufo\JsonRpcBundle\ParamConvertors\IParamConvertor` 
 
 10.0.0 added `#[Autowire]` support for RPC method arguments (resolved from a per-method locator, `rpc.service_argument_locator`; such arguments are hidden from the docs).
 
-**Known issue:** from 10.0.1 on (still present in 10.2.3) `RpcServiceMapPass::processParams()` skips every typed parameter (`if ($typeName || ...) continue;`), so method-argument `#[Autowire]` is not registered. Use constructor injection.
+**Known issue:** from 10.0.1 on (still present in 10.2.3) `RpcServiceMapPass::processParams()` skips every typed parameter (`if ($typeName || ...) continue;`), so method-argument `#[Autowire]` is not registered. Use constructor injection. **Fixed in [10.3.1](../10.3/README.md#1031).**
 
 ## Changes and fixes
 
@@ -106,4 +106,4 @@ Custom convertors implement `Ufo\JsonRpcBundle\ParamConvertors\IParamConvertor` 
 - Removed: `ServiceMapFactory`, `ServiceLocator`, `ServiceMap::addService()`, `getTarget()`, `getDescription()`. Moved: `RpcFromCli` / `RpcFromHttp` to `Server\RequestPrepare\Holders`.
 - `Service`: constructor requires `Info $apiClassInfo`; `name`, `procedureFQCN`, `methodName`, `procedure` are public readonly; `getResponseInfo()` returns `RPC\DTO` instead of `ResultAsDTO`. `getName()` still works; it is marked `#[Deprecated]` only in 10.3 (use the `name` property).
 - `ApiController` actions renamed: `serverAction()` → `openrpc()`, `postmanAction()` → `postman()`.
-- `RPC\Info(concat: ...)` is not applied to method names since 10.0 (names always use `.`). This looks unintentional; check if you use a custom `concat`.
+- `RPC\Info(concat: ...)` is not applied to method names since 10.0 (names always use `.`). This looks unintentional; check if you use a custom `concat`. **Fixed in [10.3.1](../10.3/README.md#1031).**

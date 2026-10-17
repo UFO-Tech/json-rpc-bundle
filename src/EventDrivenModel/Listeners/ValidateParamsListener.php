@@ -8,20 +8,27 @@ use ReflectionException;
 use ReflectionMethod;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
+use Symfony\Contracts\Service\ServiceProviderInterface;
 use Ufo\JsonRpcBundle\EventDrivenModel\RpcEventFactory;
 use Ufo\JsonRpcBundle\Server\ServiceMap\IServiceHolder;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
+use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\RpcError\ConstraintsImposedException;
 use Ufo\RpcError\RpcBadParamException;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcEvent;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcPreExecuteEvent;
 use Ufo\RpcObject\Rules\Validator\RpcValidator;
 
+use function array_combine;
 use function array_key_exists;
+use function array_keys;
+use function array_slice;
+use function array_values;
 use function array_reduce;
 use function count;
 use function is_string;
 use function key;
+use function min;
 use function sprintf;
 
 #[AsEventListener(RpcEvent::PRE_EXECUTE, 'validateAndPrepareNamedParams', priority: 1002)]
@@ -77,6 +84,15 @@ class ValidateParamsListener
             throw new RpcBadParamException(sprintf('Passed (%s) parameters and expected (%s)',
                 count($request->getParams()), $requiredParamsCount));
         }
+
+        // Arguments injected from the container (#[Autowire]) are not RPC params: map the positional
+        // params onto the RPC param names (signature order) and prepare them like named ones.
+        if ($this->hasInjectedArguments($service)) {
+            $names = array_keys($service->getParams());
+            $positional = array_values($request->getParams());
+            $count = min(count($names), count($positional));
+            $this->prepareNamedParams($event, array_combine(array_slice($names, 0, $count), array_slice($positional, 0, $count)));
+        }
     }
 
     /**
@@ -85,15 +101,22 @@ class ValidateParamsListener
      */
     public function validateAndPrepareNamedParams(RpcPreExecuteEvent $event): void
     {
-        $request = $event->rpcRequest;
-        $service = $event->service;
-        if (!is_string(key($request->getParams()))) {
+        if (!is_string(key($event->rpcRequest->getParams()))) {
             return;
         }
+        $this->prepareNamedParams($event, $event->rpcRequest->getParams());
+    }
 
-        $requestedParams = $request->getParams();
-        if (count($request->getParams()) < count($service->getParams())) {
-            $requestedParams = $service->getDefaultParams($request->getParams());
+    /**
+     * Builds the call arguments by name: requested params, defaults, and arguments injected from the container.
+     *
+     * @throws ReflectionException
+     */
+    protected function prepareNamedParams(RpcPreExecuteEvent $event, array $requestedParams): void
+    {
+        $service = $event->service;
+        if (count($requestedParams) < count($service->getParams())) {
+            $requestedParams = $service->getDefaultParams($requestedParams);
         }
         $namedParams = [];
         $refMethod = new ReflectionMethod($service->getProcedureFQCN(), $service->getMethodName());
@@ -139,6 +162,16 @@ class ValidateParamsListener
     }
 
     
+    protected function hasInjectedArguments(Service $service): bool
+    {
+        $id = $service->procedureFQCN.'::'.$service->getMethodName();
+        if (!$this->rpcArgumentLocators->has($id)) {
+            return false;
+        }
+        $locator = $this->rpcArgumentLocators->get($id);
+        return $locator instanceof ServiceProviderInterface && $locator->getProvidedServices() !== [];
+    }
+
     public static function normalizeMessage(string $message): string
     {
         return preg_replace('/[a-zA-Z0-9_\\\\]+\\\\([a-zA-Z0-9_]+)/', '$1', $message);

@@ -2,7 +2,7 @@
 
 # 10.3 — Performance, batch modes, notification rules, documentation cache and translations
 
-Tags: 10.3.0. First released: 2026-10-18.
+Tags: 10.3.0, 10.3.1. First released: 2026-10-18.
 
 > **Note:** although this is a minor release, it contains a few backward-incompatible changes for code that constructs or extends bundle services manually, and behaviour changes for batches. Read the [Upgrade notes](#upgrade-notes) before updating.
 
@@ -102,6 +102,19 @@ Built-in PHP server with 4 workers, 8 concurrent clients, opcache on, ~49 000 re
 | notification (100 ms) | 39.5 | 39.4 | 14.4 |
 | OpenRPC document | 388 | **1105** | 883 |
 | batch of 10 | 2.2 | 1.9 | **568** |
+
+## 10.3.1
+
+Four long-standing bugs fixed (none of them was introduced in 10.3):
+
+- **XHR requests are executed.** A POST with `X-Requested-With: XMLHttpRequest` (e.g. jQuery `$.ajax`) got an empty `200` and the method was not called (since 8.0). Only a CORS preflight `OPTIONS` gets the empty response now.
+- **`#[Autowire]` on RPC method arguments works again** (broken since 10.0.1): services are injected for named params, positional params and methods without params.
+  ```php
+  public function report(int $id, #[Autowire(service: 'app.report_builder')] ReportBuilder $builder): array
+  ```
+  The argument is not an RPC param: it is not in the documentation and the client does not send it.
+- **`#[RPC\Info(concat: …)]` is applied again** (ignored since 10.0): `#[RPC\Info('cc', concat: '_')]` gives `cc_x` instead of `cc.x`. **If you set `concat` and your clients call the methods with `.`, the method names change** — update the clients or remove `concat`.
+- **Deprecated methods are marked in OpenRPC again** (lost in 9.2.1): methods with `@deprecated` or `#[\Deprecated]` get `"deprecated": true`.
 
 ## Upgrade notes
 

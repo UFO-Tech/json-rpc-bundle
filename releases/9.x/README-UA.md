@@ -31,5 +31,5 @@
 5. Додайте секцію `cache: { ttl, prefix }`; кеш відповідей тепер живе в окремому файловому пулі `rpc.cache.pool`.
 6. `RpcCacheService::invalidateRelationsCache()` → `addRelationsRequestToCache()`.
 7. Запити з `$rpc.callback`: миттєвий результат тепер `{"async": true, "callback": "<url>"}`; метод виконується після відповіді (для HTTP потрібен PHP-FPM), а заголовки клієнта, включно з RPC-токеном, пересилаються на callback URL.
-8. У 9.2.1 OpenRPC більше не позначає методи як `deprecated`.
+8. У 9.2.1 OpenRPC більше не позначає методи як `deprecated`. **Виправлено в [10.3.1](../10.x/10.3/README-UA.md#1031).**
 9. Після оновлення очистіть кеш Symfony.

@@ -98,6 +98,7 @@ class UfoReflectionProcedure
             $info = new Info($procedureClassName);
         } finally {
             $this->apiClassInfo = $info;
+            $this->concat = $info->concat;
             $this->name = $procedureClassName;
             $this->namespace = $this->reflection->getNamespaceName();
         }
