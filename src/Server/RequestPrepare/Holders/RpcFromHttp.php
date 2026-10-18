@@ -4,14 +4,14 @@ namespace Ufo\JsonRpcBundle\Server\RequestPrepare\Holders;
 
 use Symfony\Component\HttpFoundation\Request;
 use Ufo\JsonRpcBundle\Server\RequestPrepare\BatchChecker;
-use Ufo\JsonRpcBundle\Server\RequestPrepare\IRpcRequestCarrier;
+use Ufo\JsonRpcBundle\Server\RequestPrepare\IRpcHttpCarrier;
 use Ufo\RpcError\RpcJsonParseException;
 use Ufo\RpcError\WrongWayException;
 use Ufo\RpcObject\RpcBatchRequest;
 use Ufo\RpcObject\RpcRequest;
 use Ufo\RpcObject\RPC\Info;
 
-class RpcFromHttp implements IRpcRequestCarrier
+class RpcFromHttp implements IRpcHttpCarrier
 {
     use BatchChecker;
 

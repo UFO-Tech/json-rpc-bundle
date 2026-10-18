@@ -9,6 +9,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
 use Ufo\JsonRpcBundle\ApiMethod\PingProcedure;
 use Ufo\JsonRpcBundle\Controller\ApiController;
+use Ufo\JsonRpcBundle\Server\Batch\InlineBatchStrategy;
+use Ufo\JsonRpcBundle\Server\RpcExecutor;
 use Ufo\JsonRpcBundle\Server\RpcRequestHandler;
 use Ufo\JsonRpcBundle\Server\RpcServer;
 use Ufo\JsonRpcBundle\Tests\Fixtures\TestKernel;
@@ -55,6 +57,9 @@ class ContainerCompilesTest extends KernelTestCase
         $this->assertInstanceOf(RpcServer::class, $container->get(RpcServer::class));
         $this->assertInstanceOf(RpcRequestHandler::class, $container->get(RpcRequestHandler::class));
         $this->assertInstanceOf(ApiController::class, $container->get(ApiController::class));
+        // RpcExecutor -> RpcRequestHandler -> batch strategies -> InlineBatchStrategy -> RpcExecutor: no cycle.
+        $this->assertInstanceOf(RpcExecutor::class, $container->get(RpcExecutor::class));
+        $this->assertInstanceOf(InlineBatchStrategy::class, $container->get(InlineBatchStrategy::class));
     }
 
     public function testBuiltInPingProcedureIsRegisteredAsRpcService(): void

@@ -24,12 +24,14 @@ use Ufo\JsonRpcBundle\CliCommand\UfoRpcProcessCommand;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\Controller\ApiController;
 use Ufo\JsonRpcBundle\EventDrivenModel\Listeners\Traits\RpcRouteMatcherTrait;
+use Ufo\JsonRpcBundle\EventDrivenModel\PostResponseQueue;
 use Ufo\JsonRpcBundle\EventDrivenModel\RpcEventFactory;
 use Ufo\JsonRpcBundle\Exceptions\ServiceNotFoundException;
 use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
 use Ufo\JsonRpcBundle\Security\Interfaces\IRpcTokenHolder;
 use Ufo\JsonRpcBundle\Security\TokenHolders\CliTokenHolder;
 use Ufo\JsonRpcBundle\Security\TokenHolders\HttpTokenHolder;
+use Ufo\JsonRpcBundle\Server\RequestPrepare\IRpcHttpCarrier;
 use Ufo\JsonRpcBundle\Server\RequestPrepare\IRpcRequestCarrier;
 use Ufo\JsonRpcBundle\Server\RequestPrepare\RequestCarrier;
 use Ufo\JsonRpcBundle\Server\RequestPrepare\Holders\RpcFromCli;
@@ -38,8 +40,6 @@ use Ufo\JsonRpcBundle\Server\RpcRequestHandler;
 use Ufo\RpcError\RpcAsyncRequestException;
 use Ufo\RpcError\RpcBadRequestException;
 use Ufo\RpcError\RpcJsonParseException;
-use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcEvent;
-use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcPreResponseEvent;
 use Ufo\RpcError\RpcMethodNotFoundExceptionRpc;
 use Ufo\RpcError\RpcRuntimeException;
 use Ufo\RpcError\RpcTokenNotSentException;
@@ -75,7 +75,10 @@ class SymfonyFlowListener
         protected RpcMainConfig $rpcConfig,
         protected ?ApiGroupContext $apiGroupContext = null,
         protected ?RpcDetachedSlots $detachedSlots = null,
-    ) {}
+        protected ?PostResponseQueue $postResponseQueue = null,
+    ) {
+        $this->postResponseQueue ??= new PostResponseQueue($this->eventFactory);
+    }
 
     public function initHttpRequest(RequestEvent $event): void
     {
@@ -188,34 +191,35 @@ class SymfonyFlowListener
         $this->rpcSecurity->isValidApiRequest();
     }
 
+    /**
+     * POST_RESPONSE of the requests executed for this HTTP request / command: the ones of the core flow
+     * (taken from the event pool here) and the ones deferred by RpcExecutor (adapters).
+     */
     public function firePostResponseEvent(TerminateEvent|ConsoleTerminateEvent $event): void
     {
-        if ($event instanceof TerminateEvent) {
-            $carrier = $this->requestCarrier->getCarrier();
-            if (!$carrier instanceof RpcFromHttp || $carrier->getHttpRequest() !== $event->getRequest()) {
-                return;
-            }
+        $request = $event instanceof TerminateEvent ? $event->getRequest() : null;
+        $carrier = $this->requestCarrier->getCarrier();
+        $ownPool = $request === null
+            || ($carrier instanceof IRpcHttpCarrier && $carrier->getHttpRequest() === $request);
+        if (!$ownPool && !$this->postResponseQueue->hasPending($request)) {
+            return;
         }
         try {
-            if ($this->requestCarrier->getCarrier() instanceof RpcFromHttp && function_exists('fastcgi_finish_request')) {
-                fastcgi_finish_request();
+            if ($ownPool) {
+                $this->postResponseQueue->defer($this->postResponseQueue->takeFromPool(), $request);
             }
-            // The client may already be gone: the work after the response must finish anyway
-            // (without FPM PHP aborts the script on the first output to a closed connection).
-            if ($event instanceof TerminateEvent) {
+            if (!$this->postResponseQueue->hasPending($request)) {
+                return;
+            }
+            if ($request !== null) {
+                if (function_exists('fastcgi_finish_request')) {
+                    fastcgi_finish_request();
+                }
+                // The client may already be gone: the work after the response must finish anyway
+                // (without FPM PHP aborts the script on the first output to a closed connection).
                 ignore_user_abort(true);
             }
-
-            $preResponse = $this->eventFactory->getEvent(RpcEvent::getEventFQSN(RpcEvent::PRE_RESPONSE));
-            /**
-             * @var RpcPreResponseEvent $preResponse
-             */
-            $this->eventFactory->fire(
-                RpcEvent::POST_RESPONSE,
-                $preResponse->response,
-                $preResponse->rpcRequest,
-                $preResponse->service,
-            );
+            $this->postResponseQueue->flush($request);
         } catch (Throwable) {} finally {
             $this->apiGroupContext?->reset();
         }

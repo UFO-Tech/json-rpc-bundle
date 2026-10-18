@@ -14,6 +14,7 @@ use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcRequestEvent;
 use Ufo\RpcObject\RpcRequest;
 
 use function array_filter;
+use function array_values;
 use function current;
 use function is_string;
 
@@ -81,6 +82,17 @@ class RpcEventFactory implements ResetInterface
             throw new EventSourceException('No event found for ' . $eventFQCN);
         return current($filteredEvents);
     }
+
+    /**
+     * @template T of BaseRpcEvent
+     * @param class-string<T> $eventFQCN
+     * @return T[] in firing order
+     */
+    public function getEvents(string $eventFQCN): array
+    {
+        return array_values(array_filter($this->eventsPool, fn($event) => $event instanceof $eventFQCN));
+    }
+
     public function reset(): void
     {
         $this->eventsPool = [];

@@ -25,7 +25,7 @@ Major 10 turns the bundle into a multi-API server: versioned APIs (10.0), JSON-R
 | [10.1](10.1/README.md) | Symfony 8; JSON-RPC notifications (`204`, executed after the response); strict `jsonrpc: "2.0"` and empty-batch checks; unified per-parameter errors |
 | [10.2](10.2/README.md) | API groups: several RPC entry points (public/internal/BFF) via route imports and `#[RPC\APIGroups]`; per-group token providers (`security.providers`); route loaders for adapters; `--api-group` for CLI and `apiGroup` for Messenger |
 | [10.3](10.3/README.md) | Batch config with inline mode; JSON-RPC notification rules in batch; docs cache with `ETag` and translated method titles via `Accept-Language`; response cache keyed by implementation; 2.4–4.2× throughput |
-| [10.4](10.4/README.md) | 10.4.1: `IApiRouteImport` — an adapter's routes imported once per API group. Method titles/descriptions per API group (`translations/rpc/<group>.<locale>.yaml`); translations from extensions (`translations.paths`); public `RpcLocaleNegotiator` |
+| [10.4](10.4/README.md) | 10.4.2: `RpcExecutor`, an entry point for adapters; `rpc.post_response` for any carrier. 10.4.1: `IApiRouteImport` — an adapter's routes imported once per API group. Method titles/descriptions per API group (`translations/rpc/<group>.<locale>.yaml`); translations from extensions (`translations.paths`); public `RpcLocaleNegotiator` |
 
 ## Upgrading from 9.x
 

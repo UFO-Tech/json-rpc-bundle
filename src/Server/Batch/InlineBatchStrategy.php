@@ -3,12 +3,12 @@
 namespace Ufo\JsonRpcBundle\Server\Batch;
 
 use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
-use Throwable;
 use Ufo\JsonRpcBundle\ConfigService\RpcBatchConfig;
-use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcEvent;
-use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcPreResponseEvent;
+use Ufo\JsonRpcBundle\EventDrivenModel\PostResponseQueue;
 use Ufo\JsonRpcBundle\EventDrivenModel\RpcEventFactory;
 use Ufo\JsonRpcBundle\Server\Async\RpcAsyncProcessor;
+use Ufo\JsonRpcBundle\Server\RequestPrepare\RequestCarrier;
+use Ufo\JsonRpcBundle\Server\RpcExecutor;
 use Ufo\JsonRpcBundle\Server\RpcRequestHandler;
 use Ufo\RpcObject\RpcBatchRequest;
 use Ufo\RpcObject\RpcNotificationRequest;
@@ -32,7 +32,11 @@ class InlineBatchStrategy implements IBatchStrategy
         protected NormalizerInterface $serializer,
         protected RpcResponseContextBuilder $contextBuilder,
         protected RpcAsyncProcessor $asyncProcessor,
-    ) {}
+        protected ?RpcExecutor $executor = null,
+        protected ?PostResponseQueue $postResponseQueue = null,
+    ) {
+        $this->postResponseQueue ??= new PostResponseQueue($this->eventFactory);
+    }
 
     public function supports(RpcBatchConfig $config): bool
     {
@@ -65,27 +69,15 @@ class InlineBatchStrategy implements IBatchStrategy
 
     protected function execute(RpcRequest $singleRequest, RpcRequestHandler $handler): RpcResponse
     {
-        $this->eventFactory->reset();
-        try {
-            $response = $handler->provideSingleRequestToResponse($singleRequest);
-        } catch (Throwable $e) {
-            $this->eventFactory->fireError($singleRequest, $e);
-            $response = $singleRequest->getResponseObject() ?? throw $e;
-        }
+        // Created without the container: run() uses neither the carrier nor the request stack.
+        $this->executor ??= new RpcExecutor($handler, new RequestCarrier(), $this->eventFactory, $this->postResponseQueue);
+        $response = $this->executor->run($singleRequest);
 
         // What console.terminate does in a child process. Output is swallowed: whatever the executed
         // method prints must not get into the HTTP response.
         ob_start();
         try {
-            /** @var RpcPreResponseEvent $preResponse */
-            $preResponse = $this->eventFactory->getEvent(RpcEvent::getEventFQSN(RpcEvent::PRE_RESPONSE));
-            $this->eventFactory->fire(
-                RpcEvent::POST_RESPONSE,
-                $preResponse->response,
-                $preResponse->rpcRequest,
-                $preResponse->service,
-            );
-        } catch (Throwable) {
+            $this->postResponseQueue->fire($this->postResponseQueue->takeFromPool());
         } finally {
             ob_end_clean();
         }

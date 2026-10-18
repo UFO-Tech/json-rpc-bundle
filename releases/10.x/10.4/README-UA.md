@@ -2,7 +2,7 @@
 
 # 10.4 — Переклади для груп API, переклади з розширень, вибір мови
 
-Теги: 10.4.0, 10.4.1. Перший реліз: 2026-10-18.
+Теги: 10.4.0, 10.4.1, 10.4.2. Перший реліз: 2026-10-18.
 
 ## Головне
 
@@ -94,6 +94,17 @@ $this->localeNegotiator->addLanguageHeaders($request, $response);     // Content
 
   Автоконфігуровані реалізації отримують тег `ufo.rpc.route_import`. Кожен імпорт тоді отримує імена маршрутів `<group>_<name>` і значення `<group>_<name_prefix>` в атрибуті маршруту з `getRouteNamePrefixAttribute()` (аліаси без групи — лише для `general`). Реєстрації працюють незалежно від того, який loader переміг за пріоритетом `routing.loader`, тож кілька адаптерів працюють поруч; наслідування `RpcYamlFileLoader` (як у rest-bundle) працює як і раніше.
 
+## 10.4.2
+
+- **Одна точка входу для адаптерів: `RpcExecutor`.** rest-bundle і mcp-bundle виконують RPC-методи поза маршрутом core, і кожен по-своєму повторював підготовку запиту й обробку помилок. `Ufo\JsonRpcBundle\Server\RpcExecutor::execute(IRpcRequestCarrier $carrier): RpcResponse` ставить carrier, виконує запит з окремим пулом подій і завжди повертає відповідь: виняток, що вилетів з обробника, проходить через `rpc.error` (відповідь з помилкою й логування як у core). Не-RPC виняток загортається так само, як у `RpcServerListener`, тож `data` помилки фільтрується за оточенням на кожному шляху. Токен не перевіряється: кожен адаптер перевіряє його по-своєму. `InlineBatchStrategy` використовує той самий код.
+
+  ```php
+  $response = $this->rpcExecutor->execute(new RpcFromMcp($rpcRequest));
+  ```
+
+- **`rpc.post_response` для будь-якого carrier-а.** Раніше подія запускалася лише для `RpcFromHttp`, тож для REST-викликів не працювали зв'язки кешу й async/notification-слухачі. Тепер запити збираються в `PostResponseQueue` і запускаються на `kernel.terminate` / `console.terminate` один раз на кожен виконаний запит, також коли один HTTP-запит виконує кілька (batch у MCP; невиконані елементи batch у process-режимі, з яких раніше подію отримував лише перший). Carrier прив'язується до свого HTTP-запиту новим інтерфейсом `IRpcHttpCarrier` (`getHttpRequest()`), його реалізує `RpcFromHttp`; `notification.process` відокремлює одиночний запит будь-якого `IRpcHttpCarrier`.
+- **Для відповіді з помилкою `rpc.post_response` не запускається, тепер явно.** Вона й раніше не запускалася (`TypeError` на `null` service ковтався); тепер черга пропускає такі запити. Помилка слухача `rpc.post_response` логується, а не ковтається мовчки.
+
 ## Що врахувати при оновленні
 
 - **Частковий базовий переклад**: якщо в `rpc.<locale>.yaml` для методу є лише `title`, `description` тепер береться з базового перекладу мовою `kernel.default_locale` (крок 4), а не з атрибута / PHPDoc.
@@ -101,6 +112,8 @@ $this->localeNegotiator->addLanguageHeaders($request, $response);     // Content
 - **Конструктори** (лише якщо створюєте вручну): `ApiDocListener` має новий необов'язковий останній аргумент `?RpcLocaleNegotiator`.
 - Новий вузол конфігу `ufo_json_rpc.translations.paths` (необов'язковий, за замовчуванням `[]`).
 - **10.4.1**, конструктори: `RpcYamlFileLoader` має новий необов'язковий останній аргумент `iterable $routeImports`.
+- **10.4.2**, поведінка: REST-виклики (і будь-який carrier, крім `RpcFromHttp`, що реалізує `IRpcHttpCarrier` або йде через `RpcExecutor`) тепер отримують `rpc.post_response`: для них запрацюють зв'язки кешу й async/notification-слухачі. У batch у process-режимі подію отримує кожен виконаний запит, а не лише перший.
+- **10.4.2**, конструктори (лише якщо створюєте вручну): `InlineBatchStrategy` має нові необов'язкові останні аргументи `?RpcExecutor` і `?PostResponseQueue`; `SymfonyFlowListener` має новий необов'язковий останній `?PostResponseQueue`.
 
 ## Відомі проблеми
 

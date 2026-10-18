@@ -11,7 +11,7 @@ use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcAsyncRequestEvent;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcPostResponseEvent;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\Server\Async\RpcAsyncProcessor;
-use Ufo\JsonRpcBundle\Server\RequestPrepare\Holders\RpcFromHttp;
+use Ufo\JsonRpcBundle\Server\RequestPrepare\IRpcHttpCarrier;
 use Ufo\JsonRpcBundle\Server\RequestPrepare\RequestCarrier;
 use Ufo\JsonRpcBundle\Server\Async\RpcCallbackProcessor;
 use Ufo\RpcError\AbstractRpcErrorException;
@@ -68,7 +68,7 @@ class AsyncServerEventListener
             return false;
         }
         $carrier = $this->requestCarrier?->getCarrier();
-        if (!$carrier instanceof RpcFromHttp) {
+        if (!$carrier instanceof IRpcHttpCarrier) {
             return false;
         }
         try {

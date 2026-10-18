@@ -2,7 +2,7 @@
 
 # 10.4 — Translations per API group, translations from extensions, locale negotiator
 
-Tags: 10.4.0, 10.4.1. First released: 2026-10-18.
+Tags: 10.4.0, 10.4.1, 10.4.2. First released: 2026-10-18.
 
 ## Highlights
 
@@ -94,6 +94,17 @@ $this->localeNegotiator->addLanguageHeaders($request, $response);     // Content
 
   Autoconfigured implementations are tagged `ufo.rpc.route_import`. Each import then gets route names `<group>_<name>` and the `<group>_<name_prefix>` value in the route default `getRouteNamePrefixAttribute()` (aliases without the group are added for `general` only). Registrations apply whichever loader wins the `routing.loader` priority, so several adapters work side by side; extending `RpcYamlFileLoader` (as rest-bundle does) keeps working as before.
 
+## 10.4.2
+
+- **One entry point for adapters: `RpcExecutor`.** rest-bundle and mcp-bundle execute RPC methods outside the core route and each repeated the request preparation and the error handling its own way. `Ufo\JsonRpcBundle\Server\RpcExecutor::execute(IRpcRequestCarrier $carrier): RpcResponse` sets the carrier, executes the request with its own event pool and always returns a response: an exception that escapes the handler goes through `rpc.error` (error response and logging as in the core). A non-RPC exception is wrapped the way `RpcServerListener` does it, so the error `data` is filtered by environment on every path. The token is not checked: every adapter checks it its own way. `InlineBatchStrategy` uses the same code.
+
+  ```php
+  $response = $this->rpcExecutor->execute(new RpcFromMcp($rpcRequest));
+  ```
+
+- **`rpc.post_response` for any carrier.** It used to fire only for `RpcFromHttp`, so for REST calls cache relations and async/notification listeners did not run. Requests are now collected in `PostResponseQueue` and fired on `kernel.terminate` / `console.terminate`, once per executed request, also when one HTTP request executes several (an MCP batch; unprocessed items of a process-mode batch, of which only the first one used to get it). A carrier is tied to its HTTP request by the new `IRpcHttpCarrier` interface (`getHttpRequest()`), implemented by `RpcFromHttp`; `notification.process` detaches a single request of any `IRpcHttpCarrier`.
+- **No `rpc.post_response` for an error response, now explicitly.** It never fired (a `TypeError` on the `null` service was swallowed); the queue now skips such requests. A failing `rpc.post_response` listener is logged instead of being swallowed silently.
+
 ## Upgrade notes
 
 - **Partial base translation**: if `rpc.<locale>.yaml` has only `title` for a method, `description` now comes from the base translation in `kernel.default_locale` (step 4) instead of the attribute / PHPDoc.
@@ -101,6 +112,8 @@ $this->localeNegotiator->addLanguageHeaders($request, $response);     // Content
 - **Constructors** (only if you create them manually): `ApiDocListener` has a new optional trailing `?RpcLocaleNegotiator`.
 - New config node `ufo_json_rpc.translations.paths` (optional, default `[]`).
 - **10.4.1**, constructors: `RpcYamlFileLoader` has a new optional trailing `iterable $routeImports`.
+- **10.4.2**, behaviour: REST calls (and any carrier other than `RpcFromHttp` that implements `IRpcHttpCarrier` or goes through `RpcExecutor`) now get `rpc.post_response`: cache relations and async/notification listeners start working for them. Every executed request of a process-mode batch gets it, not only the first one.
+- **10.4.2**, constructors (only if you create them manually): `InlineBatchStrategy` has new optional trailing `?RpcExecutor` and `?PostResponseQueue`; `SymfonyFlowListener` has a new optional trailing `?PostResponseQueue`.
 
 ## Known issues
 
