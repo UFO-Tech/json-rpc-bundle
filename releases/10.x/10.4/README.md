@@ -2,7 +2,7 @@
 
 # 10.4 — Translations per API group, translations from extensions, locale negotiator
 
-Tags: 10.4.0. First released: 2026-10-18.
+Tags: 10.4.0, 10.4.1. First released: 2026-10-18.
 
 ## Highlights
 
@@ -78,12 +78,29 @@ $this->localeNegotiator->addLanguageHeaders($request, $response);     // Content
 
 `ApiDocListener` uses it; the documentation output did not change.
 
+## 10.4.1
+
+- **An adapter's routes can be imported once per API group.** Importing the same adapter `router.yaml` twice (e.g. `/mcp` and `/mcp/internal`) produced identical route names, and the second import replaced the first. An adapter now registers its `router.yaml` with the RPC YAML loader instead of extending the loader:
+
+  ```php
+  use Ufo\JsonRpcBundle\Routing\IApiRouteImport;
+
+  final class McpRouteImport implements IApiRouteImport
+  {
+      public function getResource(): string { return __DIR__.'/../../config/router.yaml'; }
+      public function getRouteNamePrefixAttribute(): string { return '_mcp_name_prefix'; }
+  }
+  ```
+
+  Autoconfigured implementations are tagged `ufo.rpc.route_import`. Each import then gets route names `<group>_<name>` and the `<group>_<name_prefix>` value in the route default `getRouteNamePrefixAttribute()` (aliases without the group are added for `general` only). Registrations apply whichever loader wins the `routing.loader` priority, so several adapters work side by side; extending `RpcYamlFileLoader` (as rest-bundle does) keeps working as before.
+
 ## Upgrade notes
 
 - **Partial base translation**: if `rpc.<locale>.yaml` has only `title` for a method, `description` now comes from the base translation in `kernel.default_locale` (step 4) instead of the attribute / PHPDoc.
 - **Locales** offered by the documentation now include the locales of group files and extension directories.
 - **Constructors** (only if you create them manually): `ApiDocListener` has a new optional trailing `?RpcLocaleNegotiator`.
 - New config node `ufo_json_rpc.translations.paths` (optional, default `[]`).
+- **10.4.1**, constructors: `RpcYamlFileLoader` has a new optional trailing `iterable $routeImports`.
 
 ## Known issues
 

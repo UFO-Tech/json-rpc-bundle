@@ -2,7 +2,7 @@
 
 # 10.4 — Переклади для груп API, переклади з розширень, вибір мови
 
-Теги: 10.4.0. Перший реліз: 2026-10-18.
+Теги: 10.4.0, 10.4.1. Перший реліз: 2026-10-18.
 
 ## Головне
 
@@ -78,12 +78,29 @@ $this->localeNegotiator->addLanguageHeaders($request, $response);     // Content
 
 `ApiDocListener` використовує цей сервіс; вивід документації не змінився.
 
+## 10.4.1
+
+- **Маршрути адаптера можна підключити окремо для кожної групи API.** Два імпорти того самого `router.yaml` адаптера (наприклад, `/mcp` і `/mcp/internal`) давали однакові імена маршрутів, і другий імпорт затирав перший. Тепер адаптер реєструє свій `router.yaml` у YAML-loader-і RPC замість наслідування loader-а:
+
+  ```php
+  use Ufo\JsonRpcBundle\Routing\IApiRouteImport;
+
+  final class McpRouteImport implements IApiRouteImport
+  {
+      public function getResource(): string { return __DIR__.'/../../config/router.yaml'; }
+      public function getRouteNamePrefixAttribute(): string { return '_mcp_name_prefix'; }
+  }
+  ```
+
+  Автоконфігуровані реалізації отримують тег `ufo.rpc.route_import`. Кожен імпорт тоді отримує імена маршрутів `<group>_<name>` і значення `<group>_<name_prefix>` в атрибуті маршруту з `getRouteNamePrefixAttribute()` (аліаси без групи — лише для `general`). Реєстрації працюють незалежно від того, який loader переміг за пріоритетом `routing.loader`, тож кілька адаптерів працюють поруч; наслідування `RpcYamlFileLoader` (як у rest-bundle) працює як і раніше.
+
 ## Що врахувати при оновленні
 
 - **Частковий базовий переклад**: якщо в `rpc.<locale>.yaml` для методу є лише `title`, `description` тепер береться з базового перекладу мовою `kernel.default_locale` (крок 4), а не з атрибута / PHPDoc.
 - **Мови**, які пропонує документація, тепер включають мови групових файлів і тек розширень.
 - **Конструктори** (лише якщо створюєте вручну): `ApiDocListener` має новий необов'язковий останній аргумент `?RpcLocaleNegotiator`.
 - Новий вузол конфігу `ufo_json_rpc.translations.paths` (необов'язковий, за замовчуванням `[]`).
+- **10.4.1**, конструктори: `RpcYamlFileLoader` має новий необов'язковий останній аргумент `iterable $routeImports`.
 
 ## Відомі проблеми
 

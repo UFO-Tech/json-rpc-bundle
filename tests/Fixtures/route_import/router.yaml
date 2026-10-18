@@ -1,0 +1,4 @@
+adapter_endpoint:
+    path: /
+adapter_manifest:
+    path: /manifest.json

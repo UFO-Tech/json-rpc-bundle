@@ -12,6 +12,7 @@ use Ufo\JsonRpcBundle\ConfigService\RpcAsyncConfig;
 use Ufo\JsonRpcBundle\ConfigService\RpcCacheConfig;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\DependencyInjection\Attribute\RequiresExtension;
+use Ufo\JsonRpcBundle\Routing\IApiRouteImport;
 use Ufo\RpcError\RpcBadParamException;
 use Ufo\RpcObject\RpcAsyncRequest;
 
@@ -56,6 +57,8 @@ class UfoJsonRpcExtension extends Extension implements PrependExtensionInterface
 
         $loader = new Loader\YamlFileLoader($this->container, new FileLocator(__DIR__.'/../../config'));
         $loader->load('services.yaml');
+        // Explicit: src/Routing/ is not scanned, so an attribute on the interface would never be read.
+        $this->container->registerForAutoconfiguration(IApiRouteImport::class)->addTag(IApiRouteImport::TAG);
         $this->useCachePool($config[RpcCacheConfig::NAME][RpcCacheConfig::POOL] ?? null);
         $this->removeServicesWithMissingExtensions();
     }

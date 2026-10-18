@@ -1,0 +1,9 @@
+adapter:
+    resource: router.yaml
+    prefix: /adapter
+    defaults: { api_group: adapter }
+
+adapter_internal:
+    resource: router.yaml
+    prefix: /adapter/internal
+    defaults: { api_group: internal }

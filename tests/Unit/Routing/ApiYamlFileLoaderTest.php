@@ -10,6 +10,7 @@ use Symfony\Component\Config\Loader\Loader;
 use Symfony\Component\Config\Loader\LoaderResolver;
 use Symfony\Component\Routing\Route;
 use Symfony\Component\Routing\RouteCollection;
+use Ufo\JsonRpcBundle\Routing\IApiRouteImport;
 use Ufo\JsonRpcBundle\Routing\RpcYamlFileLoader;
 use Ufo\JsonRpcBundle\Server\ApiGroupContext;
 
@@ -162,5 +163,75 @@ class ApiYamlFileLoaderTest extends TestCase
         file_put_contents($this->directory.'/rpc.yaml', "rpc:\n    path: /rpc\n    defaults: { _rpc_route: rpc }\n");
         file_put_contents($this->directory.'/imports.yaml', "api:\n    resource: rpc.yaml\n    defaults: { api_group: internal }\n");
         self::assertNotNull($loader->load('imports.yaml')->get('internal_rpc'));
+    }
+
+    private function routeImport(string $resource, string $attribute): IApiRouteImport
+    {
+        return new class($resource, $attribute) implements IApiRouteImport {
+            public function __construct(private string $resource, private string $attribute) {}
+            public function getResource(): string { return $this->resource; }
+            public function getRouteNamePrefixAttribute(): string { return $this->attribute; }
+        };
+    }
+
+    /**
+     * An adapter router.yaml with plain controller routes (no _rpc_route), imported once per group.
+     */
+    private function loadRegisteredTwice(RpcYamlFileLoader $loader): RouteCollection
+    {
+        $loader->setResolver(new LoaderResolver([$loader]));
+        file_put_contents($this->directory.'/registered.yaml', "endpoint:\n    path: /\nmanifest:\n    path: /manifest.json\n");
+        file_put_contents($this->directory.'/imports.yaml', "mcp:\n    resource: registered.yaml\n    prefix: /mcp\n    defaults: { api_group: mcp }\n"
+            ."mcp_internal:\n    resource: registered.yaml\n    prefix: /mcp/internal\n    defaults: { api_group: internal }\n");
+
+        return $loader->load('imports.yaml');
+    }
+
+    public function testRegisteredRouteImportCanBeImportedOncePerGroup(): void
+    {
+        $loader = new RpcYamlFileLoader(new FileLocator($this->directory), 'test', $this->context, [
+            $this->routeImport($this->directory.'/registered.yaml', '_registered_name_prefix'),
+        ]);
+        $routes = $this->loadRegisteredTwice($loader);
+
+        self::assertSame(
+            ['mcp_endpoint', 'mcp_manifest', 'internal_endpoint', 'internal_manifest'],
+            array_keys($routes->all())
+        );
+        self::assertSame('/mcp/', $routes->get('mcp_endpoint')->getPath());
+        self::assertSame('/mcp/internal/', $routes->get('internal_endpoint')->getPath());
+        self::assertSame('mcp_', $routes->get('mcp_endpoint')->getDefault('_registered_name_prefix'));
+        self::assertSame('internal', $routes->get('internal_endpoint')->getDefault(ApiGroupContext::ROUTE_GROUP));
+        self::assertNull($routes->get('mcp_endpoint')->getDefault(ApiGroupContext::ROUTE_NAME_PREFIX));
+    }
+
+    public function testRegisteredRouteImportWorksWhenAnotherAdapterSubclassHandlesYaml(): void
+    {
+        // Like rest-bundle: a subclass with its own override wins the loader priority; the registry still applies.
+        $loader = new class(new FileLocator($this->directory), 'test', $this->context, [
+            $this->routeImport($this->directory.'/registered.yaml', '_registered_name_prefix'),
+        ]) extends RpcYamlFileLoader {
+            protected function getRouteNamePrefixAttribute(array $config, string $path): ?string
+            {
+                if ($this->isResourceImport($config['resource'], $path, dirname($path).'/adapter.yaml')) {
+                    return '_adapter_name_prefix';
+                }
+                return parent::getRouteNamePrefixAttribute($config, $path);
+            }
+        };
+        $routes = $this->loadRegisteredTwice($loader);
+
+        self::assertSame('mcp_', $routes->get('mcp_endpoint')->getDefault('_registered_name_prefix'));
+        self::assertSame('internal_', $routes->get('internal_endpoint')->getDefault('_registered_name_prefix'));
+    }
+
+    public function testUnregisteredAdapterImportWithGroupKeepsItsNames(): void
+    {
+        // Without a registration the import goes to the RPC branch, which groups only _rpc_route routes (as before).
+        $loader = new RpcYamlFileLoader(new FileLocator($this->directory), 'test', $this->context);
+        $routes = $this->loadRegisteredTwice($loader);
+
+        self::assertSame(['endpoint', 'manifest'], array_keys($routes->all()));
+        self::assertSame('/mcp/internal/', $routes->get('endpoint')->getPath());
     }
 }
