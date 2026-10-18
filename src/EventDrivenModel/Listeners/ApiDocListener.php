@@ -20,6 +20,7 @@ use Ufo\JsonRpcBundle\EventDrivenModel\Listeners\Traits\RpcRouteMatcherTrait;
 use Ufo\JsonRpcBundle\Security\Interfaces\IRpcSecurity;
 use Ufo\JsonRpcBundle\Security\TokenHolders\HttpTokenHolder;
 use Ufo\JsonRpcBundle\Server\ApiGroupContext;
+use Ufo\JsonRpcBundle\Server\RpcLocaleNegotiator;
 use Ufo\JsonRpcBundle\Server\ServiceMap\IServiceHolder;
 use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceMap;
 use Ufo\RpcError\RpcInvalidTokenException;
@@ -62,7 +63,10 @@ class ApiDocListener
         #[Autowire('%kernel.debug%')]
         protected bool $debug,
         protected ?ApiGroupContext $apiGroupContext = null,
-    ) {}
+        protected ?RpcLocaleNegotiator $localeNegotiator = null,
+    ) {
+        $this->localeNegotiator ??= new RpcLocaleNegotiator($this->serviceMap);
+    }
 
     /**
      * @throws RpcTokenNotSentException
@@ -93,21 +97,18 @@ class ApiDocListener
      */
     public function setLocale(RequestEvent $event): void
     {
-        $locales = $this->serviceMap->getLocales();
         $request = $event->getRequest();
-        if (!$locales || !$this->isDocsRequest($request)) return;
+        if (!$this->isDocsRequest($request)) return;
 
-        $request->setLocale($request->getPreferredLanguage($locales));
+        $this->localeNegotiator->applyLocale($request);
     }
 
     public function addLanguageHeaders(ResponseEvent $event): void
     {
         $request = $event->getRequest();
-        if (!$this->serviceMap->getLocales() || !$this->isDocsRequest($request)) return;
+        if (!$this->isDocsRequest($request)) return;
 
-        $response = $event->getResponse();
-        $response->headers->set('Content-Language', $request->getLocale());
-        $response->setVary('Accept-Language', false);
+        $this->localeNegotiator->addLanguageHeaders($request, $event->getResponse());
     }
 
     /**

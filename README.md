@@ -21,7 +21,7 @@ composer require ufo-tech/json-rpc-bundle
 ## Key features
 
 - **Any service becomes an API.** Implement `IRpcService` and its public methods are JSON-RPC 2.0 methods on one endpoint — [4.5](releases/4.x/4.5/README.md)
-- **Self-documenting.** `GET /rpc` returns OpenRPC, `GET /rpc/postman` a Postman collection; schemas come from native types, PHPDoc, DTOs, enums and validation constraints; titles and descriptions are translated by `Accept-Language` and cached with `ETag` — [6.4](releases/6.x/6.4/README.md), [7.3](releases/7.x/7.3/README.md), [9.0](releases/9.x/9.0/README.md), [10.3](releases/10.x/10.3/README.md)
+- **Self-documenting.** `GET /rpc` returns OpenRPC, `GET /rpc/postman` a Postman collection; schemas come from native types, PHPDoc, DTOs, enums and validation constraints; titles and descriptions are translated by `Accept-Language` (also per API group) and cached with `ETag` — [6.4](releases/6.x/6.4/README.md), [7.3](releases/7.x/7.3/README.md), [9.0](releases/9.x/9.0/README.md), [10.3](releases/10.x/10.3/README.md), [10.4](releases/10.x/10.4/README.md)
 - **API versions side by side.** `/rpc`, `/rpc/v2` with `#[RPC\Info('user', version: 2, removedMethods: [...])]`; each version inherits the previous one — [10.0](releases/10.x/10.0/README.md)
 - **Several APIs in one application.** Public, internal and BFF entry points via `#[RPC\APIGroups]`, each with its own methods, versions, docs and token validation — [10.2](releases/10.x/10.2/README.md)
 - **Batch with dependencies.** Pass one call's result into another with `@FROM:<id>(<field>)`; run items inline (fast) or in parallel child processes with a limit — [4.5](releases/4.x/4.5/README.md), [10.3](releases/10.x/10.3/README.md)
@@ -33,7 +33,7 @@ composer require ufo-tech/json-rpc-bundle
 
 ## Release notes
 
-All versions with what was added and how to use it: [releases](releases/README.md). Latest: [10.3](releases/10.x/10.3/README.md).
+All versions with what was added and how to use it: [releases](releases/README.md). Latest: [10.4](releases/10.x/10.4/README.md).
 
 ## Documentation
 

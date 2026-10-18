@@ -12,6 +12,7 @@ use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\ConfigService\RpcNotificationConfig;
 use Ufo\JsonRpcBundle\ConfigService\RpcSecurityConfig;
 use Ufo\JsonRpcBundle\ConfigService\RpcSecurityProviderConfig;
+use Ufo\JsonRpcBundle\ConfigService\RpcTranslationsConfig;
 use Ufo\RpcObject\RPC\Cache;
 
 /**
@@ -61,6 +62,14 @@ class Configuration implements ConfigurationInterface
                             ->defaultValue(RpcNotificationConfig::DEFAULT_PROCESS_COUNT)
                             ->min(1)
                             ->max(RpcNotificationConfig::MAX_PROCESS_COUNT)
+                        ->end()
+                    ->end()
+                ->end()
+                ->arrayNode(RpcTranslationsConfig::NAME)->addDefaultsIfNotSet()
+                    ->children()
+                        ->arrayNode(RpcTranslationsConfig::PATHS)
+                            ->defaultValue([])
+                            ->scalarPrototype()->cannotBeEmpty()->end()
                         ->end()
                     ->end()
                 ->end()

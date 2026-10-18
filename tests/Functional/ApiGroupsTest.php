@@ -98,6 +98,30 @@ class ApiGroupsTest extends KernelTestCase
         }
     }
 
+    public function testGroupTranslationsOverrideBaseInOpenRpc(): void
+    {
+        $dir = dirname(__DIR__).'/Fixtures/rpc_translations';
+        TestKernel::$rpcConfig = [
+            'cache' => [],
+            'security' => ['protected_api' => false, 'protected_doc' => false],
+            'docs' => ['project_name' => 'test-rpc', 'validations' => []],
+            'translations' => ['paths' => [$dir.'/extension', $dir.'/override']],
+        ];
+        self::bootKernel();
+        $method = function (string $path): array {
+            $request = Request::create('http://localhost'.$path, server: ['HTTP_ACCEPT_LANGUAGE' => 'uk']);
+            $doc = json_decode(self::$kernel->handle($request)->getContent(), true);
+            return array_column($doc['methods'], null, 'name')['area.shared'];
+        };
+
+        // Base translation in the client's language.
+        self::assertSame(['Спільний', 'Спільний метод'], [$method('/rpc')['summary'], $method('/rpc')['description']]);
+        self::assertSame(['Спільний', 'Спільний метод'], [$method('/rpc/bff')['summary'], $method('/rpc/bff')['description']]);
+        // bfa: the group title in the default language wins over the base title in uk;
+        // the description comes from the group uk file of a later directory.
+        self::assertSame(['BFA shared', 'Опис для BFA'], [$method('/rpc/bfa')['summary'], $method('/rpc/bfa')['description']]);
+    }
+
     public function testPostmanNameHasNoGroupMarkForDefaultGroup(): void
     {
         self::bootKernel();

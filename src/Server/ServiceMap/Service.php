@@ -164,6 +164,20 @@ class Service implements IArrayConvertible, IArrayConstructible
         return $this;
     }
 
+    /**
+     * A copy with only the given translations; the first one becomes the fallback for other locales.
+     */
+    public function withTranslations(ServiceTranslation ...$translations): static
+    {
+        $clone = clone $this;
+        $clone->translations = [];
+        foreach ($translations as $translation) {
+            $clone->addTranslation($translation);
+        }
+
+        return $clone;
+    }
+
     protected function getTranslation(?string $locale): ?ServiceTranslation
     {
         if ($locale === null) {

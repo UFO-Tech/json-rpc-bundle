@@ -27,6 +27,7 @@ use Throwable;
 use Ufo\DTO\DTOTransformer;
 use Ufo\DTO\Factory\DefaultDTOTransformerFactory;
 use Ufo\JsonRpcBundle\ApiMethod\Interfaces\IRpcService;
+use Ufo\JsonRpcBundle\ConfigService\RpcTranslationsConfig;
 use Ufo\JsonRpcBundle\ParamConvertors\ChainParamConvertor;
 use Ufo\JsonRpcBundle\ParamConvertors\IParamConvertor;
 use Ufo\JsonRpcBundle\Server\ServiceMap\IServiceHolder;
@@ -48,9 +49,12 @@ use function array_diff_key;
 use function array_flip;
 use function array_keys;
 use function array_merge;
+use function array_reduce;
 use function array_search;
 use function array_unique;
 use function array_unshift;
+use function array_values;
+use function basename;
 use function class_exists;
 use function enum_exists;
 use function glob;
@@ -60,6 +64,7 @@ use function is_array;
 use function is_string;
 use function is_subclass_of;
 use function preg_match;
+use function rtrim;
 use function usort;
 
 class RpcServiceMapPass implements CompilerPassInterface
@@ -83,10 +88,22 @@ class RpcServiceMapPass implements CompilerPassInterface
      */
     protected array $compiledServices = [];
 
+    protected const string BASE_TRANSLATION_FILE = '/^rpc\.([a-zA-Z0-9_]+)\.ya?ml$/';
+    protected const string GROUP_TRANSLATION_FILE = '/^(.+)\.([a-zA-Z0-9_]+)\.ya?ml$/';
+
     /**
+     * Base translations: [locale][method].
+     *
      * @var array<string, array<string, array{title?: string, description?: string}>>
      */
     protected array $translations = [];
+
+    /**
+     * Overrides for an API group: [group][locale][method].
+     *
+     * @var array<string, array<string, array<string, array{title?: string, description?: string}>>>
+     */
+    protected array $groupTranslations = [];
 
     protected string $defaultLocale = 'en';
 
@@ -100,10 +117,17 @@ class RpcServiceMapPass implements CompilerPassInterface
         $this->defaultLocale = $container->hasParameter('kernel.default_locale')
             ? $container->getParameter('kernel.default_locale')
             : 'en';
-        $projectDir = $container->getParameter('kernel.project_dir');
-        $this->translations = $this->readTranslations($projectDir);
-        // Rebuild the container (in debug) when RPC translation files are added, removed or changed.
-        $container->fileExists($projectDir.'/translations', '/^rpc\.[a-zA-Z0-9_]+\.ya?ml$/');
+        $this->translations = $this->groupTranslations = [];
+        foreach ($this->translationDirs($container->getParameter('kernel.project_dir')) as $dir) {
+            // Later directories override earlier ones field by field.
+            $this->translations = $this->mergeTranslations($this->translations, $this->readTranslations($dir));
+            foreach ($this->readGroupTranslations($dir) as $group => $translations) {
+                $this->groupTranslations[$group] = $this->mergeTranslations($this->groupTranslations[$group] ?? [], $translations);
+            }
+            // Rebuild the container (in debug) when RPC translation files are added, removed or changed.
+            $container->fileExists($dir, self::BASE_TRANSLATION_FILE);
+            $container->fileExists($dir.'/rpc', self::GROUP_TRANSLATION_FILE);
+        }
 
         $rpcServices = $container->findTaggedServiceIds(IRpcService::TAG);
         $rpcClassRef = []; // ServiceLocator
@@ -171,7 +195,7 @@ class RpcServiceMapPass implements CompilerPassInterface
             $serviceName = $service->name;
             $ver = $service->apiClassInfo->version;
             $versions[$ver] = $ver;
-            $servicesData[$ver][$serviceName] = $service->toArray(false);
+            $servicesData[$ver][$serviceName] = $this->translatedForGroup($service, $group)->toArray(false);
             $excludeByVersion[$ver] = array_unique(array_merge(
                 $excludeByVersion[$ver] ?? [],
                 $service->apiClassInfo->removedMethods
@@ -352,38 +376,102 @@ class RpcServiceMapPass implements CompilerPassInterface
     }
 
     /**
-     * Reads per-locale RPC translation files from `<projectDir>/translations/rpc.<locale>.yaml|yml`.
+     * Directories with RPC translations: `ufo_json_rpc.translations.paths` (e.g. added by extensions via prepend()),
+     * then the application's `translations/`, which goes last so it overrides the others.
+     *
+     * @return string[]
+     */
+    protected function translationDirs(string $projectDir): array
+    {
+        $paths = $this->container->hasParameter(RpcTranslationsConfig::PARAMETER)
+            ? $this->container->getParameterBag()->resolveValue($this->container->getParameter(RpcTranslationsConfig::PARAMETER))
+            : [];
+
+        $dirs = [];
+        foreach ([...$paths, $projectDir.'/translations'] as $path) {
+            $path = rtrim($path, '/');
+            unset($dirs[$path]); // a repeated directory takes its last position
+            $dirs[$path] = $path;
+        }
+
+        return array_values($dirs);
+    }
+
+    /**
+     * Reads base RPC translation files `<dir>/rpc.<locale>.yaml|yml`.
      *
      * @return array<string, array<string, array{title?: string, description?: string}>>
      */
-    protected function readTranslations(string $projectDir): array
+    protected function readTranslations(string $dir): array
     {
-        // GLOB_BRACE is a glibc extension, not guaranteed on every libc (e.g. musl/Alpine)
-        // — two plain globs instead, merged.
-        $files = [
-            ...glob($projectDir.'/translations/rpc.*.yaml') ?: [],
-            ...glob($projectDir.'/translations/rpc.*.yml') ?: [],
-        ];
-
         $translations = [];
-        foreach ($files as $file) {
-            if (preg_match('/rpc\.([a-zA-Z0-9_]+)\.ya?ml$/', $file, $matches)) {
-                $data = Yaml::parseFile($file) ?? [];
-                $translations[$matches[1]] = is_array($data) ? $data : [];
-            }
+        foreach ($this->readTranslationFiles($dir, self::BASE_TRANSLATION_FILE) as [$matches, $data]) {
+            $translations[$matches[1]] = $data;
         }
 
         return $translations;
     }
 
     /**
-     * Locales that have RPC translation files, the default locale (`kernel.default_locale`) first.
+     * Reads API group overrides `<dir>/rpc/<group>.<locale>.yaml|yml`.
+     * The locale is the last segment before the extension, the group is everything before it.
+     *
+     * @return array<string, array<string, array<string, array{title?: string, description?: string}>>>
+     */
+    protected function readGroupTranslations(string $dir): array
+    {
+        $translations = [];
+        foreach ($this->readTranslationFiles($dir.'/rpc', self::GROUP_TRANSLATION_FILE) as [$matches, $data]) {
+            $translations[$matches[1]][$matches[2]] = $data;
+        }
+
+        return $translations;
+    }
+
+    /**
+     * YAML files in $dir whose name matches $pattern, with the regex matches.
+     *
+     * @return iterable<array{0: string[], 1: array}>
+     */
+    protected function readTranslationFiles(string $dir, string $pattern): iterable
+    {
+        // GLOB_BRACE is a glibc extension, not guaranteed on every libc (e.g. musl/Alpine)
+        // — two plain globs instead, merged.
+        foreach ([...glob($dir.'/*.yaml') ?: [], ...glob($dir.'/*.yml') ?: []] as $file) {
+            if (!preg_match($pattern, basename($file), $matches)) continue;
+            $data = Yaml::parseFile($file) ?? [];
+            yield [$matches, is_array($data) ? $data : []];
+        }
+    }
+
+    /**
+     * @return array<string, array<string, array{title?: string, description?: string}>>
+     */
+    protected function mergeTranslations(array $into, array $from): array
+    {
+        foreach ($from as $locale => $methods) {
+            $into[$locale] ??= [];
+            foreach ($methods as $method => $data) {
+                if (!is_array($data)) continue;
+                $into[$locale][$method] = [...($into[$locale][$method] ?? []), ...$data];
+            }
+        }
+
+        return $into;
+    }
+
+    /**
+     * Locales that have RPC translation files (base or group), the default locale (`kernel.default_locale`) first.
      *
      * @return string[]
      */
     protected function getLocales(): array
     {
         $locales = array_keys($this->translations);
+        foreach ($this->groupTranslations as $translations) {
+            $locales = [...$locales, ...array_keys($translations)];
+        }
+        $locales = array_values(array_unique($locales));
         $defaultIndex = array_search($this->defaultLocale, $locales, true);
         if ($defaultIndex !== false) {
             unset($locales[$defaultIndex]);
@@ -394,28 +482,66 @@ class RpcServiceMapPass implements CompilerPassInterface
     }
 
     /**
-     * Fills $service translations from the loaded translation files.
+     * Fills $service with the base translations; it is shared by all API groups.
      * The default locale (`kernel.default_locale`), if present, is added first
      * so it becomes the fallback for locales that have no translation of their own.
      */
     protected function applyTranslations(Service $service): void
     {
-        if (!$this->translations) {
-            return;
+        foreach ($this->resolveTranslations($service) as $translation) {
+            $service->addTranslation($translation);
+        }
+    }
+
+    /**
+     * $service as it is serialized into the map of $group: with the group overrides, if the group has any.
+     */
+    protected function translatedForGroup(Service $service, string $group): Service
+    {
+        if (empty($this->groupTranslations[$group])) {
+            return $service;
         }
 
+        return $service->withTranslations(...$this->resolveTranslations($service, $group));
+    }
+
+    /**
+     * Each field is looked up in order: group + locale, group + default locale, base + locale,
+     * base + default locale, then the text from the attribute / PHPDoc. The group wins over the language.
+     * A locale gets its own translation only if it has a file entry for the method (base or group);
+     * other locales fall back to the first translation (the default locale).
+     *
+     * @return ServiceTranslation[]
+     */
+    protected function resolveTranslations(Service $service, ?string $group = null): array
+    {
+        $groupTranslations = $group === null ? [] : ($this->groupTranslations[$group] ?? []);
+        $name = $service->name;
+        $resolved = [];
         foreach ($this->getLocales() as $locale) {
-            $data = $this->translations[$locale][$service->name] ?? null;
-            if (!is_array($data)) {
+            $own = [$groupTranslations[$locale][$name] ?? null, $this->translations[$locale][$name] ?? null];
+            if (!is_array($own[0]) && !is_array($own[1])) {
                 continue;
             }
+            $steps = [
+                $own[0],
+                $groupTranslations[$this->defaultLocale][$name] ?? null,
+                $own[1],
+                $this->translations[$this->defaultLocale][$name] ?? null,
+            ];
+            $field = fn(string $key) => array_reduce(
+                $steps,
+                fn($found, ?array $step) => $found ?? $step[$key] ?? null
+            );
 
-            $service->addTranslation(new ServiceTranslation(
+            $resolved[] = new ServiceTranslation(
                 $locale,
-                $data['title'] ?? $service->getTitle() ?? $service->name,
-                $data['description'] ?? $service->getDescription(),
-            ));
+                $field('title') ?? $service->getTitle() ?? $name,
+                $field('description') ?? $service->getDescription(),
+            );
         }
+
+        return $resolved;
     }
 
     public function processServiceMap(ReflectionClass $refClass): void

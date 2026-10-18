@@ -21,7 +21,7 @@ composer require ufo-tech/json-rpc-bundle
 ## Ключові можливості
 
 - **Будь-який сервіс стає API.** Реалізуйте `IRpcService`, і його публічні методи стануть методами JSON-RPC 2.0 на одному ендпоінті — [4.5](releases/4.x/4.5/README-UA.md)
-- **Документація будується сама.** `GET /rpc` повертає OpenRPC, `GET /rpc/postman` — колекцію Postman; схеми беруться з типів PHP, PHPDoc, DTO, enum і обмежень валідації; назви й описи перекладаються за `Accept-Language` і кешуються з `ETag` — [6.4](releases/6.x/6.4/README-UA.md), [7.3](releases/7.x/7.3/README-UA.md), [9.0](releases/9.x/9.0/README-UA.md), [10.3](releases/10.x/10.3/README-UA.md)
+- **Документація будується сама.** `GET /rpc` повертає OpenRPC, `GET /rpc/postman` — колекцію Postman; схеми беруться з типів PHP, PHPDoc, DTO, enum і обмежень валідації; назви й описи перекладаються за `Accept-Language` (зокрема окремо для групи API) і кешуються з `ETag` — [6.4](releases/6.x/6.4/README-UA.md), [7.3](releases/7.x/7.3/README-UA.md), [9.0](releases/9.x/9.0/README-UA.md), [10.3](releases/10.x/10.3/README-UA.md), [10.4](releases/10.x/10.4/README-UA.md)
 - **Кілька версій API поруч.** `/rpc`, `/rpc/v2` через `#[RPC\Info('user', version: 2, removedMethods: [...])]`; кожна версія успадковує попередню — [10.0](releases/10.x/10.0/README-UA.md)
 - **Кілька API в одному застосунку.** Публічний, внутрішній і BFF-ендпоінти через `#[RPC\APIGroups]`, у кожного свої методи, версії, документація і перевірка токенів — [10.2](releases/10.x/10.2/README-UA.md)
 - **Batch із залежностями.** Результат одного виклику передається в інший через `@FROM:<id>(<поле>)`; елементи виконуються inline (швидко) або паралельно в дочірніх процесах з лімітом — [4.5](releases/4.x/4.5/README-UA.md), [10.3](releases/10.x/10.3/README-UA.md)
@@ -33,7 +33,7 @@ composer require ufo-tech/json-rpc-bundle
 
 ## Опис релізів
 
-Усі версії, що в них додано і як цим користуватися: [releases](releases/README-UA.md). Остання: [10.3](releases/10.x/10.3/README-UA.md).
+Усі версії, що в них додано і як цим користуватися: [releases](releases/README-UA.md). Остання: [10.4](releases/10.x/10.4/README-UA.md).
 
 ## Документація
 
