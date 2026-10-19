@@ -17,18 +17,19 @@ use Ufo\JsonRpcBundle\Server\RpcCache\RpcMetadataCache;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\DtoReflector;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\RpcError\ConstraintsImposedException;
+use Ufo\RpcError\RpcBadParamException;
 use Ufo\RpcObject\RPC\DTO;
 use Ufo\RpcObject\RPC\Param;
 use Ufo\RpcObject\RpcResponse;
 
 use function array_is_list;
 use function array_key_exists;
-use function array_map;
 use function array_unique;
 use function class_exists;
 use function count;
 use function interface_exists;
 use function is_array;
+use function is_bool;
 use function is_object;
 use function str_starts_with;
 
@@ -103,7 +104,16 @@ class ParamsConverterEventListener
     public function dataToDTOTransform(RpcPreExecuteEvent $event): void
     {
         $service = $event->service;
-        $this->convertParams($service, $event->params);
+        $convertErrors = $this->convertParams($service, $event->params);
+        if (count($convertErrors) > 0) {
+            $this->eventFactory->fireError($event->rpcRequest, new ConstraintsImposedException(
+                sprintf(ValidateParamsListener::INVALID_DATA_FOR_CALL_METHOD_TEMPLATE, $event->rpcRequest->getMethod()),
+                $convertErrors
+            ));
+            $event->stopPropagation();
+            return;
+        }
+        $dtoErrors = [];
         if (count($service->getParamsDto()) > 0) {
             foreach ($service->getParamsDto() as $paramName => $paramDtoCollection) {
                 $result = $event->params[$paramName] ?? null;
@@ -143,16 +153,16 @@ class ParamsConverterEventListener
                 }
 
                 $event->params[$paramName] = $result;
-                $errors = array_filter($errors, static fn (array $messages): bool => count($messages) > 0);
-
-                if (count($errors) > 0 ){
-                    $this->eventFactory->fireError($event->rpcRequest, new ConstraintsImposedException(
-                        sprintf(ValidateParamsListener::INVALID_DATA_FOR_CALL_METHOD_TEMPLATE, $event->rpcRequest->getMethod()),
-                        $errors
-                    ));
-                }
+                $dtoErrors += array_filter($errors, static fn (array $messages): bool => count($messages) > 0);
             }
 
+        }
+        if (count($dtoErrors) > 0) {
+            $this->eventFactory->fireError($event->rpcRequest, new ConstraintsImposedException(
+                sprintf(ValidateParamsListener::INVALID_DATA_FOR_CALL_METHOD_TEMPLATE, $event->rpcRequest->getMethod()),
+                $dtoErrors
+            ));
+            $event->stopPropagation();
         }
     }
 
@@ -167,8 +177,12 @@ class ParamsConverterEventListener
 
 
 
-    protected function convertParams(Service $service, array &$params): void
+    /**
+     * @return array<string, array> messages of the values a convertor rejected, keyed by parameter name
+     */
+    protected function convertParams(Service $service, array &$params): array
     {
+        $errors = [];
         // Positional params stay a list (unless the method has injected arguments): their key is the position.
         $positional = array_is_list($params);
         $position = 0;
@@ -180,7 +194,7 @@ class ParamsConverterEventListener
             if ($paramAttribute = $paramDefinition->getAttributesCollection()->getAttribute(Param::class)) {
 
                 $process = function ($value) use ($paramAttribute, $paramDefinition, $service) {
-                    if (!is_scalar($value) && !is_null($value)) {
+                    if (is_bool($value) || (!is_scalar($value) && !is_null($value))) {
                         return $value;
                     }
 
@@ -212,12 +226,26 @@ class ParamsConverterEventListener
                     );
                 };
 
-                $params[$key] = match (true) {
-                    $paramAttribute->isCollection() => array_map($process, $params[$key]),
-                    default => $process($params[$key]),
-                };
+                if (!$paramAttribute->isCollection()) {
+                    try {
+                        $params[$key] = $process($params[$key]);
+                    } catch (RpcBadParamException $e) {
+                        $errors[$paramName][] = ValidateParamsListener::normalizeMessage($e->getMessage());
+                    }
+                    continue;
+                }
+
+                foreach ($params[$key] as $index => $item) {
+                    try {
+                        $params[$key][$index] = $process($item);
+                    } catch (RpcBadParamException $e) {
+                        $errors[$paramName][$index][] = ValidateParamsListener::normalizeMessage($e->getMessage());
+                    }
+                }
             }
         }
+
+        return $errors;
     }
 
     protected function resolveParamTypeClassFQCN(array|string $type): string

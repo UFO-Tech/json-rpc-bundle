@@ -4,7 +4,9 @@ namespace Ufo\JsonRpcBundle\Tests\Unit\ParamConvertors;
 
 use PHPUnit\Framework\TestCase;
 use Ufo\JsonRpcBundle\ParamConvertors\ChainParamConvertor;
+use Ufo\JsonRpcBundle\ParamConvertors\INullableParamConvertor;
 use Ufo\JsonRpcBundle\ParamConvertors\IParamConvertor;
+use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
 use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Generator;
 use Ufo\JsonRpcBundle\Validations\JsonSchema\JsonSchemaPropertyNormalizer;
 use Ufo\RpcObject\RPC\Param;
@@ -91,6 +93,42 @@ class ChainParamConvertorTest extends TestCase
         $this->assertFalse($convertor->supported(\DateTime::class));
         $this->assertSame($param, $convertor->getParamAttr(\stdClass::class));
         $this->assertNull($convertor->getParamAttr(\DateTime::class));
+    }
+
+    public function testGetParamAttrUsesNullableConvertorWhenParamDefinitionGiven(): void
+    {
+        $plain = new Param(Param::INT);
+        $nullable = new Param(Param::NULLABLE_NUMBER);
+        $convertor = $this->buildChain([
+            new class($plain, $nullable) implements INullableParamConvertor {
+                public function __construct(private Param $plain, private Param $nullable) {}
+                public function toScalar(object $object, array $context = [], ?callable $callback = null): array|string|int|float|null { return 1; }
+                public function toObject(int|string|float|null $value, array $context = [], ?callable $callback = null): ?object { return new \stdClass(); }
+                public function supported(string $classFQCN): bool { return true; }
+                public function getParamAttr(string $classFQCN): Param { return $this->plain; }
+                public function getNullableParamAttr(string $classFQCN, ParamDefinition $param): Param { return $this->nullable; }
+            },
+        ]);
+        $definition = new ParamDefinition('id', [], ['int', 'null']);
+
+        $this->assertSame($plain, $convertor->getParamAttr(\stdClass::class));
+        $this->assertSame($nullable, $convertor->getParamAttr(\stdClass::class, $definition));
+    }
+
+    public function testGetParamAttrFallsBackToPlainConvertorWhenParamDefinitionGiven(): void
+    {
+        $param = new Param(Param::INT);
+        $convertor = $this->buildChain([
+            new class($param) implements IParamConvertor {
+                public function __construct(private Param $param) {}
+                public function toScalar(object $object, array $context = [], ?callable $callback = null): array|string|int|float|null { return 1; }
+                public function toObject(int|string|float|null $value, array $context = [], ?callable $callback = null): ?object { return new \stdClass(); }
+                public function supported(string $classFQCN): bool { return true; }
+                public function getParamAttr(string $classFQCN): Param { return $this->param; }
+            },
+        ]);
+
+        $this->assertSame($param, $convertor->getParamAttr(\stdClass::class, new ParamDefinition('id', [], ['int', 'null'])));
     }
 
     /**

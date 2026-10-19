@@ -15,8 +15,6 @@ use Ufo\RpcObject\RPC\IgnoreApi;
 use Ufo\RpcObject\RPC\Param;
 use Ufo\DTO\Helpers\EnumResolver;
 
-use function is_string;
-
 #[AutoconfigureTag(IServiceFiller::TAG, ['priority' => 101])]
 class ParamFiller extends AbstractServiceFiller
 {
@@ -43,11 +41,12 @@ class ParamFiller extends AbstractServiceFiller
                     description: $this->getParamDescription($methodDoc, $paramRef->getName()),
                     paramItems: $descType
                 );
+                $nonNullType = $paramDefinition->getNonNullType();
                 if (
                     !$paramDefinition->attributesCollection->getAttribute(Param::class)
-                    && is_string($paramDefinition->getRealType())
-                    && $this->convertor->supported($paramDefinition->getRealType())
-                    && $paramAttr = $this->convertor->getParamAttr($paramDefinition->getRealType())
+                    && $nonNullType !== null
+                    && $this->convertor->supported($nonNullType)
+                    && $paramAttr = $this->convertor->getParamAttr($nonNullType, $paramDefinition)
                 ) {
                     $paramDefinition->attributesCollection->addAttribute($paramAttr);
                 }

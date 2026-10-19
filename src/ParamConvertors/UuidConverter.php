@@ -13,12 +13,14 @@ use Ramsey\Uuid\UuidInterface;
 use Stringable;
 use Throwable;
 use Ufo\DTO\Helpers\TypeHintResolver;
+use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
+use Ufo\RpcError\RpcBadParamException;
 use Ufo\RpcObject\RPC\Param;
 
 use function class_exists;
 use function in_array;
 
-class UuidConverter implements IParamConvertor
+class UuidConverter implements INullableParamConvertor
 {
     protected const array SUPPORTS_MAP = [
         Uid\AbstractUid::class,
@@ -67,14 +69,20 @@ class UuidConverter implements IParamConvertor
 
     public function toObject(int|string|float|null $value, array $context = [], ?callable $callback = null): ?object
     {
+        if ($value === null && ($context['paramDefinition'] ?? null) instanceof ParamDefinition && $context['paramDefinition']->acceptsNull()) {
+            return null;
+        }
         $classFQCN = $context[TypeHintResolver::CLASS_FQCN] ?? null;
-        if (in_array($classFQCN, static::SUPPORTS_MAP) && class_exists($classFQCN)) {
-            return $classFQCN::fromString($value);
+        $factory = match (true) {
+            in_array($classFQCN, static::SUPPORTS_MAP) && class_exists($classFQCN) => $classFQCN::fromString(...),
+            $classFQCN === UuidInterface::class || $classFQCN === Uid\AbstractUid::class => Uuid::fromString(...),
+            default => throw new RuntimeException('No convertor found for "' . $value . '" and classFQCN: ' . $classFQCN),
+        };
+        try {
+            return $factory((string) $value);
+        } catch (Throwable) {
+            throw new RpcBadParamException('Invalid value "' . $value . '", expected a UUID');
         }
-        if ($classFQCN === UuidInterface::class || $classFQCN === Uid\AbstractUid::class) {
-            return Uuid::fromString($value);
-        }
-        throw new RuntimeException('No convertor found for "' . $value . '" and classFQCN: ' . $classFQCN);
     }
 
     public function supported(string $classFQCN): bool
@@ -85,5 +93,13 @@ class UuidConverter implements IParamConvertor
     public function getParamAttr(string $classFQCN): Param
     {
         return new Param(Param::STRING, context: [Param::C_CONVERTOR => $this::class]);
+    }
+
+    public function getNullableParamAttr(string $classFQCN, ParamDefinition $param): Param
+    {
+        return new Param(
+            $param->acceptsNull() ? Param::NULLABLE_STRING : Param::STRING,
+            context: [Param::C_CONVERTOR => $this::class]
+        );
     }
 }

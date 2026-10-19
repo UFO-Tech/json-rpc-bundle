@@ -94,6 +94,36 @@ class ParamsConverterEventListenerTest extends TestCase
         );
     }
 
+    public function testDtoFailureStopsPropagation(): void
+    {
+        $event = $this->createEvent(['person' => ['name' => 'bob']], [
+            'person' => [new DTO(PersonDto::class)],
+        ]);
+
+        $this->createListener()->dataToDTOTransform($event);
+
+        $this->assertTrue($event->isPropagationStopped());
+    }
+
+    public function testFailuresOfSeveralDtoParamsAreReportedInOneError(): void
+    {
+        $event = $this->createEvent(['person' => ['name' => 'bob'], 'product' => ['unknown' => 1]], [
+            'person' => [new DTO(PersonDto::class)],
+            'product' => [new DTO(ProductDto::class)],
+        ]);
+
+        $this->createListener()->dataToDTOTransform($event);
+
+        $exception = $this->singleFiredException();
+        $this->assertSame(
+            [
+                'person' => ["Missing required key for property: 'age'"],
+                'product' => ["Missing required key for property: 'sku'"],
+            ],
+            $exception->getConstraintsImposed()
+        );
+    }
+
     public function testNestedDtoFailureMessageIsStrippedOfNamespaces(): void
     {
         $event = $this->createEvent(['person' => ['customer' => 'oops']], [

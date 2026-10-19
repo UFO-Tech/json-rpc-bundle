@@ -5,14 +5,19 @@ namespace Ufo\JsonRpcBundle\ParamConvertors;
 use BackedEnum;
 use RuntimeException;
 use Throwable;
-use Ufo\DTO\DTOTransformer;
+use TypeError;
 use Ufo\DTO\Helpers\TypeHintResolver;
 use Ufo\DTO\Transformer\Converter\EnumConverter;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
+use Ufo\RpcError\RpcBadParamException;
 use Ufo\RpcObject\RPC\Param;
 use UnitEnum;
 
-class EnumConvertor implements IParamConvertor
+use function array_map;
+use function implode;
+use function sprintf;
+
+class EnumConvertor implements INullableParamConvertor
 {
     public function toScalar(object $object, array $context = [], ?callable $callback = null): string|int|float|null
     {
@@ -29,6 +34,9 @@ class EnumConvertor implements IParamConvertor
         return $value;
     }
 
+    /**
+     * @throws RpcBadParamException
+     */
     public function toObject(int|string|float|null $value, array $context = [], ?callable $callback = null): ?object
     {
         $fqcn = $context[TypeHintResolver::CLASS_FQCN] ?? throw new RuntimeException('classFQCN is required in context');
@@ -37,34 +45,57 @@ class EnumConvertor implements IParamConvertor
             throw new RuntimeException("{$fqcn} is not a UnitEnum or BackedEnum");
         }
 
+        $enum = $this->fromName($fqcn, $value) ?? $this->fromAlias($fqcn, $value);
+
+        return match (true) {
+            $enum !== null => $callback !== null ? $callback($value, $enum) : $enum,
+            $value === null && $this->acceptsNull($context) => null,
+            default => throw new RpcBadParamException(sprintf(
+                'Invalid value "%s", expected one of: %s',
+                $value,
+                implode(', ', array_map(
+                    static fn (UnitEnum $case): string => $case instanceof BackedEnum ? (string) $case->value : $case->name,
+                    $fqcn::cases()
+                ))
+            )),
+        };
+    }
+
+    /**
+     * @param class-string<UnitEnum> $fqcn
+     */
+    protected function fromName(string $fqcn, int|string|float|null $value): ?UnitEnum
+    {
         try {
-            $enum = EnumConverter::toEnum($fqcn, $value);
-        } catch (Throwable) {
-            $enum = is_subclass_of($fqcn, BackedEnum::class) ? $fqcn::tryFrom($value) : null;
-        }
+            return EnumConverter::toEnum($fqcn, $value);
+        } catch (Throwable) {}
 
-        if (!$enum && method_exists($fqcn, 'tryFromValue')) {
-            try {
-                $enum = $fqcn::tryFromValue($value);
-            } catch (Throwable) {}
-        }
-
-        if (!$enum) {
-            /** @var ParamDefinition $paramDef */
-            if (
-                !($paramDef = $context['paramDefinition'] ?? false)
-                || !$paramDef->isOptional() || $paramDef->getDefault() !== null
-            ) {
-                throw new RuntimeException("Invalid value '{$value}' for enum {$fqcn}");
-            }
+        try {
+            return is_subclass_of($fqcn, BackedEnum::class) ? $fqcn::tryFrom($value) : null;
+        } catch (TypeError) {
             return null;
         }
+    }
 
-        if ($callback !== null) {
-            $enum = $callback($value, $enum);
+    /**
+     * @param class-string<UnitEnum> $fqcn
+     */
+    protected function fromAlias(string $fqcn, int|string|float|null $value): ?UnitEnum
+    {
+        if (!method_exists($fqcn, 'tryFromValue')) {
+            return null;
         }
+        try {
+            return $fqcn::tryFromValue($value);
+        } catch (Throwable) {
+            return null;
+        }
+    }
 
-        return $enum;
+    protected function acceptsNull(array $context): bool
+    {
+        $paramDef = $context['paramDefinition'] ?? null;
+        return $paramDef instanceof ParamDefinition && $paramDef->acceptsNull();
     }
 
     public function supported(string $classFQCN): bool
@@ -74,7 +105,14 @@ class EnumConvertor implements IParamConvertor
 
     public function getParamAttr(string $classFQCN): Param
     {
-        $ref = new \ReflectionEnum($classFQCN);
         return new Param(Param::STRING, context: [Param::C_CONVERTOR => $this::class]);
+    }
+
+    public function getNullableParamAttr(string $classFQCN, ParamDefinition $param): Param
+    {
+        return new Param(
+            $param->acceptsNull() ? Param::NULLABLE_STRING : Param::STRING,
+            context: [Param::C_CONVERTOR => $this::class]
+        );
     }
 }

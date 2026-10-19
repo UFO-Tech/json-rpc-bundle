@@ -10,6 +10,7 @@ use DateTimeImmutable;
 use DateTimeInterface;
 use Throwable;
 use Ufo\DTO\Helpers\TypeHintResolver;
+use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
 use Ufo\RpcError\RpcBadParamException;
 use Ufo\RpcObject\RPC\Param;
 
@@ -47,6 +48,9 @@ class DateTimeConverter implements IParamConvertor
 
     public function toObject(int|string|float|null $value, array $context = [], ?callable $callback = null): ?object
     {
+        if ($value === null && ($context['paramDefinition'] ?? null) instanceof ParamDefinition && $context['paramDefinition']->acceptsNull()) {
+            return null;
+        }
         $classFQCN = $context[TypeHintResolver::CLASS_FQCN] ?? static::SUPPORTS_MAP[0] ?? DateTime::class;
         try {
             $object = new $classFQCN($value ?? 'now');

@@ -2,10 +2,16 @@
 
 namespace Ufo\JsonRpcBundle\Tests\Unit\ParamConvertors;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Ufo\JsonRpcBundle\ParamConvertors\BackedEnumConvertor;
+use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
 use Ufo\JsonRpcBundle\Tests\Unit\MockBackedEnum;
 use Ufo\JsonRpcBundle\Tests\Unit\MockBackedEnumWithAlias;
+use Ufo\JsonRpcBundle\Tests\Unit\MockIntBackedEnum;
+use Ufo\JsonRpcBundle\Tests\Unit\MockZeroIntBackedEnum;
+use Ufo\JsonRpcBundle\Tests\Unit\MockZeroStringBackedEnum;
+use Ufo\RpcError\RpcBadParamException;
 use Ufo\RpcObject\RPC\Param;
 
 class BackedEnumConvertorTest extends TestCase
@@ -28,11 +34,18 @@ class BackedEnumConvertorTest extends TestCase
 
     public function testThrowsExceptionForInvalidValueToObject(): void
     {
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage("Invalid value 'invalidValue' for enum");
+        $this->expectException(RpcBadParamException::class);
+        $this->expectExceptionMessage('Invalid value "invalidValue", expected one of: a, b');
         $mockEnumClass = MockBackedEnum::class;
         $context = ['classFQCN' => $mockEnumClass];
         $this->convertor->toObject('invalidValue', $context);
+    }
+
+    public function testValueOfAnotherTypeIsABadParamNotATypeError(): void
+    {
+        $this->expectException(RpcBadParamException::class);
+        $this->expectExceptionMessage('Invalid value "one", expected one of: 1, 2');
+        $this->convertor->toObject('one', ['classFQCN' => MockIntBackedEnum::class]);
     }
 
     public function testThrowsExceptionForMissingClassFQCNInContext(): void
@@ -107,6 +120,92 @@ class BackedEnumConvertorTest extends TestCase
         $result = $this->convertor->toObject('alias', $context);
 
         $this->assertSame(MockBackedEnumWithAlias::A, $result);
+    }
+
+    public function testIntZeroConvertsToTheZeroCase(): void
+    {
+        $context = ['classFQCN' => MockZeroIntBackedEnum::class];
+
+        $this->assertSame(MockZeroIntBackedEnum::ZERO, $this->convertor->toObject(0, $context));
+        $this->assertSame(MockZeroIntBackedEnum::ZERO, $this->convertor->toObject('0', $context));
+    }
+
+    public function testStringZeroConvertsToTheZeroCase(): void
+    {
+        $context = ['classFQCN' => MockZeroStringBackedEnum::class];
+
+        $this->assertSame(MockZeroStringBackedEnum::ZERO, $this->convertor->toObject('0', $context));
+        $this->assertSame(MockZeroStringBackedEnum::ZERO, $this->convertor->toObject(0, $context));
+    }
+
+    public function testToScalarKeepsZero(): void
+    {
+        $this->assertSame(0, $this->convertor->toScalar(MockZeroIntBackedEnum::ZERO));
+        $this->assertSame('0', $this->convertor->toScalar(MockZeroStringBackedEnum::ZERO));
+    }
+
+    public function testInvalidValueMessageListsZero(): void
+    {
+        $this->expectException(RpcBadParamException::class);
+        $this->expectExceptionMessage('Invalid value "5", expected one of: 0, 1');
+        $this->convertor->toObject(5, ['classFQCN' => MockZeroIntBackedEnum::class]);
+    }
+
+    #[DataProvider('notAnIntegerProvider')]
+    public function testNotAnIntegerIsNotTakenForTheZeroCase(mixed $value): void
+    {
+        $this->expectException(RpcBadParamException::class);
+        $this->convertor->toObject($value, ['classFQCN' => MockZeroIntBackedEnum::class]);
+    }
+
+    public static function notAnIntegerProvider(): iterable
+    {
+        yield 'float zero' => [0.0];
+        yield 'numeric float string' => ['0.0'];
+        yield 'null' => [null];
+    }
+
+    public function testNullForNullableParamIsNull(): void
+    {
+        $this->assertNull($this->convertor->toObject(null, [
+            'classFQCN' => MockBackedEnum::class,
+            'paramDefinition' => new ParamDefinition('e', [], ['null', MockBackedEnum::class]),
+        ]));
+    }
+
+    public function testNullForRequiredParamIsABadParam(): void
+    {
+        $this->expectException(RpcBadParamException::class);
+        $this->convertor->toObject(null, [
+            'classFQCN' => MockBackedEnum::class,
+            'paramDefinition' => new ParamDefinition('e', [], MockBackedEnum::class),
+        ]);
+    }
+
+    public function testInvalidValueForNullableParamIsABadParam(): void
+    {
+        $this->expectException(RpcBadParamException::class);
+        $this->convertor->toObject('invalid', [
+            'classFQCN' => MockBackedEnum::class,
+            'paramDefinition' => new ParamDefinition('e', [], ['null', MockBackedEnum::class]),
+        ]);
+    }
+
+    #[DataProvider('nullableParamAttrProvider')]
+    public function testGetNullableParamAttrAddsNullOnlyForNullableParam(string $enum, array|string $realType, array|string $expected): void
+    {
+        $param = $this->convertor->getNullableParamAttr($enum, new ParamDefinition('e', [], $realType));
+
+        $this->assertSame($expected, $param->getType());
+        $this->assertSame(BackedEnumConvertor::class, $param->context[Param::C_CONVERTOR] ?? null);
+    }
+
+    public static function nullableParamAttrProvider(): iterable
+    {
+        yield 'nullable string enum' => [MockBackedEnum::class, ['null', MockBackedEnum::class], ['string', 'null']];
+        yield 'required string enum' => [MockBackedEnum::class, MockBackedEnum::class, 'string'];
+        yield 'nullable int enum' => [MockIntBackedEnum::class, '?' . MockIntBackedEnum::class, ['int', 'null']];
+        yield 'required int enum' => [MockIntBackedEnum::class, MockIntBackedEnum::class, 'int'];
     }
 
 }

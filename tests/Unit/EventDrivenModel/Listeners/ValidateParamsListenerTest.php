@@ -116,8 +116,8 @@ class ValidateParamsListenerTest extends TestCase
         $this->assertInstanceOf(ConstraintsImposedException::class, $exception);
         $this->assertSame('Invalid Data for call method: main.triple', $exception->getMessage());
         $this->assertSame([
-            'b' => 'Required parameter "b" not passed',
-            'c' => 'Required parameter "c" not passed',
+            'b' => ['Required parameter "b" not passed'],
+            'c' => ['Required parameter "c" not passed'],
         ], $exception->getConstraintsImposed());
         $this->assertTrue($event->isPropagationStopped());
     }

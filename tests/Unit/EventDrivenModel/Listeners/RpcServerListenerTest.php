@@ -53,7 +53,7 @@ class RpcServerListenerTest extends TestCase
         $this->assertInstanceOf(ConstraintsImposedException::class, $exception);
         $this->assertSame('Invalid Data for call method: main.expectInt', $exception->getMessage());
         $this->assertSame(
-            ['id' => 'Parameter "id" must be of type int, string given'],
+            ['id' => ['Parameter "id" must be of type int, string given']],
             $exception->getConstraintsImposed()
         );
     }
@@ -66,10 +66,10 @@ class RpcServerListenerTest extends TestCase
         $exception = $this->singleFiredException();
         $this->assertInstanceOf(ConstraintsImposedException::class, $exception);
         $this->assertSame(
-            ['person' => 'Parameter "person" must be of type PersonDto, array given'],
+            ['person' => ['Parameter "person" must be of type PersonDto, array given']],
             $exception->getConstraintsImposed()
         );
-        $this->assertStringNotContainsString(PersonDto::class, $exception->getConstraintsImposed()['person']);
+        $this->assertStringNotContainsString(PersonDto::class, $exception->getConstraintsImposed()['person'][0]);
     }
 
     public function testTypeErrorWithoutArgumentInfoFallsBackToUnknownParam(): void
@@ -79,7 +79,7 @@ class RpcServerListenerTest extends TestCase
 
         $exception = $this->singleFiredException();
         $this->assertInstanceOf(ConstraintsImposedException::class, $exception);
-        $this->assertSame(['unknown' => 'custom type failure'], $exception->getConstraintsImposed());
+        $this->assertSame(['unknown' => ['custom type failure']], $exception->getConstraintsImposed());
     }
 
     public function testOtherThrowablesStayRuntimeExceptions(): void

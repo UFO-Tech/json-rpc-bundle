@@ -5,6 +5,7 @@ namespace Ufo\JsonRpcBundle\ParamConvertors;
 use RuntimeException;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 use Ufo\DTO\Helpers\TypeHintResolver;
+use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
 use Ufo\JsonRpcBundle\Validations\JsonSchema\JsonSchemaPropertyNormalizer;
 use Ufo\RpcObject\RPC\Param;
 
@@ -43,24 +44,21 @@ class ChainParamConvertor
 
     public function supported(string $classFQCN): bool
     {
-        $supported = false;
         foreach ($this->convertors as $convertor) {
-            if (!$convertor->supported($classFQCN)) continue;
-            $supported = true;
-            break;
+            if ($convertor->supported($classFQCN)) return true;
         }
-        return $supported;
+        return false;
     }
 
-    public function getParamAttr(string $classFQCN): ?Param
+    public function getParamAttr(string $classFQCN, ?ParamDefinition $param = null): ?Param
     {
-        $param = null;
         foreach ($this->convertors as $convertor) {
-            if ($convertor->supported($classFQCN)) {
-                $param = $convertor->getParamAttr($classFQCN);
-                break;
-            };
+            if (!$convertor->supported($classFQCN)) continue;
+
+            return $param !== null && $convertor instanceof INullableParamConvertor
+                ? $convertor->getNullableParamAttr($classFQCN, $param)
+                : $convertor->getParamAttr($classFQCN);
         }
-        return $param;
+        return null;
     }
 }

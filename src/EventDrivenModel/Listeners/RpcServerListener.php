@@ -78,7 +78,7 @@ class RpcServerListener
             $this->eventFactory->fireError($event->rpcRequest, new ConstraintsImposedException(
                 sprintf(ValidateParamsListener::INVALID_DATA_FOR_CALL_METHOD_TEMPLATE, $event->rpcRequest->getMethod()),
                 [
-                    $paramName => $message,
+                    $paramName => [$message],
                 ]
             ));
             return;

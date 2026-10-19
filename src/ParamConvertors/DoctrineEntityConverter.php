@@ -10,6 +10,7 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 use Throwable;
 use Ufo\JsonRpcBundle\DependencyInjection\Attribute\RequiresExtension;
 use Ufo\DTO\Helpers\TypeHintResolver;
+use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
 use Ufo\RpcObject\RPC\Param;
 
 use function array_values;
@@ -17,7 +18,7 @@ use function current;
 
 #[AsTaggedItem(IParamConvertor::TAG, priority: 100)]
 #[RequiresExtension(RequiresExtension::DOCTRINE)]
-readonly class DoctrineEntityConverter implements IParamConvertor
+readonly class DoctrineEntityConverter implements INullableParamConvertor
 {
     public function __construct(
         protected ?ManagerRegistry $registry = null
@@ -88,12 +89,23 @@ readonly class DoctrineEntityConverter implements IParamConvertor
 
     public function getParamAttr(string $classFQCN): Param
     {
-        $em = $this->getEntityManager($classFQCN);
-        $meta = $em->getClassMetadata($classFQCN);
-        $ids = $meta->getIdentifierFieldNames();
-        $type = $meta->getTypeOfField($ids[0] ?? 'id');
+        return new Param($this->identifierTypeBit($classFQCN), context: [Param::C_CONVERTOR => $this::class]);
+    }
 
-        return new Param(Param::bitFromType($type), context: [Param::C_CONVERTOR => $this::class]);
+    public function getNullableParamAttr(string $classFQCN, ParamDefinition $param): Param
+    {
+        return new Param(
+            $this->identifierTypeBit($classFQCN) | ($param->acceptsNull() ? Param::NULL : 0),
+            context: [Param::C_CONVERTOR => $this::class]
+        );
+    }
+
+    protected function identifierTypeBit(string $classFQCN): int
+    {
+        $meta = $this->getEntityManager($classFQCN)->getClassMetadata($classFQCN);
+        $ids = $meta->getIdentifierFieldNames();
+
+        return Param::bitFromType($meta->getTypeOfField($ids[0] ?? 'id'));
     }
 
 }

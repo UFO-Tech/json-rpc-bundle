@@ -7,6 +7,9 @@ use Ramsey\Uuid\Uuid;
 use Ramsey\Uuid\UuidInterface;
 use Symfony\Component\Uid\UuidV4;
 use Ufo\JsonRpcBundle\ParamConvertors\UuidConverter;
+use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
+use Ufo\RpcError\RpcBadParamException;
+use Ufo\RpcObject\RPC\Param;
 
 class UuidConverterTest extends TestCase
 {
@@ -41,6 +44,13 @@ class UuidConverterTest extends TestCase
         $this->assertEquals($uuidString, $result->toRfc4122());
     }
 
+    public function testToObjectWithInvalidUuidStringIsABadParam(): void
+    {
+        $this->expectException(RpcBadParamException::class);
+        $this->expectExceptionMessage('Invalid value "not-a-uuid", expected a UUID');
+        $this->converter->toObject('not-a-uuid', ['classFQCN' => UuidV4::class]);
+    }
+
     public function testToObjectWithUnsupportedClassThrowsException(): void
     {
         $uuidString = '550e8400-e29b-41d4-a716-446655440000';
@@ -68,6 +78,47 @@ class UuidConverterTest extends TestCase
     /**
      * Test that the supported method returns false for a class not in the supports map.
      */
+    public function testToObjectWithNullForNullableParamIsNull(): void
+    {
+        $this->assertNull($this->converter->toObject(null, [
+            'classFQCN' => UuidV4::class,
+            'paramDefinition' => new ParamDefinition('id', [], ['null', UuidV4::class]),
+        ]));
+    }
+
+    public function testToObjectWithNullForRequiredParamIsABadParam(): void
+    {
+        $this->expectException(RpcBadParamException::class);
+        $this->converter->toObject(null, [
+            'classFQCN' => UuidV4::class,
+            'paramDefinition' => new ParamDefinition('id', [], UuidV4::class),
+        ]);
+    }
+
+    public function testToObjectWithNullWithoutParamDefinitionIsABadParam(): void
+    {
+        $this->expectException(RpcBadParamException::class);
+        $this->converter->toObject(null, ['classFQCN' => UuidV4::class]);
+    }
+
+    public function testGetParamAttrIsAStringWithConvertorContext(): void
+    {
+        $param = $this->converter->getParamAttr(UuidV4::class);
+
+        $this->assertSame('string', $param->getType());
+        $this->assertSame(UuidConverter::class, $param->context[Param::C_CONVERTOR] ?? null);
+    }
+
+    public function testGetNullableParamAttrAddsNullOnlyForNullableParam(): void
+    {
+        $nullable = $this->converter->getNullableParamAttr(UuidV4::class, new ParamDefinition('id', [], ['null', UuidV4::class]));
+        $required = $this->converter->getNullableParamAttr(UuidV4::class, new ParamDefinition('id', [], UuidV4::class));
+
+        $this->assertSame(['string', 'null'], $nullable->getType());
+        $this->assertSame('string', $required->getType());
+        $this->assertSame(UuidConverter::class, $nullable->context[Param::C_CONVERTOR] ?? null);
+    }
+
     public function testSupportedWithUnSupportedClass(): void
     {
         $this->assertFalse($this->converter->supported('Unsupported\Class'));

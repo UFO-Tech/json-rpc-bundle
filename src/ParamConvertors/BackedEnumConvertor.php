@@ -3,16 +3,24 @@
 namespace Ufo\JsonRpcBundle\ParamConvertors;
 
 use BackedEnum;
+use ReflectionEnum;
 use ReflectionException;
 use RuntimeException;
 use Throwable;
 use Ufo\DTO\Helpers\TypeHintResolver;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
+use Ufo\RpcError\RpcBadParamException;
 use Ufo\RpcObject\RPC\Param;
 
+use function array_map;
+use function implode;
+use function is_int;
+use function is_string;
 use function is_subclass_of;
+use function preg_match;
+use function sprintf;
 
-class BackedEnumConvertor implements IParamConvertor
+class BackedEnumConvertor implements INullableParamConvertor
 {
     public function toScalar(object $object, array $context = [], ?callable $callback = null): string|int|float|null
     {
@@ -37,30 +45,55 @@ class BackedEnumConvertor implements IParamConvertor
             throw new RuntimeException("{$fqcn} is not a BackedEnum");
         }
 
-        $enum = $fqcn::tryFrom($value);
+        $enum = $this->fromBackingValue($fqcn, $value) ?? $this->fromAlias($fqcn, $value);
 
-        if (!$enum && method_exists($fqcn, 'tryFromValue')) {
-            try {
-                $enum = $fqcn::tryFromValue($value);
-            } catch (Throwable) {}
-        }
+        return match (true) {
+            $enum !== null => $callback !== null ? $callback($value, $enum) : $enum,
+            $value === null && $this->acceptsNull($context) => null,
+            default => throw new RpcBadParamException(sprintf(
+                'Invalid value "%s", expected one of: %s',
+                $value,
+                implode(', ', array_map(static fn (BackedEnum $case): string => (string) $case->value, $fqcn::cases()))
+            )),
+        };
+    }
 
-        if (!$enum) {
-            /** @var ParamDefinition $paramDef */
-            if (
-                !($paramDef = $context['paramDefinition'] ?? false)
-                || !$paramDef->isOptional() || $paramDef->getDefault() !== null
-            ) {
-                throw new RuntimeException("Invalid value '{$value}' for enum {$fqcn}");
-            }
+    /**
+     * @param class-string<BackedEnum> $fqcn
+     */
+    protected function fromAlias(string $fqcn, int|string|float|null $value): ?BackedEnum
+    {
+        if (!method_exists($fqcn, 'tryFromValue')) {
             return null;
         }
-
-        if ($callback !== null) {
-            $enum = $callback($value, $enum);
+        try {
+            return $fqcn::tryFromValue($value);
+        } catch (Throwable) {
+            return null;
         }
+    }
 
-        return $enum;
+    protected function acceptsNull(array $context): bool
+    {
+        $paramDef = $context['paramDefinition'] ?? null;
+        return $paramDef instanceof ParamDefinition && $paramDef->acceptsNull();
+    }
+
+    /**
+     * @param class-string<BackedEnum> $fqcn
+     * @throws ReflectionException
+     */
+    protected function fromBackingValue(string $fqcn, int|string|float|null $value): ?BackedEnum
+    {
+        $backingType = (new ReflectionEnum($fqcn))->getBackingType()?->getName();
+        $value = match (true) {
+            $backingType === 'int' && is_int($value) => $value,
+            $backingType === 'int' && is_string($value) && preg_match('/^-?\d+$/', $value) === 1 => (int) $value,
+            $backingType === 'string' && (is_string($value) || is_int($value)) => (string) $value,
+            default => null,
+        };
+
+        return $value === null ? null : $fqcn::tryFrom($value);
     }
 
     public function supported(string $classFQCN): bool
@@ -68,9 +101,19 @@ class BackedEnumConvertor implements IParamConvertor
         return is_subclass_of($classFQCN, BackedEnum::class);
     }
 
-    public function getParamAttr(string $classFQCN): Param
+    public function getParamAttr(string $classFQCN, ): Param
     {
         $ref = new \ReflectionEnum($classFQCN);
         return new Param(Param::bitFromType($ref->getBackingType()->getName()), context: [Param::C_CONVERTOR => $this::class]);
+    }
+
+    public function getNullableParamAttr(string $classFQCN, ParamDefinition $param): Param
+    {
+        $ref = new \ReflectionEnum($classFQCN);
+        $bits = Param::bitFromType($ref->getBackingType()->getName());
+        if ($param->acceptsNull()) {
+            $bits |= Param::NULL;
+        }
+        return new Param($bits, context: [Param::C_CONVERTOR => $this::class]);
     }
 }

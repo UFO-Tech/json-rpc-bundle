@@ -6,7 +6,9 @@ use DateTime;
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 use Ufo\JsonRpcBundle\ParamConvertors\DateTimeConverter;
+use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
 use Ufo\RpcError\RpcBadParamException;
+use Ufo\RpcObject\RPC\Param;
 
 class DateTimeConverterTest extends TestCase
 {
@@ -146,6 +148,52 @@ class DateTimeConverterTest extends TestCase
         
         $this->assertFalse($this->convertor->supported(\stdClass::class));
         $this->assertFalse($this->convertor->supported('NonExistentClass'));
+    }
+
+    public function testToObjectWithNullForNullableParamIsNull(): void
+    {
+        $this->assertNull($this->convertor->toObject(null, [
+            'classFQCN' => DateTimeImmutable::class,
+            'paramDefinition' => new ParamDefinition('at', [], ['null', DateTimeImmutable::class]),
+        ]));
+    }
+
+    public function testToObjectWithNullForOptionalParamWithNullDefaultIsNull(): void
+    {
+        $paramDefinition = (new ParamDefinition('at', [], '?' . DateTimeImmutable::class))->setDefault(null);
+
+        $this->assertNull($this->convertor->toObject(null, [
+            'classFQCN' => DateTimeImmutable::class,
+            'paramDefinition' => $paramDefinition,
+        ]));
+    }
+
+    public function testToObjectWithNullForRequiredParamIsNow(): void
+    {
+        $result = $this->convertor->toObject(null, [
+            'classFQCN' => DateTimeImmutable::class,
+            'paramDefinition' => new ParamDefinition('at', [], DateTimeImmutable::class),
+        ]);
+
+        $this->assertInstanceOf(DateTimeImmutable::class, $result);
+    }
+
+    public function testToObjectWithValueForNullableParamIsConverted(): void
+    {
+        $result = $this->convertor->toObject('2023-12-01 15:30:45', [
+            'classFQCN' => DateTimeImmutable::class,
+            'paramDefinition' => new ParamDefinition('at', [], ['null', DateTimeImmutable::class]),
+        ]);
+
+        $this->assertSame('2023-12-01 15:30:45', $result->format('Y-m-d H:i:s'));
+    }
+
+    public function testGetParamAttrIsANullableStringWithConvertorContext(): void
+    {
+        $param = $this->convertor->getParamAttr(DateTimeImmutable::class);
+
+        $this->assertSame(['string', 'null'], $param->getType());
+        $this->assertSame(DateTimeConverter::class, $param->context[Param::C_CONVERTOR] ?? null);
     }
 
 }

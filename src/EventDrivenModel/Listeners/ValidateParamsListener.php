@@ -147,7 +147,7 @@ class ValidateParamsListener
                 continue;
             }
 
-            $errors[$refParam->getName()] = sprintf('Required parameter "%s" not passed', $refParam->getName());
+            $errors[$refParam->getName()][] = sprintf('Required parameter "%s" not passed', $refParam->getName());
         }
 
         if (count($errors)) {

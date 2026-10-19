@@ -2,7 +2,7 @@
 
 # 10.4 — Translations per API group, translations from extensions, locale negotiator
 
-Tags: 10.4.0, 10.4.1, 10.4.2, 10.4.3. First released: 2026-10-18.
+Tags: 10.4.0, 10.4.1, 10.4.2, 10.4.3, 10.4.4. First released: 2026-10-18.
 
 ## Highlights
 
@@ -112,6 +112,16 @@ $this->localeNegotiator->addLanguageHeaders($request, $response);     // Content
 - **The default of a converted parameter is kept** in the service map and the documentation (it was replaced by `null`).
 - **Responses in one process no longer share serialization groups.** `RpcResponseContextBuilder` kept the groups of previous responses, so in a long-running worker or an MCP batch an error response after a success got `"result": null`, a success after an error got `"error": null`, and an object result after an error was normalized as `[]`. Fixed in `ufo-tech/rpc-objects` 3.9.2, now required.
 
+## 10.4.4
+
+- **An unknown enum value is a parameter error, not a server error.** `BackedEnumConvertor` and `EnumConvertor` threw `RuntimeException("Invalid value 'xml' for enum <FQCN>")`, so a client error looked like an internal server error and REST answered `500`. It is now `RpcBadParamException('Invalid value "xml", expected one of: json, csv')`, without the class name in the message.
+- **An invalid UUID too.** `UuidConverter` let the library exception (`symfony/uid` or `ramsey/uuid`) through as is. It is now `RpcBadParamException('Invalid value "…", expected a UUID')`.
+- **All conversion errors in one response.** `ParamsConverterEventListener` collects the convertor errors of every parameter (per index for a collection) and returns them as validation errors: `-32602`, `message: "Invalid Data for call method: <method>"`, `data: {"format": ["Invalid value \"xml\", expected one of: json, csv"]}` or `{"ids": {"2": [...]}}`. The request used to stop at the first error. REST (`ufo-tech/rest-bundle`) answers it with `400` and `detail-data`.
+- **A backed enum accepts only values of its type.** An int enum takes an integer or an integer string (`"0"`, `"-3"`); a string enum takes a string or an integer. `tryFrom` used to get the value as is, and PHP's weak typing silently turned `false`, `0.0`, `"0.0"` and `null` into the case with value `0`, and `1.0` into case `1`. These are now `-32602`. A `bool` passed to an enum parameter is no longer cast to a number and gives a `-32602` about the parameter type. `null` for an optional parameter with `= null` still becomes `null`, now without a deprecation.
+- **Nullable parameters are converted again without `#[RPC\Param]`.** In 10.4.3 a convertor was attached automatically only to a parameter with a single type, so `?SortDirection $dir = null` or `?DateTimeImmutable $date = null` got the request string as is (`-32602 Parameter "dir" must be of type ?SortDirection, string given`). `ParamFiller` now takes the single class of a nullable type (`?T`, `T|null`) and adds `null` to the type of the `Param` attribute.
+- **`null` only for a parameter that allows it.** The convertors (enum, date, UUID) return `null` only for a `null` value and only if the parameter is nullable or defaults to `null` (`ParamDefinition::acceptsNull()`). An invalid value of such a parameter is now `-32602`; an enum used to become `null` silently, so e.g. a profile with an invalid sort direction lost the stored one. `null` for `?DateTimeImmutable` is `null`, not the current time; `null` for `?Uuid` is `null`, not an error.
+- Tests: `EnumConvertor` (had none), an enum with value `0` for int and string enums, an invalid enum and UUID value through the endpoint.
+
 ## Upgrade notes
 
 - **Partial base translation**: if `rpc.<locale>.yaml` has only `title` for a method, `description` now comes from the base translation in `kernel.default_locale` (step 4) instead of the attribute / PHPDoc.
@@ -122,7 +132,14 @@ $this->localeNegotiator->addLanguageHeaders($request, $response);     // Content
 - **10.4.2**, behaviour: REST calls (and any carrier other than `RpcFromHttp` that implements `IRpcHttpCarrier` or goes through `RpcExecutor`) now get `rpc.post_response`: cache relations and async/notification listeners start working for them. Every executed request of a process-mode batch gets it, not only the first one.
 - **10.4.2**, constructors (only if you create them manually): `InlineBatchStrategy` has new optional trailing `?RpcExecutor` and `?PostResponseQueue`; `SymfonyFlowListener` has a new optional trailing `?PostResponseQueue`.
 - **10.4.3**, documentation: a parameter converted by a convertor (enum, `DateTimeInterface`, `Uuid`, Doctrine entity) is described by its request type (e.g. `string|null` for a date instead of `object`). Methods that used to fail with such a parameter now execute.
+- **10.4.4**, error message: for an invalid parameter converted by a convertor, `error.message` is now `Invalid Data for call method: <method>` and the convertor's message is in `error.data`. This also applies to dates (the `message` used to be `Value "…" is not a valid date…`) and to your own convertors that throw `RpcBadParamException`. A client that shows or parses `error.message` (including the PHP SDK exception) gets a different text; the `-32602` code is unchanged.
+- **10.4.4**, enums: an int enum no longer accepts floats (`1.0`), strings with a fraction or spaces (`"1.0"`, `" 1"`) or `bool`; a required enum parameter does not accept `null`.
+- **10.4.4**, REST: an unknown enum value or an invalid UUID is `400` instead of `500`.
+- **10.4.4**, nullable parameters: an invalid value of `?Enum $x = null` is `-32602` instead of `null`; an explicit `null` for `?Enum $x` without a default is `null` instead of an error; `null` for `?DateTimeImmutable` is `null` instead of the current time.
+- **10.4.4**, your code: `RpcBadParamException` does not extend `RuntimeException`. If you call `BackedEnumConvertor`, `EnumConvertor` or `UuidConverter` directly and catch `RuntimeException`, catch `RpcBadParamException`.
 
 ## Known issues
 
+- A parameter typed `DateTimeInterface` rejects any date (`DateTimeConverter` tries to instantiate the interface); use `DateTimeImmutable` or `DateTime`. An explicit `null` for a non-nullable date parameter becomes the current time.
+- `UuidConverter`: a parameter typed `Symfony\Component\Uid\AbstractUid` is not converted; a parameter typed `Ramsey\Uuid\Uuid` or `Ramsey\Uuid\Rfc4122\UuidV*` fails with a type error because `Uuid::fromString()` returns `LazyUuidFromString` — use `Ramsey\Uuid\UuidInterface`.
 - The list of locales is shared by all API groups. If `pl` exists only in `rpc/bfa.pl.yaml`, the documentation of another group requested with `Accept-Language: pl` gets `Content-Language: pl` while its texts are in the default locale.

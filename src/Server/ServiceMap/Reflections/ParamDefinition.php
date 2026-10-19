@@ -16,8 +16,11 @@ use Ufo\JsonRpcBundle\Server\ServiceMap\AttributesCollection;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\RpcObject\RPC\Param;
 
+use function array_diff;
 use function array_map;
+use function array_values;
 use function class_exists;
+use function count;
 use function is_string;
 use function Symfony\Component\DependencyInjection\Loader\Configurator\param;
 
@@ -101,6 +104,15 @@ class ParamDefinition implements IArrayConvertible, IArrayConstructible
         return $this->optional;
     }
 
+    public function acceptsNull(): bool
+    {
+        $type = $this->realType;
+
+        return ($this->optional && $this->default === null)
+            || (is_array($type) && in_array(TypeHintResolver::NULL->value, $type, true))
+            || (is_string($type) && ($type === TypeHintResolver::MIXED->value || str_starts_with($type, '?')));
+    }
+
     public function getDefault(): mixed
     {
         return $this->default;
@@ -131,6 +143,13 @@ class ParamDefinition implements IArrayConvertible, IArrayConstructible
     public function getRealType(): array|string
     {
         return $this->realType;
+    }
+
+    public function getNonNullType(): ?string
+    {
+        $types = array_values(array_diff((array) $this->realType, [TypeHintResolver::NULL->value]));
+
+        return count($types) === 1 && is_string($types[0]) ? $types[0] : null;
     }
 
 }
