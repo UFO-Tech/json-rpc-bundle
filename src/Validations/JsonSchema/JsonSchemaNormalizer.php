@@ -112,7 +112,8 @@ class JsonSchemaNormalizer implements NormalizerInterface
                     'targetType' => $this->getScalarTargetType($paramAttr->getType()),
                 ]
             );
-            $paramDefinition->setSchema($schema)->setDefault($paramAttr->getData(Param::C_DEFAULT));
+            // The attribute added by a convertor has no default: keep the one of the signature.
+            $paramDefinition->setSchema($schema)->setDefault($paramAttr->getData(Param::C_DEFAULT) ?? $paramDefinition->getDefault());
 
             $attrType = $paramAttr->getType();
             if (is_array($attrType)) {

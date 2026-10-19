@@ -242,10 +242,8 @@ class RpcServiceMapPass implements CompilerPassInterface
             $refS = new ReflectionObject($s);
             $propNormalizers = $refS->getProperty('normalizers')->getValue($s);
 
-            $generator = new Generator($this->getTaggedServices(IConstraintGenerator::TAG));
-            $propNormalizer = new JsonSchemaPropertyNormalizer($generator);
-
-            $paramConvertor = new ChainParamConvertor($propNormalizer, $this->getTaggedServices(IParamConvertor::TAG));
+            $paramConvertor = $this->compileParamConvertor();
+            $propNormalizer = $paramConvertor->jsonSchemaPropertyNormalizer;
 
             $propNormalizers = [
                 new JsonSchemaNormalizer($propNormalizer, $paramConvertor),
@@ -256,6 +254,23 @@ class RpcServiceMapPass implements CompilerPassInterface
             $this->serializer = $s;
         }
         return $this->serializer;
+    }
+
+    /**
+     * The one ChainParamConvertor of the pass, with the tagged convertors. Taken from the container instead,
+     * it has none: #[AutowireIterator] is not resolved yet at this compilation stage, so ParamFiller saw no
+     * convertor for an enum / DateTime / Uuid parameter and the parameter was not converted.
+     */
+    protected function compileParamConvertor(): ChainParamConvertor
+    {
+        if (!isset($this->compiledServices[ChainParamConvertor::class])) {
+            $generator = new Generator($this->getTaggedServices(IConstraintGenerator::TAG));
+            $this->compiledServices[ChainParamConvertor::class] = new ChainParamConvertor(
+                new JsonSchemaPropertyNormalizer($generator),
+                $this->getTaggedServices(IParamConvertor::TAG)
+            );
+        }
+        return $this->compiledServices[ChainParamConvertor::class];
     }
 
     protected function getTaggedServices(string $tag): array
@@ -282,6 +297,7 @@ class RpcServiceMapPass implements CompilerPassInterface
         }
 
         if ($serviceId === SerializerInterface::class) return $this->compileSerializer();
+        if ($serviceId === ChainParamConvertor::class) return $this->compileParamConvertor();
         // In compiler passes, interfaces are usually registered as aliases (autowiring). `findDefinition()` resolves aliases.
         if (!$this->container->has($serviceId) && !$this->container->hasAlias($serviceId) && !$this->container->hasDefinition($serviceId)) {
             throw new RpcInternalException('Service "' . $serviceId . '" not found');
@@ -363,6 +379,11 @@ class RpcServiceMapPass implements CompilerPassInterface
             }
 
             $depId = $type->getName();
+
+            if ($depId === ChainParamConvertor::class) {
+                $params[] = $this->compileParamConvertor();
+                continue;
+            }
 
             // NOTE: This still instantiates services at compile time, which is generally unsafe.
             // This change only fixes alias/interface resolution (e.g. SerializerInterface).

@@ -2,7 +2,7 @@
 
 # 10.4 — Translations per API group, translations from extensions, locale negotiator
 
-Tags: 10.4.0, 10.4.1, 10.4.2. First released: 2026-10-18.
+Tags: 10.4.0, 10.4.1, 10.4.2, 10.4.3. First released: 2026-10-18.
 
 ## Highlights
 
@@ -105,6 +105,13 @@ $this->localeNegotiator->addLanguageHeaders($request, $response);     // Content
 - **`rpc.post_response` for any carrier.** It used to fire only for `RpcFromHttp`, so for REST calls cache relations and async/notification listeners did not run. Requests are now collected in `PostResponseQueue` and fired on `kernel.terminate` / `console.terminate`, once per executed request, also when one HTTP request executes several (an MCP batch; unprocessed items of a process-mode batch, of which only the first one used to get it). A carrier is tied to its HTTP request by the new `IRpcHttpCarrier` interface (`getHttpRequest()`), implemented by `RpcFromHttp`; `notification.process` detaches a single request of any `IRpcHttpCarrier`.
 - **No `rpc.post_response` for an error response, now explicitly.** It never fired (a `TypeError` on the `null` service was swallowed); the queue now skips such requests. A failing `rpc.post_response` listener is logged instead of being swallowed silently.
 
+## 10.4.3
+
+- **Parameters are converted again without `#[RPC\Param]`.** Since 10.0.6 the service map built by the compiler pass got a `ChainParamConvertor` without convertors (`#[AutowireIterator]` is not resolved at that compilation stage), so a parameter typed as an enum, `DateTimeInterface`, `Uuid` or a Doctrine entity was passed to the method as it came in the request: `-32602 Parameter "color" must be of type Color, string given`, also when it was not passed and its default applied. The pass now builds one `ChainParamConvertor` with the tagged convertors.
+- **Positional params are converted too**, matched to the parameters by position; a parameter that is not passed keeps the method's default.
+- **The default of a converted parameter is kept** in the service map and the documentation (it was replaced by `null`).
+- **Responses in one process no longer share serialization groups.** `RpcResponseContextBuilder` kept the groups of previous responses, so in a long-running worker or an MCP batch an error response after a success got `"result": null`, a success after an error got `"error": null`, and an object result after an error was normalized as `[]`. Fixed in `ufo-tech/rpc-objects` 3.9.2, now required.
+
 ## Upgrade notes
 
 - **Partial base translation**: if `rpc.<locale>.yaml` has only `title` for a method, `description` now comes from the base translation in `kernel.default_locale` (step 4) instead of the attribute / PHPDoc.
@@ -114,6 +121,7 @@ $this->localeNegotiator->addLanguageHeaders($request, $response);     // Content
 - **10.4.1**, constructors: `RpcYamlFileLoader` has a new optional trailing `iterable $routeImports`.
 - **10.4.2**, behaviour: REST calls (and any carrier other than `RpcFromHttp` that implements `IRpcHttpCarrier` or goes through `RpcExecutor`) now get `rpc.post_response`: cache relations and async/notification listeners start working for them. Every executed request of a process-mode batch gets it, not only the first one.
 - **10.4.2**, constructors (only if you create them manually): `InlineBatchStrategy` has new optional trailing `?RpcExecutor` and `?PostResponseQueue`; `SymfonyFlowListener` has a new optional trailing `?PostResponseQueue`.
+- **10.4.3**, documentation: a parameter converted by a convertor (enum, `DateTimeInterface`, `Uuid`, Doctrine entity) is described by its request type (e.g. `string|null` for a date instead of `object`). Methods that used to fail with such a parameter now execute.
 
 ## Known issues
 

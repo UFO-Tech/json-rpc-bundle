@@ -21,6 +21,8 @@ use Ufo\RpcObject\RPC\DTO;
 use Ufo\RpcObject\RPC\Param;
 use Ufo\RpcObject\RpcResponse;
 
+use function array_is_list;
+use function array_key_exists;
 use function array_map;
 use function array_unique;
 use function class_exists;
@@ -167,7 +169,13 @@ class ParamsConverterEventListener
 
     protected function convertParams(Service $service, array &$params): void
     {
+        // Positional params stay a list (unless the method has injected arguments): their key is the position.
+        $positional = array_is_list($params);
+        $position = 0;
         foreach ($service->getParams() as $paramName => $paramDefinition) {
+            $key = $positional ? $position++ : $paramName;
+            // Not passed: the method's own default applies.
+            if (!array_key_exists($key, $params)) continue;
             /** @var Param $paramAttribute */
             if ($paramAttribute = $paramDefinition->getAttributesCollection()->getAttribute(Param::class)) {
 
@@ -204,9 +212,9 @@ class ParamsConverterEventListener
                     );
                 };
 
-                $params[$paramName] = match (true) {
-                    $paramAttribute->isCollection() => array_map($process, $params[$paramName]),
-                    default => $process($params[$paramName]),
+                $params[$key] = match (true) {
+                    $paramAttribute->isCollection() => array_map($process, $params[$key]),
+                    default => $process($params[$key]),
                 };
             }
         }

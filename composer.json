@@ -44,7 +44,7 @@
     "symfony/process": "^7.2|^8.0",
     "ufo-tech/packages": "^1",
     "ufo-tech/dto-transformer": "^3.1",
-    "ufo-tech/rpc-objects": "^3.9.1",
+    "ufo-tech/rpc-objects": "^3.9.2",
     "ufo-tech/rpc-exceptions": "^2",
     "doctrine/persistence": ">=3.1",
     "phpdocumentor/reflection-docblock": ">=5.3",
