@@ -37,4 +37,8 @@ composer require ufo-tech/json-rpc-bundle
 
 ## Документація
 
-Встановлення, налаштування і використання: [документація JsonRpcBundle](https://docs.ufo-tech.space/bin/view/docs/JsonRpcBundle/?language=uk) на порталі [UFO-Tech](https://docs.ufo-tech.space/?language=uk).
+Встановлення, налаштування і використання: [документація JsonRpcBundle](https://ufo-tech.space/uk/docs/api/json-rpc-bundle) на [ufo-tech.space](https://ufo-tech.space/uk).
+
+## UFO-Tech
+
+[**ufo-tech.space**](https://ufo-tech.space/uk) — дім бібліотек UFO-Tech: документація й інструкції з інтеграції, матеріали про PHP, Symfony, JSON-RPC, API та сервісну архітектуру, практичні нотатки й кейси.

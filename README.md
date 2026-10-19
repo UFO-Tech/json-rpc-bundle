@@ -37,4 +37,8 @@ All versions with what was added and how to use it: [releases](releases/README.m
 
 ## Documentation
 
-Installation, configuration and usage: [JsonRpcBundle documentation](https://docs.ufo-tech.space/bin/view/docs/JsonRpcBundle/?language=en) on the [UFO-Tech](https://docs.ufo-tech.space/?language=en) portal.
+Installation, configuration and usage: [JsonRpcBundle documentation](https://ufo-tech.space/en/docs/api/json-rpc-bundle) on [ufo-tech.space](https://ufo-tech.space/en).
+
+## UFO-Tech
+
+[**ufo-tech.space**](https://ufo-tech.space/en) is the home of UFO-Tech libraries: documentation and integration guides, articles on PHP, Symfony, JSON-RPC, APIs and service architecture, practical notes and case studies.
