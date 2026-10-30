@@ -19,12 +19,14 @@ use Ufo\JsonRpcBundle\DependencyInjection\Async\AsyncTransportName;
 use Ufo\JsonRpcBundle\DependencyInjection\Attribute\RequiresExtension;
 use Ufo\JsonRpcBundle\Routing\IApiRouteImport;
 use Ufo\RpcError\RpcBadParamException;
+use Ufo\RpcObject\RpcAsyncRequest;
 
 use function array_diff_key;
 use function array_flip;
 use function is_null;
 use function ltrim;
 use function sprintf;
+use function trigger_deprecation;
 
 /**
  * This is the class that loads and manages your bundle configuration.
@@ -103,9 +105,12 @@ class UfoJsonRpcExtension extends Extension implements PrependExtensionInterface
         foreach ($asyncConfigs as $asyncConfig) {
             $type = $asyncConfig[RpcAsyncConfig::K_TYPE] ?? throw new RpcBadParamException('Invalid async transport config. Async transport type is not set');
             $builder = $builders[$type] ?? null;
+            $config = $asyncConfig[RpcAsyncConfig::K_CONFIG] ?? [];
+            if ($type === RpcAsyncConfig::DEFAULT_TYPE) {
+                $this->mapLegacyAsyncTransport($config, $builder !== null, $transports, $routs);
+            }
             if (!$builder) continue;
 
-            $config = $asyncConfig[RpcAsyncConfig::K_CONFIG] ?? [];
             $baseName = $config['name'] ?? RpcAsyncConfig::RPC_ASYNC;
             $dsn = $config['dsn'] ?? throw new RpcBadParamException(sprintf('Invalid async transport config. Async transport "%s" has no dsn', $baseName));
             $options = array_diff_key($config, array_flip(static::ASYNC_SERVICE_KEYS));
@@ -120,7 +125,7 @@ class UfoJsonRpcExtension extends Extension implements PrependExtensionInterface
                 $queues[$queue] = $name;
                 $transport = $builder->build(new AsyncTransportConfigDTO($name, $dsn, $options));
                 $transports[$name] = ['dsn' => $transport->dsn, 'options' => $transport->options];
-                if (isset($config['route'])) {
+                if (isset($config['route']) && $type !== RpcAsyncConfig::DEFAULT_TYPE) {
                     $routs[$config['route']][] = $name;
                 }
             }
@@ -134,6 +139,30 @@ class UfoJsonRpcExtension extends Extension implements PrependExtensionInterface
                 ],
             ]);
         }
+    }
+
+    /**
+     * Транспорт amqp, як його реєструвала 10.4: ім'я з config.name, DSN як є, маршрут RpcAsyncRequest.
+     *
+     * @throws RpcBadParamException
+     */
+    protected function mapLegacyAsyncTransport(array $config, bool $hasBuilder, array &$transports, array &$routs): void
+    {
+        $name = $config['name'] ?? RpcAsyncRequest::class;
+        if (AsyncTransportName::isTemplate($name)) {
+            return;
+        }
+        $transports[$name] = $config['dsn'] ?? throw new RpcBadParamException(sprintf('Invalid async transport config. Async transport "%s" has no dsn', $name));
+        $routs[$config['route'] ?? RpcAsyncRequest::class] = [$name];
+        if (!$hasBuilder && !$this->isProdEnvironment()) {
+            trigger_deprecation('ufo-tech/json-rpc-bundle', '10.5', 'Async transport "%s" gets no queue per API group and version: install "ufo-tech/component-transport-amqp".', $name);
+        }
+    }
+
+    protected function isProdEnvironment(): bool
+    {
+        return $this->container->hasParameter('kernel.environment')
+            && $this->container->getParameter('kernel.environment') === 'prod';
     }
 
     protected function removeServicesWithMissingExtensions(): void

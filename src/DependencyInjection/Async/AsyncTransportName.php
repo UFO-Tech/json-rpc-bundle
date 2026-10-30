@@ -15,10 +15,15 @@ final class AsyncTransportName
 
     public static function expand(string $name, string $group, string $version): string
     {
-        if (!str_contains($name, self::GROUP) && !str_contains($name, self::VERSION)) {
+        if (!self::isTemplate($name)) {
             return $name.self::SEPARATOR.$group.self::SEPARATOR.$version;
         }
 
         return strtr($name, [self::GROUP => $group, self::VERSION => $version]);
+    }
+
+    public static function isTemplate(string $name): bool
+    {
+        return str_contains($name, self::GROUP) || str_contains($name, self::VERSION);
     }
 }

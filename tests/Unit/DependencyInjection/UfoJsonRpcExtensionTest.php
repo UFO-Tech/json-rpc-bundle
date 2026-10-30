@@ -64,13 +64,104 @@ class UfoJsonRpcExtensionTest extends TestCase
         $messenger = $container->getExtensionConfig('framework')[0]['messenger'];
 
         $this->assertEqualsCanonicalizing(
-            ['rpc_async.general.v1', 'rpc_async.bfa.v1', 'rpc_async.bff.v1', 'rpc_async.bfa.v2'],
+            ['rpc_async', 'rpc_async.general.v1', 'rpc_async.bfa.v1', 'rpc_async.bff.v1', 'rpc_async.bfa.v2'],
             array_keys($messenger['transports'])
         );
         $this->assertSame([
             'dsn' => '%env(resolve:RPC_ASYNC_DSN)%',
             'options' => ['queue' => 'rpc-async.bfa.v2'],
         ], $messenger['transports']['rpc_async.bfa.v2']);
+    }
+
+    public function testAmqpKeepsTheTransportAndRouteOf104(): void
+    {
+        $container = new ContainerBuilder();
+        $container->prependExtensionConfig(RpcMainConfig::NAME, [
+            RpcAsyncConfig::NAME => [$this->asyncEntry('amqp', 'rpc_async')],
+        ]);
+
+        $this->extension()->prepend($container);
+        $messenger = $container->getExtensionConfig('framework')[0]['messenger'];
+
+        $this->assertSame('%env(resolve:RPC_ASYNC_DSN)%', $messenger['transports']['rpc_async']);
+        $this->assertSame([RpcAsyncRequest::class => ['rpc_async']], $messenger['routing']);
+    }
+
+    public function testAmqpWithoutNameKeepsTheDefaultNameOf104(): void
+    {
+        $container = new ContainerBuilder();
+        $container->prependExtensionConfig(RpcMainConfig::NAME, [
+            RpcAsyncConfig::NAME => [[RpcAsyncConfig::K_TYPE => 'amqp', RpcAsyncConfig::K_CONFIG => ['dsn' => 'amqp://h/%2f/q']]],
+        ]);
+
+        $this->extension()->prepend($container);
+        $messenger = $container->getExtensionConfig('framework')[0]['messenger'];
+
+        $this->assertSame([RpcAsyncRequest::class, 'rpc_async.general.v1'], array_keys($messenger['transports']));
+        $this->assertSame([RpcAsyncRequest::class => [RpcAsyncRequest::class]], $messenger['routing']);
+    }
+
+    public function testAmqpWithoutBuilderRegistersOnlyTheTransportOf104(): void
+    {
+        $container = $this->containerWithProcedures();
+        $container->prependExtensionConfig(RpcMainConfig::NAME, [
+            RpcAsyncConfig::NAME => [$this->asyncEntry('amqp', 'rpc_async')],
+        ]);
+
+        $this->expectUserDeprecationMessage('Since ufo-tech/json-rpc-bundle 10.5: Async transport "rpc_async" gets no queue per API group and version: install "ufo-tech/component-transport-amqp".');
+        $this->extension([])->prepend($container);
+        $messenger = $container->getExtensionConfig('framework')[0]['messenger'];
+
+        $this->assertSame(['rpc_async' => '%env(resolve:RPC_ASYNC_DSN)%'], $messenger['transports']);
+        $this->assertSame([RpcAsyncRequest::class => ['rpc_async']], $messenger['routing']);
+    }
+
+    public function testAmqpWithoutBuilderIsNotDeprecatedInProd(): void
+    {
+        $container = $this->containerWithProcedures();
+        $container->setParameter('kernel.environment', 'prod');
+        $container->prependExtensionConfig(RpcMainConfig::NAME, [
+            RpcAsyncConfig::NAME => [$this->asyncEntry('amqp', 'rpc_async')],
+        ]);
+
+        $deprecations = [];
+        set_error_handler(static function (int $level, string $message) use (&$deprecations): bool {
+            $deprecations[] = $message;
+            return true;
+        }, E_USER_DEPRECATED);
+        try {
+            $this->extension([])->prepend($container);
+        } finally {
+            restore_error_handler();
+        }
+
+        $this->assertSame([], $deprecations);
+        $this->assertSame(['rpc_async' => '%env(resolve:RPC_ASYNC_DSN)%'], $container->getExtensionConfig('framework')[0]['messenger']['transports']);
+    }
+
+    public function testKafkaWithoutBuilderIsIgnored(): void
+    {
+        $container = new ContainerBuilder();
+        $container->prependExtensionConfig(RpcMainConfig::NAME, [
+            RpcAsyncConfig::NAME => [$this->asyncEntry('kafka', 'rpc_async-kafka')],
+        ]);
+
+        $this->extension([])->prepend($container);
+
+        $this->assertSame([], $container->getExtensionConfig('framework'));
+    }
+
+    public function testKafkaHasNoTransportOf104(): void
+    {
+        $container = new ContainerBuilder();
+        $container->prependExtensionConfig(RpcMainConfig::NAME, [
+            RpcAsyncConfig::NAME => [$this->asyncEntry('kafka', 'rpc_async-kafka')],
+        ]);
+
+        $this->extension()->prepend($container);
+        $messenger = $container->getExtensionConfig('framework')[0]['messenger'];
+
+        $this->assertSame(['rpc_async-kafka.general.v1'], array_keys($messenger['transports']));
         $this->assertSame([], $messenger['routing']);
     }
 
@@ -102,18 +193,31 @@ class UfoJsonRpcExtensionTest extends TestCase
         $this->assertSame(['queue' => 'rpc-async.general.v1', 'auto_setup' => false], $transport['options']);
     }
 
-    public function testRouteGoesToEveryTransportOfTheEntry(): void
+    public function testAmqpRouteGoesToTheTransportOf104(): void
     {
         $container = $this->containerWithProcedures();
         $container->prependExtensionConfig(RpcMainConfig::NAME, [
-            RpcAsyncConfig::NAME => [$this->asyncEntry('amqp', 'rpc_async', ['route' => RpcAsyncRequest::class])],
+            RpcAsyncConfig::NAME => [$this->asyncEntry('amqp', 'rpc_async', ['route' => 'App\\Message\\Ping'])],
+        ]);
+
+        $this->extension()->prepend($container);
+        $messenger = $container->getExtensionConfig('framework')[0]['messenger'];
+
+        $this->assertSame(['App\\Message\\Ping' => ['rpc_async']], $messenger['routing']);
+        $this->assertArrayNotHasKey('route', $messenger['transports']['rpc_async.general.v1']['options']);
+    }
+
+    public function testRouteOfOtherTypeGoesToEveryTransportOfTheEntry(): void
+    {
+        $container = $this->containerWithProcedures();
+        $container->prependExtensionConfig(RpcMainConfig::NAME, [
+            RpcAsyncConfig::NAME => [$this->asyncEntry('kafka', 'rpc_async-kafka', ['route' => RpcAsyncRequest::class])],
         ]);
 
         $this->extension()->prepend($container);
         $messenger = $container->getExtensionConfig('framework')[0]['messenger'];
 
         $this->assertEqualsCanonicalizing(array_keys($messenger['transports']), $messenger['routing'][RpcAsyncRequest::class]);
-        $this->assertArrayNotHasKey('route', $messenger['transports']['rpc_async.general.v1']['options']);
     }
 
     public function testTransportsSharingAQueueAreRefused(): void
@@ -184,27 +288,40 @@ class UfoJsonRpcExtensionTest extends TestCase
         $this->assertSame(RpcMainConfig::NAME, (new UfoJsonRpcExtension())->getAlias());
     }
 
-    private function extension(): UfoJsonRpcExtension
+    /** @param list<string> $types */
+    private function extension(array $types = ['amqp', 'kafka']): UfoJsonRpcExtension
     {
-        return new class extends UfoJsonRpcExtension {
+        $builders = [];
+        foreach ($types as $type) {
+            $builders[$type] = new class($type) implements AsyncTransportConfigBuilderInterface {
+                public function __construct(private string $type) {}
+
+                public function getType(): string
+                {
+                    return $this->type;
+                }
+
+                public function getQueueName(string $transportName): string
+                {
+                    return str_replace('_', '-', $transportName);
+                }
+
+                public function build(AsyncTransportConfigDTO $config): AsyncTransportConfigDTO
+                {
+                    return new AsyncTransportConfigDTO($config->name, $config->dsn, ['queue' => $this->getQueueName($config->name)] + $config->options);
+                }
+            };
+        }
+
+        return new class($builders) extends UfoJsonRpcExtension {
+            public function __construct(private array $builders)
+            {
+                parent::__construct();
+            }
+
             protected function getAsyncConfigBuilders(): array
             {
-                return ['amqp' => new class implements AsyncTransportConfigBuilderInterface {
-                    public function getType(): string
-                    {
-                        return 'amqp';
-                    }
-
-                    public function getQueueName(string $transportName): string
-                    {
-                        return str_replace('_', '-', $transportName);
-                    }
-
-                    public function build(AsyncTransportConfigDTO $config): AsyncTransportConfigDTO
-                    {
-                        return new AsyncTransportConfigDTO($config->name, $config->dsn, ['queue' => $this->getQueueName($config->name)] + $config->options);
-                    }
-                }];
+                return $this->builders;
             }
         };
     }
