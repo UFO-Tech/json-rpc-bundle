@@ -8,16 +8,23 @@ use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface;
 use Symfony\Component\DependencyInjection\Extension\Extension;
 use Symfony\Component\DependencyInjection\Loader;
+use Ufo\Component\TransportContracts\AsyncTransportConfigBuilderInterface;
+use Ufo\Component\TransportContracts\AsyncTransportConfigBuilders;
+use Ufo\Component\TransportContracts\AsyncTransportConfigDTO;
 use Ufo\JsonRpcBundle\ConfigService\RpcAsyncConfig;
 use Ufo\JsonRpcBundle\ConfigService\RpcCacheConfig;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
+use Ufo\JsonRpcBundle\DependencyInjection\Async\ApiPairs;
+use Ufo\JsonRpcBundle\DependencyInjection\Async\AsyncTransportName;
 use Ufo\JsonRpcBundle\DependencyInjection\Attribute\RequiresExtension;
 use Ufo\JsonRpcBundle\Routing\IApiRouteImport;
 use Ufo\RpcError\RpcBadParamException;
-use Ufo\RpcObject\RpcAsyncRequest;
 
+use function array_diff_key;
+use function array_flip;
 use function is_null;
 use function ltrim;
+use function sprintf;
 
 /**
  * This is the class that loads and manages your bundle configuration.
@@ -26,9 +33,7 @@ use function ltrim;
  */
 class UfoJsonRpcExtension extends Extension implements PrependExtensionInterface
 {
-    public const array ALLOWED_MESSENGER_PROTOCOLS = [
-        RpcAsyncConfig::DEFAULT_TYPE
-    ];
+    protected const array ASYNC_SERVICE_KEYS = ['name', 'dsn', 'route'];
 
     /**
      * @var ?ContainerBuilder
@@ -84,22 +89,43 @@ class UfoJsonRpcExtension extends Extension implements PrependExtensionInterface
     }
 
     /**
-     * @param array{type:string, config:array<string,string>} $asyncConfigs
+     * Транспорт Messenger на кожну пару (група, версія) для кожного запису async, що має адаптер свого типу.
+     *
+     * @param array{type:string, config:array<string,mixed>} $asyncConfigs
      * @return void
      * @throws RpcBadParamException
      */
     protected function mapAsyncTransportParams(array $asyncConfigs): void
     {
-        $transports = $routs = [];
+        $builders = $this->getAsyncConfigBuilders();
+        $pairs = null;
+        $transports = $routs = $queues = [];
         foreach ($asyncConfigs as $asyncConfig) {
-            $protocol = $asyncConfig[RpcAsyncConfig::K_TYPE] ?? throw new RpcBadParamException('Invalid async transport config. Async transport type is not set');
-            if (!in_array($protocol, static::ALLOWED_MESSENGER_PROTOCOLS)) continue;
-            $config = $asyncConfig[RpcAsyncConfig::K_CONFIG];
-            $route = $config['route'] ?? $this->getRoute($asyncConfig[RpcAsyncConfig::K_TYPE]);
-            $name = $config['name'] ?? RpcAsyncRequest::class;
-            $transports[$name] = $config['dsn'];
-            $routs[$route] = $name;
+            $type = $asyncConfig[RpcAsyncConfig::K_TYPE] ?? throw new RpcBadParamException('Invalid async transport config. Async transport type is not set');
+            $builder = $builders[$type] ?? null;
+            if (!$builder) continue;
+
+            $config = $asyncConfig[RpcAsyncConfig::K_CONFIG] ?? [];
+            $baseName = $config['name'] ?? RpcAsyncConfig::RPC_ASYNC;
+            $dsn = $config['dsn'] ?? throw new RpcBadParamException(sprintf('Invalid async transport config. Async transport "%s" has no dsn', $baseName));
+            $options = array_diff_key($config, array_flip(static::ASYNC_SERVICE_KEYS));
+            $pairs ??= ApiPairs::fromContainer($this->container);
+
+            foreach ($pairs as [$group, $version]) {
+                $name = AsyncTransportName::expand($baseName, $group, $version);
+                $queue = $builder->getQueueName($name);
+                if (isset($queues[$queue]) || isset($transports[$name])) {
+                    throw new RpcBadParamException(sprintf('Async transports "%s" and "%s" use the same name or queue "%s"', $queues[$queue] ?? $name, $name, $queue));
+                }
+                $queues[$queue] = $name;
+                $transport = $builder->build(new AsyncTransportConfigDTO($name, $dsn, $options));
+                $transports[$name] = ['dsn' => $transport->dsn, 'options' => $transport->options];
+                if (isset($config['route'])) {
+                    $routs[$config['route']][] = $name;
+                }
+            }
         }
+
         if (!empty($transports)) {
             $this->container->prependExtensionConfig('framework', [
                 'messenger' => [
@@ -140,16 +166,12 @@ class UfoJsonRpcExtension extends Extension implements PrependExtensionInterface
         }
     }
 
-    protected function getRoute(string $type): string
+    /**
+     * @return array<string, AsyncTransportConfigBuilderInterface> ключ — тип транспорту
+     */
+    protected function getAsyncConfigBuilders(): array
     {
-        return $this->getRouteMapper()[$type] ?? RpcAsyncRequest::class;
-    }
-
-    protected function getRouteMapper(): array
-    {
-        return [
-            'amqp'=> RpcAsyncRequest::class
-        ];
+        return AsyncTransportConfigBuilders::discover();
     }
 
     public function getAlias(): string

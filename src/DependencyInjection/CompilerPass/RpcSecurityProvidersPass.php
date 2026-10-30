@@ -13,6 +13,7 @@ use Ufo\JsonRpcBundle\Security\Interfaces\ITokenValidator;
 use Ufo\JsonRpcBundle\Security\SimpleTokenValidator;
 use Ufo\JsonRpcBundle\Security\TokenValidatorRegistry;
 use Ufo\JsonRpcBundle\ConfigService\RpcSecurityProviderConfig;
+use Ufo\JsonRpcBundle\Server\ApiGroupContext;
 
 class RpcSecurityProvidersPass implements CompilerPassInterface
 {
@@ -42,6 +43,7 @@ class RpcSecurityProvidersPass implements CompilerPassInterface
                 throw new InvalidArgumentException('RPC token provider "'.$name.'" must implement '.ITokenValidator::class.'.');
             }
             foreach ($provider->apiGroups as $group) {
+                ApiGroupContext::validateGroup($group);
                 if (isset($validators[$group])) {
                     throw new InvalidArgumentException('Multiple RPC token providers configured for API group "'.$group.'".');
                 }

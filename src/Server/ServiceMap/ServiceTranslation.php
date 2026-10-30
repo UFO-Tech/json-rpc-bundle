@@ -3,11 +3,11 @@
 namespace Ufo\JsonRpcBundle\Server\ServiceMap;
 
 use Ufo\DTO\ArrayConstructibleTrait;
-use Ufo\DTO\Interfaces\IArrayConstructible;
-use Ufo\DTO\Interfaces\IArrayConvertible;
+use Ufo\DTO\Contract\ArrayConstructibleInterface;
+use Ufo\DTO\Contract\ArrayConvertibleInterface;
 use Ufo\DTO\SmartArrayConvertibleTrait;
 
-class ServiceTranslation implements IArrayConvertible, IArrayConstructible
+class ServiceTranslation implements ArrayConvertibleInterface, ArrayConstructibleInterface
 {
     use SmartArrayConvertibleTrait, ArrayConstructibleTrait;
 

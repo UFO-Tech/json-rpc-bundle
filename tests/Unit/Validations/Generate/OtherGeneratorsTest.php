@@ -6,8 +6,9 @@ namespace Ufo\JsonRpcBundle\Tests\Unit\Validations\Generate;
 
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Validator\Constraints as Assert;
-use Ufo\DTO\Helpers\EnumResolver;
+use Ufo\DTO\Schema\Enum\EnumResolver;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\EnumProcessor\EnumsHolder;
+use Ufo\JsonRpcBundle\Tests\Unit\MockBackedEnum;
 use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Enums\CompositeConstraintType;
 use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\IsChoice;
 use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\IsCollection;
@@ -33,6 +34,17 @@ class OtherGeneratorsTest extends TestCase
 
         $this->assertSame(Assert\Choice::class, $generator->getSupportedClass());
         $this->assertSame('string', $rules['type']);
+        $this->assertSame(['a', 'b'], $rules[EnumResolver::ENUM_KEY]);
+    }
+
+    public function testIsChoiceWithEnumCallbackDescribesTheEnum(): void
+    {
+        $generator = new IsChoice(new EnumsHolder());
+        $rules = ['type' => 'string'];
+
+        $generator->generate(new Assert\Choice(callback: [MockBackedEnum::class, 'cases']), $rules);
+
+        $this->assertSame('MockBackedEnum', $rules[EnumResolver::ENUM][EnumResolver::ENUM_NAME]);
         $this->assertSame(['a', 'b'], $rules[EnumResolver::ENUM_KEY]);
     }
 

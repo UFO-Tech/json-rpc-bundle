@@ -34,6 +34,8 @@ use Ufo\JsonRpcBundle\Server\ServiceMap\IServiceHolder;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\Fillers\ChainServiceFiller;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\Fillers\IServiceFiller;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\UfoReflectionProcedure;
+use Ufo\JsonRpcBundle\Server\ServiceMap\SchemaNames;
+use Ufo\JsonRpcBundle\Server\ServiceMap\SchemaNamesCollector;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\JsonRpcBundle\Server\ServiceMap\ServiceTranslation;
 use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Generator;
@@ -65,6 +67,7 @@ use function is_string;
 use function is_subclass_of;
 use function preg_match;
 use function rtrim;
+use function spl_object_id;
 use function usort;
 
 class RpcServiceMapPass implements CompilerPassInterface
@@ -153,6 +156,10 @@ class RpcServiceMapPass implements CompilerPassInterface
             $this->processServiceMap($refClass);
         }
 
+        SchemaNames::assertUnique(
+            (new SchemaNamesCollector($this->compileParamConvertor()))->collect($this->allServices())
+        );
+
         $this->registration(IServiceHolder::LOCATOR, $rpcClassRef);
         $this->registration(IServiceHolder::ARG_LOCATOR, $methodLocators);
         $this->container->setParameter(IServiceHolder::MAP, $this->getServicesForMap());
@@ -169,6 +176,19 @@ class RpcServiceMapPass implements CompilerPassInterface
             $this->getLocales(),
         ])));
         DTOTransformer::reset();
+    }
+
+    /** @return Service[] усі сервіси всіх API-груп без повторів */
+    protected function allServices(): array
+    {
+        $services = [];
+        foreach ([$this->serviceMap, ...array_values($this->groupMaps)] as $map) {
+            foreach ($map as $service) {
+                $services[spl_object_id($service)] = $service;
+            }
+        }
+
+        return array_values($services);
     }
 
     /**
@@ -577,6 +597,7 @@ class RpcServiceMapPass implements CompilerPassInterface
             $methodGroups = $refClass->getMethod($service->getMethodName())->getAttributes(APIGroups::class)[0] ?? null;
             $groups = ($methodGroups ?? $classGroups)?->newInstance() ?? new APIGroups();
             foreach ($groups->groups as $group) {
+                ApiGroupContext::validateGroup($group);
                 $name = $service->name . ':' . $service->apiClassInfo->version;
                 $existing = $this->groupMaps[$group][$name] ?? null;
                 if ($existing && !is_subclass_of($service->getProcedureFQCN(), $existing->getProcedureFQCN())) {

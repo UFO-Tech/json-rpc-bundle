@@ -9,7 +9,7 @@ use Stringable;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 use Throwable;
 use Ufo\JsonRpcBundle\DependencyInjection\Attribute\RequiresExtension;
-use Ufo\DTO\Helpers\TypeHintResolver;
+use Ufo\DTO\Schema\Type\TypeHintResolver;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
 use Ufo\RpcObject\RPC\Param;
 

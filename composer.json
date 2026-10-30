@@ -43,9 +43,10 @@
     "symfony/http-client": "^7.2|^8.0",
     "symfony/process": "^7.2|^8.0",
     "ufo-tech/packages": "^1",
-    "ufo-tech/dto-transformer": "^3.1",
+    "ufo-tech/dto-transformer": "^4.0",
     "ufo-tech/rpc-objects": "^3.9.2",
     "ufo-tech/rpc-exceptions": "^2",
+    "ufo-tech/component-transport-contracts": "^1.1",
     "doctrine/persistence": ">=3.1",
     "phpdocumentor/reflection-docblock": ">=5.3",
     "ramsey/uuid": "^4",
@@ -53,6 +54,10 @@
   },
   "require-dev": {
     "phpunit/phpunit": "^11.5"
+  },
+  "suggest": {
+    "ufo-tech/component-transport-amqp": "async RPC requests through RabbitMQ (type: amqp)",
+    "ufo-tech/component-transport-kafka": "async RPC requests through Kafka (type: kafka)"
   },
   "autoload": {
     "psr-4": {

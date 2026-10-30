@@ -3,7 +3,7 @@
 namespace Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\EnumProcessor;
 
 use ReflectionException;
-use Ufo\DTO\Helpers\EnumResolver;
+use Ufo\DTO\Schema\Enum\EnumResolver;
 
 class EnumsHolder
 {

@@ -6,8 +6,8 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Throwable;
 use Ufo\DTO\DTOTransformer;
 use Ufo\DTO\Exceptions\BadParamException;
-use Ufo\DTO\Helpers\EnumResolver;
-use Ufo\DTO\Helpers\TypeHintResolver;
+use Ufo\DTO\Schema\Enum\EnumResolver;
+use Ufo\DTO\Schema\Type\TypeHintResolver;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcEvent;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcPreExecuteEvent;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcPreResponseEvent;
@@ -24,13 +24,16 @@ use Ufo\RpcObject\RpcResponse;
 
 use function array_is_list;
 use function array_key_exists;
+use function array_map;
 use function array_unique;
 use function class_exists;
 use function count;
+use function enum_exists;
 use function interface_exists;
 use function is_array;
 use function is_bool;
 use function is_object;
+use function is_string;
 use function str_starts_with;
 
 #[AsEventListener(RpcEvent::PRE_EXECUTE, method: 'dataToDTOTransform', priority: 1000)]
@@ -118,6 +121,8 @@ class ParamsConverterEventListener
             foreach ($service->getParamsDto() as $paramName => $paramDtoCollection) {
                 $result = $event->params[$paramName] ?? null;
                 $errors = [];
+                $converted = [];
+                $depth = $this->collectionDepth($service, $paramName);
 
                 foreach ($paramDtoCollection as $paramDto) {
                     if (!is_array($event->params[$paramName])) continue;
@@ -136,13 +141,14 @@ class ParamsConverterEventListener
                     }
 
                     foreach ($event->params[$paramName] ?? [] as $key => $item) {
-                        if (is_object($result[$key] ?? null)) {
+                        if (isset($converted[$key]) || is_object($result[$key] ?? null)) {
                             unset($errors[$paramName][$key]);
                             continue;
                         }
 
                         try {
-                            $result[$key] = $this->transformSingleObject($dtoClass, $item);
+                            $result[$key] = $this->transformNested($dtoClass, $item, $depth - 1);
+                            $converted[$key] = true;
                             unset($errors[$paramName][$key]);
                         } catch (Throwable $exception) {
                             $errors[$paramName][$key][] = ValidateParamsListener::normalizeMessage($exception->getMessage());
@@ -164,6 +170,46 @@ class ParamsConverterEventListener
             ));
             $event->stopPropagation();
         }
+    }
+
+    /** Скільки рівнів масиву лежить над DTO в типі параметра: PointDto[] — 1, PointDto[][] — 2. */
+    protected function collectionDepth(Service $service, string $paramName): int
+    {
+        $param = $service->getParams()[$paramName] ?? null;
+        if (!$param?->paramItems) {
+            return 1;
+        }
+        $schema = TypeHintResolver::typeDescriptionToJsonSchema($param->paramItems, $service->uses);
+        $depth = 0;
+        while (true) {
+            foreach ($schema[TypeHintResolver::ONE_OFF] ?? [] as $variant) {
+                if (($variant[TypeHintResolver::TYPE] ?? null) !== TypeHintResolver::NULL->value) {
+                    $schema = $variant;
+                    break;
+                }
+            }
+            $next = $schema[TypeHintResolver::ITEMS] ?? $schema[TypeHintResolver::ADDITIONAL_PROPERTIES] ?? null;
+            if (!is_array($next)) {
+                break;
+            }
+            $schema = $next;
+            $depth++;
+        }
+
+        return max(1, $depth);
+    }
+
+    /** @throws BadParamException */
+    protected function transformNested(string $dtoClass, mixed $data, int $depth): mixed
+    {
+        if ($depth <= 0) {
+            return $this->transformSingleObject($dtoClass, $data);
+        }
+        if (!is_array($data)) {
+            throw new BadParamException('Invalid Data for create collection of "' . $dtoClass . '". Data must be an array');
+        }
+
+        return array_map(fn (mixed $item): mixed => $this->transformNested($dtoClass, $item, $depth - 1), $data);
     }
 
     protected function transformSingleObject(string $dtoClass, mixed $data): object
@@ -203,16 +249,12 @@ class ParamsConverterEventListener
                     TypeHintResolver::filterSchema(
                         $paramDefinition->getType(),
                         function (array $schemaItem) use ($paramDefinition, &$classFQCN, $service) {
-                            if (
-                                $classFQCN
-                                || !($name = $schemaItem[EnumResolver::ENUM][EnumResolver::ENUM_NAME] ?? false)
-                            ) return;
+                            if ($classFQCN || !($name = $schemaItem[EnumResolver::ENUM][EnumResolver::ENUM_NAME] ?? false)) return;
 
-                            $classFQCN = EnumResolver::getEnumFQCN(
-                                TypeHintResolver::typeWithNamespaceOrDefault(
-                                    $name, $service->uses
-                                ) ?? ''
-                            );
+                            $fromSchema = $schemaItem[TypeHintResolver::CLASS_FQCN] ?? null;
+                            $classFQCN = is_string($fromSchema) && enum_exists($fromSchema)
+                                ? $fromSchema
+                                : EnumResolver::getEnumFQCN(TypeHintResolver::typeWithNamespaceOrDefault($name, $service->uses) ?? '');
                         }
                     );
 

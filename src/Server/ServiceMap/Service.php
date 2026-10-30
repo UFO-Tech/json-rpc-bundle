@@ -10,9 +10,9 @@ use Ufo\DTO\SmartArrayConvertibleTrait;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\DtoReflector;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
 use Ufo\RpcError\RpcInternalException;
-use Ufo\DTO\Interfaces\IArrayConstructible;
-use Ufo\DTO\Interfaces\IArrayConvertible;
-use Ufo\DTO\Helpers\TypeHintResolver;
+use Ufo\DTO\Contract\ArrayConstructibleInterface;
+use Ufo\DTO\Contract\ArrayConvertibleInterface;
+use Ufo\DTO\Schema\Type\TypeHintResolver;
 use Ufo\RpcObject\RPC\AssertionsCollection;
 use Ufo\RpcObject\RPC\DTO;
 use Ufo\RpcObject\RPC\Info;
@@ -23,7 +23,7 @@ use function implode;
 use function is_array;
 use function json_encode;
 
-class Service implements IArrayConvertible, IArrayConstructible
+class Service implements ArrayConvertibleInterface, ArrayConstructibleInterface
 {
     use JsonSerializableTrait, SmartArrayConvertibleTrait;
 

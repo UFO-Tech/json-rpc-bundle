@@ -4,10 +4,14 @@ namespace Ufo\JsonRpcBundle\Tests\Unit\DependencyInjection;
 
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Ufo\Component\TransportContracts\AsyncTransportConfigBuilderInterface;
+use Ufo\Component\TransportContracts\AsyncTransportConfigDTO;
 use Ufo\JsonRpcBundle\ConfigService\RpcAsyncConfig;
 use Ufo\JsonRpcBundle\ConfigService\RpcCacheConfig;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\DependencyInjection\UfoJsonRpcExtension;
+use Ufo\JsonRpcBundle\Tests\Fixtures\Procedures\GroupedProcedure;
+use Ufo\JsonRpcBundle\Tests\Fixtures\Procedures\GroupedV2Procedure;
 use Ufo\RpcError\RpcBadParamException;
 use Ufo\RpcObject\RpcAsyncRequest;
 
@@ -49,38 +53,98 @@ class UfoJsonRpcExtensionTest extends TestCase
         }
     }
 
-    public function testPrependMapsAllowedAsyncTransportToFrameworkMessenger(): void
+    public function testPrependRegistersTransportForEveryGroupAndVersion(): void
     {
-        $extension = new UfoJsonRpcExtension();
-        $container = new ContainerBuilder();
+        $container = $this->containerWithProcedures();
         $container->prependExtensionConfig(RpcMainConfig::NAME, [
-            RpcAsyncConfig::NAME => [[
-                RpcAsyncConfig::K_TYPE => 'amqp',
-                RpcAsyncConfig::K_CONFIG => [
-                    'name' => 'rpc_async',
-                    'dsn' => 'amqp://guest:guest@127.0.0.1:5672/%2f/messages',
-                ],
-            ]],
+            RpcAsyncConfig::NAME => [$this->asyncEntry('amqp', 'rpc_async')],
         ]);
 
-        $extension->prepend($container);
-        $frameworkConfigs = $container->getExtensionConfig('framework');
+        $this->extension()->prepend($container);
+        $messenger = $container->getExtensionConfig('framework')[0]['messenger'];
 
-        $this->assertNotEmpty($frameworkConfigs);
-        $messenger = $frameworkConfigs[0]['messenger'];
-        $this->assertSame(
-            'amqp://guest:guest@127.0.0.1:5672/%2f/messages',
-            $messenger['transports']['rpc_async']
+        $this->assertEqualsCanonicalizing(
+            ['rpc_async.general.v1', 'rpc_async.bfa.v1', 'rpc_async.bff.v1', 'rpc_async.bfa.v2'],
+            array_keys($messenger['transports'])
         );
+        $this->assertSame([
+            'dsn' => '%env(resolve:RPC_ASYNC_DSN)%',
+            'options' => ['queue' => 'rpc-async.bfa.v2'],
+        ], $messenger['transports']['rpc_async.bfa.v2']);
+        $this->assertSame([], $messenger['routing']);
+    }
+
+    public function testPlaceholdersInNameReplaceTheSuffix(): void
+    {
+        $container = new ContainerBuilder();
+        $container->prependExtensionConfig(RpcMainConfig::NAME, [
+            RpcAsyncConfig::NAME => [$this->asyncEntry('amqp', 'rpc_{version}_{group}')],
+        ]);
+
+        $this->extension()->prepend($container);
+
         $this->assertSame(
-            'rpc_async',
-            $messenger['routing'][RpcAsyncRequest::class]
+            ['rpc_v1_general'],
+            array_keys($container->getExtensionConfig('framework')[0]['messenger']['transports'])
         );
     }
 
-    public function testPrependIgnoresNotAllowedProtocols(): void
+    public function testExtraConfigKeysBecomeTransportOptions(): void
     {
-        $extension = new UfoJsonRpcExtension();
+        $container = new ContainerBuilder();
+        $container->prependExtensionConfig(RpcMainConfig::NAME, [
+            RpcAsyncConfig::NAME => [$this->asyncEntry('amqp', 'rpc_async', ['auto_setup' => false])],
+        ]);
+
+        $this->extension()->prepend($container);
+        $transport = $container->getExtensionConfig('framework')[0]['messenger']['transports']['rpc_async.general.v1'];
+
+        $this->assertSame(['queue' => 'rpc-async.general.v1', 'auto_setup' => false], $transport['options']);
+    }
+
+    public function testRouteGoesToEveryTransportOfTheEntry(): void
+    {
+        $container = $this->containerWithProcedures();
+        $container->prependExtensionConfig(RpcMainConfig::NAME, [
+            RpcAsyncConfig::NAME => [$this->asyncEntry('amqp', 'rpc_async', ['route' => RpcAsyncRequest::class])],
+        ]);
+
+        $this->extension()->prepend($container);
+        $messenger = $container->getExtensionConfig('framework')[0]['messenger'];
+
+        $this->assertEqualsCanonicalizing(array_keys($messenger['transports']), $messenger['routing'][RpcAsyncRequest::class]);
+        $this->assertArrayNotHasKey('route', $messenger['transports']['rpc_async.general.v1']['options']);
+    }
+
+    public function testTransportsSharingAQueueAreRefused(): void
+    {
+        $container = new ContainerBuilder();
+        $container->prependExtensionConfig(RpcMainConfig::NAME, [
+            RpcAsyncConfig::NAME => [$this->asyncEntry('amqp', 'rpc_async'), $this->asyncEntry('amqp', 'rpc-async')],
+        ]);
+
+        $this->expectException(RpcBadParamException::class);
+        $this->expectExceptionMessage('rpc-async.general.v1');
+
+        $this->extension()->prepend($container);
+    }
+
+    public function testTransportWithoutDsnIsRefused(): void
+    {
+        $container = new ContainerBuilder();
+        $container->prependExtensionConfig(RpcMainConfig::NAME, [
+            RpcAsyncConfig::NAME => [[RpcAsyncConfig::K_TYPE => 'amqp', RpcAsyncConfig::K_CONFIG => ['name' => 'rpc_async']]],
+        ]);
+
+        $this->expectException(RpcBadParamException::class);
+        $this->expectExceptionMessage('"rpc_async" has no dsn');
+
+        $this->extension()->prepend($container);
+    }
+
+    public function testPrependIgnoresTypesWithoutBuilder(): void
+    {
+        $extension = $this->extension();
         $container = new ContainerBuilder();
         $container->prependExtensionConfig(RpcMainConfig::NAME, [
             RpcAsyncConfig::NAME => [[
@@ -99,7 +163,7 @@ class UfoJsonRpcExtensionTest extends TestCase
 
     public function testMapAsyncTransportParamsThrowsWhenTypeIsMissing(): void
     {
-        $extension = new UfoJsonRpcExtension();
+        $extension = $this->extension();
         $container = new ContainerBuilder();
         $this->setProtectedProperty($extension, 'container', $container);
 
@@ -115,17 +179,51 @@ class UfoJsonRpcExtensionTest extends TestCase
         ]]);
     }
 
-    public function testAliasAndRouteHelpers(): void
+    public function testAlias(): void
     {
-        $extension = new UfoJsonRpcExtension();
+        $this->assertSame(RpcMainConfig::NAME, (new UfoJsonRpcExtension())->getAlias());
+    }
 
-        $this->assertSame(RpcMainConfig::NAME, $extension->getAlias());
+    private function extension(): UfoJsonRpcExtension
+    {
+        return new class extends UfoJsonRpcExtension {
+            protected function getAsyncConfigBuilders(): array
+            {
+                return ['amqp' => new class implements AsyncTransportConfigBuilderInterface {
+                    public function getType(): string
+                    {
+                        return 'amqp';
+                    }
 
-        $method = new \ReflectionMethod($extension, 'getRoute');
-        $method->setAccessible(true);
+                    public function getQueueName(string $transportName): string
+                    {
+                        return str_replace('_', '-', $transportName);
+                    }
 
-        $this->assertSame(RpcAsyncRequest::class, $method->invoke($extension, 'amqp'));
-        $this->assertSame(RpcAsyncRequest::class, $method->invoke($extension, 'unknown'));
+                    public function build(AsyncTransportConfigDTO $config): AsyncTransportConfigDTO
+                    {
+                        return new AsyncTransportConfigDTO($config->name, $config->dsn, ['queue' => $this->getQueueName($config->name)] + $config->options);
+                    }
+                }];
+            }
+        };
+    }
+
+    private function containerWithProcedures(): ContainerBuilder
+    {
+        $container = new ContainerBuilder();
+        $container->register(GroupedProcedure::class, GroupedProcedure::class);
+        $container->register(GroupedV2Procedure::class, GroupedV2Procedure::class);
+
+        return $container;
+    }
+
+    private function asyncEntry(string $type, string $name, array $extra = []): array
+    {
+        return [
+            RpcAsyncConfig::K_TYPE => $type,
+            RpcAsyncConfig::K_CONFIG => ['name' => $name, 'dsn' => '%env(resolve:RPC_ASYNC_DSN)%', ...$extra],
+        ];
     }
 
     private function setProtectedProperty(object $object, string $property, mixed $value): void

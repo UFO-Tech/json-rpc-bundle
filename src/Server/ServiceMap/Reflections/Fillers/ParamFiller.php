@@ -10,10 +10,10 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Ufo\JsonRpcBundle\ParamConvertors\ChainParamConvertor;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
-use Ufo\DTO\Helpers\TypeHintResolver as T;
+use Ufo\DTO\Schema\Type\TypeHintResolver as T;
 use Ufo\RpcObject\RPC\IgnoreApi;
 use Ufo\RpcObject\RPC\Param;
-use Ufo\DTO\Helpers\EnumResolver;
+use Ufo\DTO\Schema\Enum\EnumResolver;
 
 #[AutoconfigureTag(IServiceFiller::TAG, ['priority' => 101])]
 class ParamFiller extends AbstractServiceFiller

@@ -98,6 +98,26 @@ class ApiGroupsTest extends KernelTestCase
         }
     }
 
+    public function testGroupNameWithUnderscoreAndDigitServesRpcAndDocs(): void
+    {
+        self::bootKernel();
+        $router = self::getContainer()->get('router');
+        self::assertSame('/rpc/internal-dev-2', $router->generate('internal_dev_2_'.ApiController::API_ROUTE));
+        self::assertSame('internal_dev_2', $router->match('/rpc/internal-dev-2')['api_group']);
+
+        self::assertSame('internal_dev_2', $this->request('/rpc/internal-dev-2', 'POST', 'internal.status')[1]['result']);
+        self::assertSame(-32601, $this->request('/rpc', 'POST', 'internal.status')[1]['error']['code']);
+
+        [$status, $doc] = $this->request('/rpc/internal-dev-2');
+        self::assertSame(200, $status);
+        self::assertSame(['internal.status'], array_column($doc['methods'], 'name'));
+        self::assertSame('http://localhost/rpc/internal-dev-2', $doc['servers'][0]['url']);
+
+        [$status, $postman] = $this->request('/rpc/internal-dev-2/postman');
+        self::assertSame(200, $status);
+        self::assertStringContainsString('[internal_dev_2]', $postman['info']['name']);
+    }
+
     public function testGroupTranslationsOverrideBaseInOpenRpc(): void
     {
         $dir = dirname(__DIR__).'/Fixtures/rpc_translations';

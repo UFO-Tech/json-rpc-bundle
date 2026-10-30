@@ -9,7 +9,7 @@ use DateTime;
 use DateTimeImmutable;
 use DateTimeInterface;
 use Throwable;
-use Ufo\DTO\Helpers\TypeHintResolver;
+use Ufo\DTO\Schema\Type\TypeHintResolver;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
 use Ufo\RpcError\RpcBadParamException;
 use Ufo\RpcObject\RPC\Param;
@@ -18,7 +18,7 @@ use function in_array;
 
 class DateTimeConverter implements IParamConvertor
 {
-    const string DEFAULT_FORMAT = 'Y-m-d H:i:s';
+    const string DEFAULT_FORMAT = DateTimeInterface::ATOM;
     protected const array SUPPORTS_MAP = [
         DateTimeImmutable::class,
         DateTime::class,
@@ -28,7 +28,7 @@ class DateTimeConverter implements IParamConvertor
     /**
      * Convert a DateTime object to scalar format
      * @param object $object DateTime object to convert
-     * @param array<string,mixed> $context context: ['format' => 'Y-m-d H:i:s']
+     * @param array<string,mixed> $context context: ['format' => DateTimeInterface::ATOM]
      * @param callable|null $callback Optional callback to modify result $callback($scalar, $object)
      * @return string|int|float|null Formatted date string or null
      */

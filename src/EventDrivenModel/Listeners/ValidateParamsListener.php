@@ -8,11 +8,9 @@ use ReflectionException;
 use ReflectionMethod;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
-use Symfony\Contracts\Service\ServiceProviderInterface;
 use Ufo\JsonRpcBundle\EventDrivenModel\RpcEventFactory;
 use Ufo\JsonRpcBundle\Server\ServiceMap\IServiceHolder;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
-use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\RpcError\ConstraintsImposedException;
 use Ufo\RpcError\RpcBadParamException;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcEvent;
@@ -85,14 +83,14 @@ class ValidateParamsListener
                 count($request->getParams()), $requiredParamsCount));
         }
 
-        // Arguments injected from the container (#[Autowire]) are not RPC params: map the positional
-        // params onto the RPC param names (signature order) and prepare them like named ones.
-        if ($this->hasInjectedArguments($service)) {
-            $names = array_keys($service->getParams());
-            $positional = array_values($request->getParams());
-            $count = min(count($names), count($positional));
-            $this->prepareNamedParams($event, array_combine(array_slice($names, 0, $count), array_slice($positional, 0, $count)));
+        if ((new ReflectionMethod($service->getProcedureFQCN(), $service->getMethodName()))->isVariadic()) {
+            return;
         }
+
+        $names = array_keys($service->getParams());
+        $positional = array_values($request->getParams());
+        $count = min(count($names), count($positional));
+        $this->prepareNamedParams($event, array_combine(array_slice($names, 0, $count), array_slice($positional, 0, $count)));
     }
 
     /**
@@ -159,17 +157,6 @@ class ValidateParamsListener
         }
 
         $event->params = $namedParams;
-    }
-
-    
-    protected function hasInjectedArguments(Service $service): bool
-    {
-        $id = $service->procedureFQCN.'::'.$service->getMethodName();
-        if (!$this->rpcArgumentLocators->has($id)) {
-            return false;
-        }
-        $locator = $this->rpcArgumentLocators->get($id);
-        return $locator instanceof ServiceProviderInterface && $locator->getProvidedServices() !== [];
     }
 
     public static function normalizeMessage(string $message): string

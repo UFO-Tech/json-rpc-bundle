@@ -3,7 +3,7 @@
 namespace Ufo\JsonRpcBundle\Server\ServiceMap;
 
 
-use Ufo\DTO\Interfaces\IArrayConstructible;
+use Ufo\DTO\Contract\ArrayConstructibleInterface;
 use Ufo\RpcObject\RPC\DTO;
 
 use Ufo\RpcObject\RPC\DTOCollection;

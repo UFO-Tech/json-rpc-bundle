@@ -156,6 +156,40 @@ class ApiYamlFileLoaderTest extends TestCase
         self::assertSame([], $this->registration->groups);
     }
 
+    public static function invalidGroupNames(): array
+    {
+        return [
+            'dot' => ['internal.dev'],
+            'hyphen' => ['internal-dev'],
+            'space' => ['internal dev'],
+            'colon' => ['internal:dev'],
+            'cyrillic' => ['внутрішня'],
+        ];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('invalidGroupNames')]
+    public function testGroupWithForbiddenCharactersIsRejectedBeforeRegistration(string $group): void
+    {
+        try {
+            $this->load("api:\n    resource: adapter.yaml\n    defaults: { api_group: '".$group."' }\n");
+            self::fail('Expected invalid group.');
+        } catch (\InvalidArgumentException $error) {
+            self::assertStringContainsString('only Latin letters, digits and underscores', $error->getMessage());
+        }
+        self::assertSame([], $this->registration->groups);
+    }
+
+    public function testGroupWithLettersDigitsAndUnderscoresIsAccepted(): void
+    {
+        self::assertSame('Internal_dev_2', ApiGroupContext::validateGroup('Internal_dev_2'));
+    }
+
+    public function testGroupWithTrailingNewlineIsRejected(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        ApiGroupContext::validateGroup("internal\n");
+    }
+
     public function testOriginalRpcConstructorRemainsSupportedWithoutContext(): void
     {
         $loader = new RpcYamlFileLoader(new FileLocator($this->directory), 'test');

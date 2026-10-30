@@ -6,8 +6,8 @@ use ReflectionException;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\Constraints\Choice;
-use Ufo\DTO\Helpers\EnumResolver;
-use Ufo\DTO\Helpers\TypeHintResolver;
+use Ufo\DTO\Schema\Enum\EnumResolver;
+use Ufo\DTO\Schema\Type\TypeHintResolver;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\EnumProcessor\EnumsHolder;
 use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Interfaces\IConstraintGenerator;
 use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Traits\ConstraintApplier;
@@ -44,7 +44,7 @@ class IsChoice implements IConstraintGenerator
         if (is_array($constraint->callback) && count($constraint->callback) === 2) {
             [$enum, $method] = $constraint->callback;
             if (method_exists($enum, $method)) {
-                $enumData = $this->enumsHolder->getEnum($enum);
+                $enumData = $this->enumsHolder->getEnum($enum)->toArray();
             }
         }
 

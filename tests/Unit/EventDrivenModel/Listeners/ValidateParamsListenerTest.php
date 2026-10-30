@@ -146,6 +146,27 @@ class ValidateParamsListenerTest extends TestCase
         $this->assertSame(['name' => 'bob', 'times' => 1], $event->params);
     }
 
+    public function testOrderedParamsAreMappedToNamesWithoutInjectedArguments(): void
+    {
+        $event = $this->createEvent('ping', ['bob', 3], ['name', 'times']);
+
+        $this->createListener()->validateAndPrepareOrderedParams($event);
+
+        $this->assertSame([], $this->errorEvents);
+        $this->assertSame(['name' => 'bob', 'times' => 3], $event->params);
+    }
+
+    public function testOrderedParamsFillDefaultsForOmittedTail(): void
+    {
+        $event = $this->createEvent('ping', ['bob'], ['name', 'times']);
+        $event->service->getParams()['times']->setDefault(1);
+
+        $this->createListener()->validateAndPrepareOrderedParams($event);
+
+        $this->assertSame([], $this->errorEvents);
+        $this->assertSame(['name' => 'bob', 'times' => 1], $event->params);
+    }
+
     private function singleFiredException(): \Throwable
     {
         $this->assertCount(1, $this->errorEvents);

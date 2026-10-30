@@ -12,7 +12,7 @@ use ReflectionProperty;
 use ReflectionType;
 use Throwable;
 use Ufo\DTO\DTOTransformer;
-use Ufo\DTO\Helpers\TypeHintResolver;
+use Ufo\DTO\Schema\Type\TypeHintResolver;
 use Ufo\JsonRpcBundle\ParamConvertors\ChainParamConvertor;
 use Ufo\RpcError\RpcInternalException;
 use Ufo\RpcObject\RPC\Assertions;

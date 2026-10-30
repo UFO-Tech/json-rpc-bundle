@@ -12,6 +12,8 @@ class ApiGroupContext implements ResetInterface
 {
     public const string ROUTE_GROUP = 'api_group';
     public const string ROUTE_NAME_PREFIX = '_rpc_name_prefix';
+    /** Латиниця, цифри й підкреслення. */
+    public const string GROUP_PATTERN = '/^[A-Za-z0-9_]+$/D';
 
     private string $group = APIGroups::DEFAULT_GROUP;
     private ?string $routeNamePrefix = null;
@@ -20,6 +22,9 @@ class ApiGroupContext implements ResetInterface
     {
         if (trim($group) === '') {
             throw new InvalidArgumentException('RPC API group must be a non-empty string.');
+        }
+        if (!preg_match(self::GROUP_PATTERN, $group)) {
+            throw new InvalidArgumentException('RPC API group "'.$group.'" may contain only Latin letters, digits and underscores.');
         }
         return $group;
     }

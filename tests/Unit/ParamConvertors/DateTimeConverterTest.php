@@ -4,6 +4,7 @@ namespace Ufo\JsonRpcBundle\Tests\Unit\ParamConvertors;
 
 use DateTime;
 use DateTimeImmutable;
+use DateTimeZone;
 use PHPUnit\Framework\TestCase;
 use Ufo\JsonRpcBundle\ParamConvertors\DateTimeConverter;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
@@ -24,9 +25,9 @@ class DateTimeConverterTest extends TestCase
     public function testToScalarWithDefaultFormat(): void
     {
         
-        $dateTime = new DateTime('2023-12-01 15:30:45');
+        $dateTime = new DateTime('2023-12-01 15:30:45', new DateTimeZone('UTC'));
         $result = $this->convertor->toScalar($dateTime);
-        $this->assertSame('2023-12-01 15:30:45', $result);
+        $this->assertSame('2023-12-01T15:30:45+00:00', $result);
     }
 
     /**
@@ -47,11 +48,11 @@ class DateTimeConverterTest extends TestCase
     public function testToScalarWithCallback(): void
     {
         
-        $dateTime = new DateTime('2023-12-01 15:30:45');
+        $dateTime = new DateTime('2023-12-01 15:30:45', new DateTimeZone('UTC'));
         $callback = fn($scalar, $object) => strtoupper($scalar);
         $result = $this->convertor->toScalar($dateTime, [], $callback);
         $this->assertSame('2023-12-01 15:30:45', strtoupper('2023-12-01 15:30:45'));
-        $this->assertSame('2023-12-01 15:30:45', $result);
+        $this->assertSame('2023-12-01T15:30:45+00:00', $result);
     }
 
     /**
@@ -71,9 +72,9 @@ class DateTimeConverterTest extends TestCase
     public function testToScalarWithDateTimeImmutable(): void
     {
         
-        $dateTime = new DateTimeImmutable('2023-12-01 15:30:45');
+        $dateTime = new DateTimeImmutable('2023-12-01 15:30:45', new DateTimeZone('UTC'));
         $result = $this->convertor->toScalar($dateTime);
-        $this->assertSame('2023-12-01 15:30:45', $result);
+        $this->assertSame('2023-12-01T15:30:45+00:00', $result);
     }
 
     /**
@@ -194,6 +195,22 @@ class DateTimeConverterTest extends TestCase
 
         $this->assertSame(['string', 'null'], $param->getType());
         $this->assertSame(DateTimeConverter::class, $param->context[Param::C_CONVERTOR] ?? null);
+    }
+
+    public function testToScalarKeepsKyivOffset(): void
+    {
+        $kyiv = new DateTimeZone('Europe/Kyiv');
+
+        $this->assertSame('2026-07-01T12:00:00+03:00', $this->convertor->toScalar(new DateTimeImmutable('2026-07-01 12:00:00', $kyiv)));
+        $this->assertSame('2026-12-31T12:00:00+02:00', $this->convertor->toScalar(new DateTimeImmutable('2026-12-31 12:00:00', $kyiv)));
+    }
+
+    public function testToObjectFromKyivAtomKeepsMoment(): void
+    {
+        $result = $this->convertor->toObject('2026-07-01T12:00:00+03:00', ['classFQCN' => DateTimeImmutable::class]);
+
+        $this->assertSame('+03:00', $result->getTimezone()->getName());
+        $this->assertSame(new DateTimeImmutable('2026-07-01T09:00:00Z')->getTimestamp(), $result->getTimestamp());
     }
 
 }

@@ -16,6 +16,7 @@ use Ufo\JsonRpcBundle\EventDrivenModel\Listeners\ParamsConverterEventListener;
 use Ufo\JsonRpcBundle\EventDrivenModel\RpcEventFactory;
 use Ufo\JsonRpcBundle\ParamConvertors\ChainParamConvertor;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\DtoReflector;
+use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\JsonRpcBundle\Tests\Fixtures\Dto\OrderDto;
 use Ufo\JsonRpcBundle\Tests\Fixtures\Dto\PersonDto;
@@ -280,6 +281,52 @@ class ParamsConverterEventListenerTest extends TestCase
         return $request->getResponseObject()->getResult();
     }
 
+    public function testListOfListsOfDtoIsTransformedAtEveryLevel(): void
+    {
+        $event = $this->createEvent(
+            ['person' => [[['name' => 'a', 'age' => 1]], [['name' => 'b', 'age' => 2], ['name' => 'c', 'age' => 3]]]],
+            ['person' => [new DTO(PersonDto::class, collection: true)]],
+            ['person' => '\\' . PersonDto::class . '[][]'],
+        );
+
+        $this->createListener()->dataToDTOTransform($event);
+
+        $this->assertSame([], $this->errorEvents);
+        $this->assertInstanceOf(PersonDto::class, $event->params['person'][1][1]);
+        $this->assertSame('c', $event->params['person'][1][1]->name);
+    }
+
+    public function testMapOfListsOfDtoKeepsKeys(): void
+    {
+        $event = $this->createEvent(
+            ['person' => ['left' => [['name' => 'a', 'age' => 1]], 'right' => [['name' => 'b', 'age' => 2]]]],
+            ['person' => [new DTO(PersonDto::class, collection: true)]],
+            ['person' => 'array<string, \\' . PersonDto::class . '[]>'],
+        );
+
+        $this->createListener()->dataToDTOTransform($event);
+
+        $this->assertSame([], $this->errorEvents);
+        $this->assertSame(['left', 'right'], array_keys($event->params['person']));
+        $this->assertInstanceOf(PersonDto::class, $event->params['person']['right'][0]);
+    }
+
+    public function testInvalidDtoDeepInsideListOfListsIsReported(): void
+    {
+        $event = $this->createEvent(
+            ['person' => [[['name' => 'a', 'age' => 1]], [['name' => 'b']]]],
+            ['person' => [new DTO(PersonDto::class, collection: true)]],
+            ['person' => '\\' . PersonDto::class . '[][]'],
+        );
+
+        $this->createListener()->dataToDTOTransform($event);
+
+        $this->assertSame(
+            ['person' => [1 => ["Missing required key for property: 'age'"]]],
+            $this->singleFiredException()->getConstraintsImposed()
+        );
+    }
+
     private function singleFiredException(): \Throwable
     {
         $this->assertCount(1, $this->errorEvents);
@@ -297,10 +344,14 @@ class ParamsConverterEventListenerTest extends TestCase
 
     /**
      * @param array<string,DTO[]> $paramsDto
+     * @param array<string,string> $paramItems типи параметрів з докблоку, наприклад PersonDto[][]
      */
-    private function createEvent(array $params, array $paramsDto): RpcPreExecuteEvent
+    private function createEvent(array $params, array $paramsDto, array $paramItems = []): RpcPreExecuteEvent
     {
         $service = new Service('main.expectDto', ListenerFixtureProcedure::class, new Info('main'));
+        foreach ($paramItems as $paramName => $items) {
+            $service->addParam(new ParamDefinition($paramName, ['type' => 'array'], 'array', paramItems: $items));
+        }
         foreach ($paramsDto as $paramName => $dtoList) {
             foreach ($dtoList as $dto) {
                 $service->addParamsDto($paramName, new DtoReflector($dto, $this->paramConvertor));

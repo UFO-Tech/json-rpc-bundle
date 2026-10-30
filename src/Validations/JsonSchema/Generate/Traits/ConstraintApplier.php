@@ -5,7 +5,7 @@ declare(strict_types = 1);
 namespace Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Traits;
 
 use Symfony\Component\Validator\Constraint;
-use Ufo\DTO\Helpers\TypeHintResolver;
+use Ufo\DTO\Schema\Type\TypeHintResolver;
 use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Generator;
 
 trait ConstraintApplier

@@ -11,6 +11,7 @@ use Ufo\JsonRpcBundle\Server\RpcCache\RpcCacheService;
 use Ufo\JsonRpcBundle\Server\RpcServer;
 use Ufo\JsonRpcBundle\Server\ServiceMap\IServiceHolder;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
+use Ufo\RpcError\RpcBadRequestException;
 use Ufo\RpcError\RpcMethodNotFoundExceptionRpc;
 use Ufo\RpcError\WrongWayException;
 use Ufo\RpcObject\RPC\Info;
@@ -102,6 +103,24 @@ class RpcServerTest extends TestCase
         $server->method('handleRpcRequest')->willReturn($response);
 
         $this->assertSame($response, $server->handle($request));
+    }
+
+    public function testInvalidRequestWinsOverMissingMethod(): void
+    {
+        $request = RpcRequest::fromArray(['id' => 1, 'jsonrpc' => '2.0']);
+
+        $holder = $this->createMock(IServiceHolder::class);
+        $holder->method('getService')->willThrowException(new ServiceNotFoundException('not found'));
+
+        $server = new RpcServer(
+            $holder,
+            $this->createMock(RpcEventFactory::class),
+            $this->createMock(RpcCacheService::class)
+        );
+
+        $this->expectException(RpcBadRequestException::class);
+        $this->expectExceptionCode(-32600);
+        $server->handleRpcRequest($request);
     }
 
     public function testHandleRpcRequestThrowsRpcMethodNotFoundWhenServiceMissing(): void

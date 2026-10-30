@@ -8,9 +8,9 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\DependencyInjection\Exception\LogicException;
 use Ufo\DTO\ArrayConstructibleTrait;
 use Ufo\DTO\ArrayConvertibleTrait;
-use Ufo\DTO\Helpers\TypeHintResolver;
-use Ufo\DTO\Interfaces\IArrayConstructible;
-use Ufo\DTO\Interfaces\IArrayConvertible;
+use Ufo\DTO\Contract\ArrayConstructibleInterface;
+use Ufo\DTO\Contract\ArrayConvertibleInterface;
+use Ufo\DTO\Schema\Type\TypeHintResolver;
 use Ufo\DTO\SmartArrayConvertibleTrait;
 use Ufo\JsonRpcBundle\Server\ServiceMap\AttributesCollection;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
@@ -24,7 +24,7 @@ use function count;
 use function is_string;
 use function Symfony\Component\DependencyInjection\Loader\Configurator\param;
 
-class ParamDefinition implements IArrayConvertible, IArrayConstructible
+class ParamDefinition implements ArrayConvertibleInterface, ArrayConstructibleInterface
 {
     use SmartArrayConvertibleTrait, ArrayConstructibleTrait;
 

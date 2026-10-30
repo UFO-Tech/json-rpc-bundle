@@ -9,6 +9,8 @@ use Ufo\JsonRpcBundle\Server\ServiceMap\IServiceHolder;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcEvent;
 use Ufo\JsonRpcBundle\EventDrivenModel\Events\RpcPreResponseEvent;
+use Ufo\RpcError\RpcBadParamException;
+use Ufo\RpcError\RpcBadRequestException;
 use Ufo\RpcError\RpcMethodNotFoundExceptionRpc;
 use Ufo\RpcError\WrongWayException;
 use Ufo\RpcObject\RpcRequest;
@@ -35,6 +37,7 @@ class RpcServer
      * @param RpcRequest $request
      * @return RpcResponse
      * @throws RpcMethodNotFoundExceptionRpc
+     * @throws RpcBadRequestException невалідний запит має пріоритет над пошуком методу
      */
     public function handleRpcRequest(RpcRequest $request, ?Service $service = null): RpcResponse
     {
@@ -42,6 +45,10 @@ class RpcServer
         try {
             $service ??= $this->serviceHolder->getService($method, $request->apiVersion);
         } catch (ServiceNotFoundException $e) {
+            $error = $request->getError();
+            if ($error instanceof RpcBadRequestException && !$error instanceof RpcBadParamException) {
+                throw $error;
+            }
             throw new RpcMethodNotFoundExceptionRpc($e->getMessage());
         }
 

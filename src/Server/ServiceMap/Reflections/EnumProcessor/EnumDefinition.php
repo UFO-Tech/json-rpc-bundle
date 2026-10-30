@@ -2,13 +2,13 @@
 
 namespace Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\EnumProcessor;
 
-use Ufo\DTO\Helpers\EnumResolver;
-use Ufo\DTO\Helpers\TypeHintResolver;
-use Ufo\DTO\Helpers\TypeHintResolver as T;
-use Ufo\DTO\Interfaces\IArrayConstructible;
-use Ufo\DTO\Interfaces\IArrayConvertible;
+use Ufo\DTO\Contract\ArrayConstructibleInterface;
+use Ufo\DTO\Contract\ArrayConvertibleInterface;
+use Ufo\DTO\Schema\Enum\EnumResolver;
+use Ufo\DTO\Schema\Type\TypeHintResolver;
+use Ufo\DTO\Schema\Type\TypeHintResolver as T;
 
-readonly class EnumDefinition implements IArrayConvertible, IArrayConstructible
+readonly class EnumDefinition implements ArrayConvertibleInterface, ArrayConstructibleInterface
 {
     /**
      * @param string $name

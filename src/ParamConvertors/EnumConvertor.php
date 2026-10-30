@@ -6,7 +6,7 @@ use BackedEnum;
 use RuntimeException;
 use Throwable;
 use TypeError;
-use Ufo\DTO\Helpers\TypeHintResolver;
+use Ufo\DTO\Schema\Type\TypeHintResolver;
 use Ufo\DTO\Transformer\Converter\EnumConverter;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
 use Ufo\RpcError\RpcBadParamException;

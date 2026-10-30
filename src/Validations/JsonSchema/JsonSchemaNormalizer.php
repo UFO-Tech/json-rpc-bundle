@@ -5,11 +5,11 @@ namespace Ufo\JsonRpcBundle\Validations\JsonSchema;
 
 use ArrayObject;
 use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
-use Ufo\DTO\Helpers\EnumResolver;
+use Ufo\DTO\Schema\Enum\EnumResolver;
 use Ufo\JsonRpcBundle\ParamConvertors\ChainParamConvertor;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\DtoReflector;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
-use Ufo\DTO\Helpers\TypeHintResolver as T;
+use Ufo\DTO\Schema\Type\TypeHintResolver as T;
 use Ufo\RpcError\RpcInternalException;
 use Ufo\RpcObject\RPC\Assertions;
 use Ufo\RpcObject\RPC\AssertionsCollection;
@@ -50,9 +50,7 @@ class JsonSchemaNormalizer implements NormalizerInterface
         $properties = [];
         foreach ($service?->getParams() as $property => $paramDefinition) {
 
-            $this->checkParamConvertor($paramDefinition, $service);
-
-            if ($paramDefinition->getSchema()) continue;
+            if ($this->checkParamConvertor($paramDefinition, $service)) continue;
 
             $assertions = $assertionsList[$property] ?? new Assertions([]);
 
@@ -87,10 +85,12 @@ class JsonSchemaNormalizer implements NormalizerInterface
     }
 
     /**
+     * @return bool true, якщо схему параметра вже задав #[RPC\Param]
      * @throws RpcInternalException
      */
-    protected function checkParamConvertor(ParamDefinition $paramDefinition, Service $service): void
+    protected function checkParamConvertor(ParamDefinition $paramDefinition, Service $service): bool
     {
+        $schemaSet = false;
         /**
          * @var Param $paramAttr
          */
@@ -100,7 +100,7 @@ class JsonSchemaNormalizer implements NormalizerInterface
         if ($paramAttr) {
             $assertionsAttr = $assertionsAttr ?? new Assertions([]);
 
-            if ($paramAttr->isCollection()) return;
+            if ($paramAttr->isCollection()) return false;
 
             $schema = $this->paramNormalizer->normalize(
                 $assertionsAttr,
@@ -114,6 +114,7 @@ class JsonSchemaNormalizer implements NormalizerInterface
             );
             // The attribute added by a convertor has no default: keep the one of the signature.
             $paramDefinition->setSchema($schema)->setDefault($paramAttr->getData(Param::C_DEFAULT) ?? $paramDefinition->getDefault());
+            $schemaSet = true;
 
             $attrType = $paramAttr->getType();
             if (is_array($attrType)) {
@@ -128,6 +129,8 @@ class JsonSchemaNormalizer implements NormalizerInterface
 
         }
         $this->checkDTO($paramDefinition->getRealType(), $paramDefinition, $service);
+
+        return $schemaSet;
     }
 
     protected function getScalarTargetType(array|string $type): ?string
@@ -162,8 +165,8 @@ class JsonSchemaNormalizer implements NormalizerInterface
 
             T::filterSchema($tmpSchema, function (array $schema) use ($service, $paramDefinition) {
                 if (($schema[T::TYPE] ?? null) === T::OBJECT->value
-                    && class_exists($schema[T::CLASS_FQCN] ?? null)
-                    && !enum_exists($schema[T::CLASS_FQCN] ?? null)
+                    && class_exists($schema[T::CLASS_FQCN] ?? '')
+                    && !enum_exists($schema[T::CLASS_FQCN] ?? '')
                 ) {
                     $service->addParamsDto($paramDefinition->name, new DtoReflector(
                             new DTOCollection($schema[T::CLASS_FQCN]),

@@ -2,13 +2,15 @@
 
 namespace Ufo\JsonRpcBundle\DocAdapters\Traits;
 
-use Ufo\DTO\Helpers\EnumResolver;
-use Ufo\DTO\Helpers\TypeHintResolver as T;
+use DateTimeInterface;
+use Ufo\DTO\Schema\Enum\EnumResolver;
+use Ufo\DTO\Schema\Type\TypeHintResolver as T;
 use Ufo\JsonRpcBundle\ParamConvertors\ChainParamConvertor;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\DtoReflector;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\EnumProcessor\EnumDefinition;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\EnumProcessor\EnumsHolder;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
+use Ufo\JsonRpcBundle\Server\ServiceMap\SchemaNames;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 use Ufo\RpcError\RpcInternalException;
 use Ufo\RpcError\WrongWayException;
@@ -17,9 +19,13 @@ use Ufo\RpcObject\RPC\DTO;
 use function array_key_exists;
 use function array_map;
 use function class_exists;
+use function enum_exists;
 use function implode;
+use function is_a;
 use function is_array;
+use function ltrim;
 use function is_null;
+use function is_string;
 use function stat;
 use function str_starts_with;
 use function substr;
@@ -27,12 +33,35 @@ use function substr;
 trait JsonSchemaDtoFormatTrait
 {
     const string SCHEMAS = '#/components/schemas/';
+    const string FORMAT = 'format';
+    const string DATE_TIME = 'date-time';
     protected array $schemas = [];
+
+    /** Опис типу для документа: короткі імена класів замість FQCN. */
+    protected function publicTypeDescription(array $schema): string
+    {
+        return T::jsonSchemaToTypeDescription(T::applyToSchema($schema, function (array $node): array {
+            $class = $node[T::CLASS_FQCN] ?? null;
+            if (!is_string($class)) {
+                return $node;
+            }
+            $name = SchemaNames::shortName(ltrim($class, '\\'));
+            if (isset($node[EnumResolver::ENUM])) {
+                $node[EnumResolver::ENUM][EnumResolver::ENUM_NAME] = $name;
+            }
+            $node[T::CLASS_FQCN] = $name;
+
+            return $node;
+        }));
+    }
 
     public function checkAndGetSchemaFromDesc(array $objSchema, ?DTO $dtoAttr = null): array
     {
         if (($objSchema[T::TYPE] ?? '') === T::OBJECT->value
             && ($objSchema[T::CLASS_FQCN] ?? false)) {
+            if ($dateSchema = $this->dateTimeSchema($objSchema[T::CLASS_FQCN])) {
+                return $dateSchema;
+            }
             $dto = $this->createDTO($objSchema[T::CLASS_FQCN], $dtoAttr);
             return $this->schemaFromDto($dto->getFormat());
         }
@@ -43,6 +72,10 @@ trait JsonSchemaDtoFormatTrait
     {
         $type = $objSchema[T::TYPE] ?? '';
         if ($type === T::OBJECT->value && $class = ($objSchema[T::CLASS_FQCN] ?? false)) {
+            if ($dateSchema = $this->dateTimeSchema($class)) {
+                $objSchema = $dateSchema;
+                return;
+            }
             $dto = $this->createDTO($class, null);
             $objSchema = $this->schemaFromDto($dto->getFormat());
 
@@ -113,6 +146,11 @@ trait JsonSchemaDtoFormatTrait
                 $param->getSchema(),
                 fn(array $itemSchema) => $this->checkAndGetSchemaFromDesc($itemSchema)
             );
+        }
+
+        $withRefs = $this->typedEnumsToRefs($paramSchema);
+        if ($withRefs !== $paramSchema) {
+            return $withRefs;
         }
 
         if ($enumFQCN = EnumResolver::getEnumFQCN($param->getRealType())) {
@@ -251,7 +289,9 @@ trait JsonSchemaDtoFormatTrait
                 $this->schemaFromDto($dto->getFormat());
             }
         }
-        if (!$jsonValue && ($enumFQCN = EnumResolver::getEnumFQCN($type))) {
+        if (!$jsonValue && ($dateSchema = $this->dateTimeSchema($type))) {
+            $jsonValue = $dateSchema;
+        } elseif (!$jsonValue && ($enumFQCN = EnumResolver::getEnumFQCN($type))) {
             $enumDef = $this->getEnumsHolder()->getEnum($enumFQCN);
             $this->schemas[$enumDef->name] = $enumDef->toArray();
             $jsonValue = $enumDef->getRef();
@@ -272,6 +312,14 @@ trait JsonSchemaDtoFormatTrait
     protected function detectArrayOfType(string $type, array $uses = []): array
     {
         return T::typeDescriptionToJsonSchema($type, $uses);
+    }
+
+    /** Дата в JSON — рядок, а не DTO-компонент. */
+    protected function dateTimeSchema(string $class): ?array
+    {
+        return is_a(ltrim($class, '\\'), DateTimeInterface::class, true)
+            ? [T::TYPE => T::STRING->value, static::FORMAT => static::DATE_TIME]
+            : null;
     }
 
     protected function createSchemaLink(string $dtoName): array
@@ -334,6 +382,24 @@ trait JsonSchemaDtoFormatTrait
                     return $enumDef->getRef();
                 }
                 return $node;
+            }
+        );
+    }
+
+    /** Вбудований enum з classFQCN стає $ref на компонент; enum з асерта Choice не чіпається. */
+    protected function typedEnumsToRefs(array $schema): array
+    {
+        return T::applyToSchema(
+            $schema,
+            function (array $node): array {
+                $classFQCN = $node[T::CLASS_FQCN] ?? null;
+                if (!EnumResolver::findEnumNameInJsonSchema($node) || !is_string($classFQCN) || !enum_exists($classFQCN)) {
+                    return $node;
+                }
+                $enumDef = $this->getEnumsHolder()->getEnum($classFQCN);
+                $this->schemas[$enumDef->name] = $enumDef->toArray();
+
+                return $enumDef->getRef();
             }
         );
     }

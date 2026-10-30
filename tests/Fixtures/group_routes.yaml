@@ -14,3 +14,9 @@ bff:
     defaults:
         api_group: bff
     trailing_slash_on_root: false
+internal_dev_2:
+    resource: ../../config/router.yaml
+    prefix: /rpc/internal-dev-2
+    defaults:
+        api_group: internal_dev_2
+    trailing_slash_on_root: false

@@ -40,6 +40,20 @@ class RpcServiceMapGroupsTest extends TestCase
         $this->expectExceptionMessage('already registered in API group "first"');
         $pass->processServiceMap(new \ReflectionClass(DuplicateGroupProcedure::class));
     }
+
+    public function testGroupWithForbiddenCharactersInAttributeIsRejected(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('RPC API group "internal.dev" may contain only Latin letters, digits and underscores.');
+        $this->pass()->processServiceMap(new \ReflectionClass(DottedGroupProcedure::class));
+    }
+}
+
+#[RPC\Info('dotted')]
+#[RPC\APIGroups(['internal.dev'], false)]
+class DottedGroupProcedure implements IRpcService
+{
+    public function ping(): string { return 'dotted'; }
 }
 
 #[RPC\Info('collision')]

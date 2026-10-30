@@ -4,7 +4,7 @@ namespace Ufo\JsonRpcBundle\DocAdapters\Outputs;
 use PSX\OpenRPC\Method;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Routing\RouterInterface;
-use Ufo\DTO\Helpers\TypeHintResolver as T;
+use Ufo\DTO\Schema\Type\TypeHintResolver as T;
 use Ufo\JsonRpcBundle\ConfigService\RpcMainConfig;
 use Ufo\JsonRpcBundle\Controller\ApiController;
 use Ufo\JsonRpcBundle\Server\ApiGroupContext;
@@ -113,15 +113,15 @@ class OpenRpcAdapter
         );
         $objSchema = [];
         if (!empty($service->getReturn())) {
-            $objSchema = T::applyToSchema(
+            $objSchema = $this->typedEnumsToRefs(T::applyToSchema(
                 $service->getReturn(),
                 fn(array $schema) => $this->checkAndGetSchemaFromDesc($schema)
-            );
+            ));
         }
 
         $this->rpcSpecBuilder->buildResult(
             $method,
-            T::jsonSchemaToTypeDescription($service->getReturn()),
+            $this->publicTypeDescription($service->getReturn()),
             $service->getReturnDescription(),
             $objSchema
         );
@@ -135,7 +135,6 @@ class OpenRpcAdapter
             ]);
         }
         $throwClasses = array_intersect_key($service->uses, array_flip(array_map(fn($throw) => str_replace('\\', '', $throw), $throws)));
-
 
         $this->rpcSpecBuilder->buildError($method, $throwClasses);
     }

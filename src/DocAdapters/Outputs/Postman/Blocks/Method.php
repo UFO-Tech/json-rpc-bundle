@@ -2,7 +2,7 @@
 
 namespace Ufo\JsonRpcBundle\DocAdapters\Outputs\Postman\Blocks;
 
-use Ufo\DTO\Helpers\TypeHintResolver;
+use Ufo\DTO\Schema\Type\TypeHintResolver;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
 
 use function array_map;

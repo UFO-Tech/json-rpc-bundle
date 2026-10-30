@@ -7,7 +7,7 @@ use ReflectionNamedType;
 use ReflectionType;
 use ReflectionUnionType;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
-use Ufo\DTO\Helpers\TypeHintResolver;
+use Ufo\DTO\Schema\Type\TypeHintResolver;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Service;
 
 use function call_user_func;

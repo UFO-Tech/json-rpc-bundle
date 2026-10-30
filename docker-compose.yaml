@@ -1,6 +1,5 @@
 version: "3"
 services:
-
   php:
     container_name: php_${PROJECT_NAME}
     image: ufotech/php:8.4-fpm

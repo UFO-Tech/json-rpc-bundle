@@ -31,6 +31,14 @@ class RpcSecurityProvidersPassTest extends TestCase
         (new RpcSecurityProvidersPass())->process($container);
     }
 
+    public function testProviderGroupWithForbiddenCharactersIsRejected(): void
+    {
+        $container = $this->container(['one' => ['service' => GroupTokenValidator::class, 'api_groups' => ['internal.dev']]]);
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('only Latin letters, digits and underscores');
+        (new RpcSecurityProvidersPass())->process($container);
+    }
+
     public function testUnknownProviderServiceIsRejected(): void
     {
         $container = $this->container(['one' => ['service' => 'missing', 'api_groups' => ['bfa']]]);

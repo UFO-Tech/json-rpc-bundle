@@ -7,7 +7,7 @@ use InvalidArgumentException;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
 use Ufo\JsonRpcBundle\Validations\JsonSchema\Generate\Generator;
-use Ufo\DTO\Helpers\TypeHintResolver;
+use Ufo\DTO\Schema\Type\TypeHintResolver;
 use Ufo\RpcObject\RPC\Assertions;
 
 use function is_array;

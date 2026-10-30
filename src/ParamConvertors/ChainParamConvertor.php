@@ -4,7 +4,7 @@ namespace Ufo\JsonRpcBundle\ParamConvertors;
 
 use RuntimeException;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
-use Ufo\DTO\Helpers\TypeHintResolver;
+use Ufo\DTO\Schema\Type\TypeHintResolver;
 use Ufo\JsonRpcBundle\Server\ServiceMap\Reflections\ParamDefinition;
 use Ufo\JsonRpcBundle\Validations\JsonSchema\JsonSchemaPropertyNormalizer;
 use Ufo\RpcObject\RPC\Param;
